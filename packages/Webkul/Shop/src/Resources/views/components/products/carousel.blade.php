@@ -119,13 +119,19 @@
 
             methods: {
                 getProducts() {
+                    window.vueDebugLogs = window.vueDebugLogs || [];
+                    window.vueDebugLogs.push("Start Products (" + (this.title || "Tüm Ürünler") + ") -> " + this.src);
+
                     this.$axios.get(this.src)
                         .then(response => {
+                            window.vueDebugLogs.push("Success Products (" + (this.title || "Tüm Ürünler") + ") -> " + (response.data?.data?.length || 0) + " items");
                             this.isLoading = false;
 
                             this.products = response.data.data;
                         }).catch(error => {
-                            console.log(error);
+                            console.error(error);
+                            window.vueDebugLogs.push("Error Products (" + (this.title || "Tüm Ürünler") + ") -> " + (error.message || error));
+                            this.isLoading = false;
                         });
                 },
 

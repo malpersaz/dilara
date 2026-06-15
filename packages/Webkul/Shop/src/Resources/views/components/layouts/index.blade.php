@@ -54,23 +54,38 @@
                     showError('<strong>Promise Rejection:</strong> ' + reason);
                 });
                 window.addEventListener('load', function() {
-                    setTimeout(function() {
+                    setInterval(function() {
                         var appEl = document.getElementById('app');
                         var isVueMounted = appEl && appEl.__vue_app__ ? 'EVET (Yes)' : 'HAYIR (No)';
-                        var debugDiv = document.createElement('div');
-                        debugDiv.style.position = 'fixed';
-                        debugDiv.style.bottom = '10px';
-                        debugDiv.style.right = '10px';
-                        debugDiv.style.backgroundColor = '#1e293b';
-                        debugDiv.style.color = '#ffffff';
-                        debugDiv.style.padding = '12px';
-                        debugDiv.style.borderRadius = '8px';
-                        debugDiv.style.zIndex = '999999';
-                        debugDiv.style.fontFamily = 'monospace';
-                        debugDiv.style.fontSize = '12px';
-                        debugDiv.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)';
-                        debugDiv.innerHTML = '<strong>Debug Status:</strong><br>Vue Mounted: ' + isVueMounted + '<br>window.app: ' + (window.app ? 'Defined' : 'Undefined');
-                        document.body.appendChild(debugDiv);
+                        var debugDiv = document.getElementById('js-debug-status');
+                        if (!debugDiv) {
+                            debugDiv = document.createElement('div');
+                            debugDiv.id = 'js-debug-status';
+                            debugDiv.style.position = 'fixed';
+                            debugDiv.style.bottom = '10px';
+                            debugDiv.style.right = '10px';
+                            debugDiv.style.backgroundColor = '#1e293b';
+                            debugDiv.style.color = '#ffffff';
+                            debugDiv.style.padding = '12px';
+                            debugDiv.style.borderRadius = '8px';
+                            debugDiv.style.zIndex = '999999';
+                            debugDiv.style.fontFamily = 'monospace';
+                            debugDiv.style.fontSize = '11px';
+                            debugDiv.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.3)';
+                            debugDiv.style.maxHeight = '250px';
+                            debugDiv.style.overflowY = 'auto';
+                            debugDiv.style.width = '320px';
+                            debugDiv.style.lineHeight = '1.4';
+                            document.body.appendChild(debugDiv);
+                        }
+                        var logsHtml = (window.vueDebugLogs || []).map(function(log) {
+                            var color = log.indexOf('Success') !== -1 ? '#4ade80' : (log.indexOf('Error') !== -1 ? '#f87171' : '#e2e8f0');
+                            return '<span style="color:' + color + '">• ' + log + '</span>';
+                        }).join('<br>');
+                        debugDiv.innerHTML = '<strong>Debug Status:</strong><br>' +
+                            'Vue Mounted: ' + isVueMounted + '<br>' +
+                            'window.app: ' + (window.app ? 'Defined' : 'Undefined') + '<br>' +
+                            '<strong style="margin-top: 5px; display: inline-block;">API Logs:</strong><br>' + (logsHtml || 'No logs yet');
                     }, 1000);
                 });
             })();

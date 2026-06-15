@@ -117,13 +117,19 @@
 
             methods: {
                 getCategories() {
+                    window.vueDebugLogs = window.vueDebugLogs || [];
+                    window.vueDebugLogs.push("Start Categories -> " + this.src);
+
                     this.$axios.get(this.src)
                         .then(response => {
+                            window.vueDebugLogs.push("Success Categories (" + (response.data?.data?.length || 0) + " items)");
                             this.isLoading = false;
 
                             this.categories = response.data.data;
                         }).catch(error => {
-                            console.log(error);
+                            console.error(error);
+                            window.vueDebugLogs.push("Error Categories -> " + (error.message || error));
+                            this.isLoading = false;
                         });
                 },
 

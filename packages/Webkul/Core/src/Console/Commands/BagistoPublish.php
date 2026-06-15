@@ -3,6 +3,8 @@
 namespace Webkul\Core\Console\Commands;
 
 use Illuminate\Console\Command;
+use Webkul\Core\Providers\CoreServiceProvider;
+use Webkul\Product\Providers\ProductServiceProvider;
 
 class BagistoPublish extends Command
 {
@@ -30,12 +32,12 @@ class BagistoPublish extends Command
          * Bagisto providers.
          */
         [
-            'name'     => 'Core',
-            'provider' => \Webkul\Core\Providers\CoreServiceProvider::class,
+            'name' => 'Core',
+            'provider' => CoreServiceProvider::class,
         ],
         [
-            'name'     => 'Product',
-            'provider' => \Webkul\Product\Providers\ProductServiceProvider::class,
+            'name' => 'Product',
+            'provider' => ProductServiceProvider::class,
         ],
     ];
 
@@ -71,7 +73,7 @@ class BagistoPublish extends Command
 
         $this->call('vendor:publish', [
             '--provider' => $provider['provider'],
-            '--force'    => $this->option('force'),
+            '--force' => $this->option('force'),
         ]);
     }
 }

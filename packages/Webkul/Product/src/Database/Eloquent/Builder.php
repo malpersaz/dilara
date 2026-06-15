@@ -2,6 +2,7 @@
 
 namespace Webkul\Product\Database\Eloquent;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder as BaseBuilder;
 use Illuminate\Pagination\Paginator;
 
@@ -17,7 +18,7 @@ class Builder extends BaseBuilder
      * @param  array  $columns
      * @param  string  $pageName
      * @param  int|null  $page
-     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
+     * @return LengthAwarePaginator
      *
      * @throws \InvalidArgumentException
      */
@@ -32,7 +33,7 @@ class Builder extends BaseBuilder
             : $this->model->newCollection();
 
         return $this->paginator($results, $total, $perPage, $page, [
-            'path'     => Paginator::resolveCurrentPath(),
+            'path' => Paginator::resolveCurrentPath(),
             'pageName' => $pageName,
         ]);
     }

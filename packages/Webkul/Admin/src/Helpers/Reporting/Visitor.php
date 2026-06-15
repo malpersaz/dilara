@@ -2,6 +2,7 @@
 
 namespace Webkul\Admin\Helpers\Reporting;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Webkul\Core\Repositories\VisitRepository;
@@ -27,7 +28,7 @@ class Visitor extends AbstractReporting
     {
         return [
             'previous' => $previous = $this->getTotalVisitors($this->lastStartDate, $this->lastEndDate, $visitableType),
-            'current'  => $current = $this->getTotalVisitors($this->startDate, $this->endDate, $visitableType),
+            'current' => $current = $this->getTotalVisitors($this->startDate, $this->endDate, $visitableType),
             'progress' => $this->getPercentageChange($previous, $current),
         ];
     }
@@ -35,8 +36,8 @@ class Visitor extends AbstractReporting
     /**
      * Retrieves total visitors and their progress.
      *
-     * @param  \Carbon\Carbon  $startDate
-     * @param  \Carbon\Carbon  $endDate
+     * @param  Carbon  $startDate
+     * @param  Carbon  $endDate
      * @param  string  $visitableType
      * @return array
      */
@@ -70,7 +71,7 @@ class Visitor extends AbstractReporting
     {
         return [
             'previous' => $previous = $this->getTotalUniqueVisitors($this->lastStartDate, $this->lastEndDate, $visitableType),
-            'current'  => $current = $this->getTotalUniqueVisitors($this->startDate, $this->endDate, $visitableType),
+            'current' => $current = $this->getTotalUniqueVisitors($this->startDate, $this->endDate, $visitableType),
             'progress' => $this->getPercentageChange($previous, $current),
         ];
     }
@@ -78,8 +79,8 @@ class Visitor extends AbstractReporting
     /**
      * Retrieves total unique visitors
      *
-     * @param  \Carbon\Carbon  $startDate
-     * @param  \Carbon\Carbon  $endDate
+     * @param  Carbon  $startDate
+     * @param  Carbon  $endDate
      * @param  string  $visitableType
      * @return array
      */
@@ -180,8 +181,8 @@ class Visitor extends AbstractReporting
     /**
      * Generates visitor graph data.
      *
-     * @param  \Carbon\Carbon  $startDate
-     * @param  \Carbon\Carbon  $endDate
+     * @param  Carbon  $startDate
+     * @param  Carbon  $endDate
      * @param  string  $period
      * @param  string  $visitableType
      */
@@ -220,8 +221,8 @@ class Visitor extends AbstractReporting
     /**
      * Generates visitor over week graph data.
      *
-     * @param  \Carbon\Carbon  $startDate
-     * @param  \Carbon\Carbon  $endDate
+     * @param  Carbon  $startDate
+     * @param  Carbon  $endDate
      * @param  string  $visitableType
      */
     public function getTotalVisitorsOverWeek($startDate, $endDate, $visitableType = null): array

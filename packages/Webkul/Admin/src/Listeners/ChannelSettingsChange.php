@@ -3,13 +3,14 @@
 namespace Webkul\Admin\Listeners;
 
 use Illuminate\Support\Facades\Artisan;
+use Webkul\Core\Models\Channel;
 
 class ChannelSettingsChange
 {
     /**
      * Check for maintenance mode and set according to settings.
      *
-     * @param  \Webkul\Core\Models\Channel  $channel
+     * @param  Channel  $channel
      * @return void
      */
     public function checkForMaintenanceMode($channel)

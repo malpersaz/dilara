@@ -1,7 +1,10 @@
 <?php
 
+use L5Swagger\Generator;
+use OpenApi\scan;
+
 return [
-    'default'        => 'default',
+    'default' => 'default',
     'documentations' => [
         'default' => [
             'api' => [
@@ -12,8 +15,8 @@ return [
                 /*
                  * Route for accessing api documentation interface
                 */
-                'api'             => 'api/shop/documentation',
-                'docs'            => storage_path('api-docs/shop'),
+                'api' => 'api/shop/documentation',
+                'docs' => storage_path('api-docs/shop'),
                 'oauth2_callback' => 'api/shop/oauth2-callback',
             ],
             'paths' => [
@@ -55,8 +58,8 @@ return [
                 /*
                  * Route for accessing api documentation interface
                 */
-                'api'             => 'api/admin/documentation',
-                'docs'            => storage_path('api-docs/admin'),
+                'api' => 'api/admin/documentation',
+                'docs' => storage_path('api-docs/admin'),
                 'oauth2_callback' => 'api/admin/oauth2-callback',
             ],
             'paths' => [
@@ -106,9 +109,9 @@ return [
              * Middleware allows to prevent unexpected access to API documentation
             */
             'middleware' => [
-                'api'             => [],
-                'asset'           => [],
-                'docs'            => [],
+                'api' => [],
+                'asset' => [],
+                'docs' => [],
                 'oauth2_callback' => [],
             ],
 
@@ -151,14 +154,14 @@ return [
             /**
              * analyser: defaults to \OpenApi\StaticAnalyser .
              *
-             * @see \OpenApi\scan
+             * @see scan
              */
             'analyser' => null,
 
             /**
              * analysis: defaults to a new \OpenApi\Analysis .
              *
-             * @see \OpenApi\scan
+             * @see scan
              */
             'analysis' => null,
 
@@ -166,7 +169,7 @@ return [
              * Custom query path processors classes.
              *
              * @link https://github.com/zircote/swagger-php/tree/master/Examples/schema-query-parameter-processor
-             * @see \OpenApi\scan
+             * @see scan
              */
             'processors' => [
                 // new \App\SwaggerProcessors\SchemaQueryParameter(),
@@ -175,7 +178,7 @@ return [
             /**
              * pattern: string       $pattern File pattern(s) to scan (default: *.php) .
              *
-             * @see \OpenApi\scan
+             * @see scan
              */
             'pattern' => null,
 
@@ -190,7 +193,7 @@ return [
              * Allows to generate specs either for OpenAPI 3.0.0 or OpenAPI 3.1.0.
              * By default the spec will be in version 3.0.0
              */
-            'open_api_spec_version' => env('L5_SWAGGER_OPEN_API_SPEC_VERSION', \L5Swagger\Generator::OPEN_API_DEFAULT_SPEC_VERSION),
+            'open_api_spec_version' => env('L5_SWAGGER_OPEN_API_SPEC_VERSION', Generator::OPEN_API_DEFAULT_SPEC_VERSION),
         ],
 
         /*
@@ -199,24 +202,24 @@ return [
         'securityDefinitions' => [
             'securitySchemes' => [
                 'sanctum_admin' => [ // Unique name of security
-                    'type'        => 'apiKey', // Valid values are "basic", "apiKey" or "oauth2".
+                    'type' => 'apiKey', // Valid values are "basic", "apiKey" or "oauth2".
                     'description' => 'Enter token in format (Bearer <token>)',
-                    'name'        => 'Authorization', // The name of the header or query parameter to be used.
-                    'in'          => 'header', // The location of the API key. Valid values are "query" or "header".
+                    'name' => 'Authorization', // The name of the header or query parameter to be used.
+                    'in' => 'header', // The location of the API key. Valid values are "query" or "header".
                 ],
                 'sanctum' => [ // Unique name of security
-                    'type'        => 'apiKey', // Valid values are "basic", "apiKey" or "oauth2".
+                    'type' => 'apiKey', // Valid values are "basic", "apiKey" or "oauth2".
                     'description' => 'Enter token in format (Bearer <token>)',
-                    'name'        => 'Authorization', // The name of the header or query parameter to be used.
-                    'in'          => 'header', // The location of the API key. Valid values are "query" or "header".
+                    'name' => 'Authorization', // The name of the header or query parameter to be used.
+                    'in' => 'header', // The location of the API key. Valid values are "query" or "header".
                 ],
             ],
             'security' => [
                 [
-                    'sanctum_admin' => []
+                    'sanctum_admin' => [],
                 ],
                 [
-                    'sanctum' => []
+                    'sanctum' => [],
                 ],
             ],
         ],

@@ -28,7 +28,7 @@ export class GDPRConfigurationPage extends BasePage {
         ];
 
         for (const selector of selectors) {
-            await this.page.fillInTinymce(selector, message);
+            await (this.page as any).fillInTinymce(selector, message);
         }
     }
 

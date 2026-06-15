@@ -205,6 +205,7 @@ class TranslationsChecker extends Command
         // Get existing locales in this lang folder
         $existingLocales = collect(File::directories($langRoot))
             ->map(fn ($d) => basename($d))
+            ->reject(fn ($d) => $d === 'vendor')
             ->sort()
             ->values();
 

@@ -1,82 +1,142 @@
-// import { test, expect } from '../../setup';
+import { test, expect } from "../../setup";
+import { loginAsCustomer, addReview } from "../../utils/customer";
+import { generateDescription, generateSKU } from "../../utils/faker";
+import { CustomerReviewsPage } from "../../pages/admin/customers/CustomerReviewsPage";
+import type { AdminPage } from "../../setup";
 
-// test.describe('review management', () => {
-//     test('update status of review', async ({ adminPage }) => {
-//         await adminPage.goto('admin/customers/reviews');
+async function createSimpleProduct(adminPage: AdminPage) {
+    const product = {
+        name: `simple-${Date.now()}`,
+        sku: generateSKU(),
+        productNumber: generateSKU(),
+        shortDescription: generateDescription(),
+        description: generateDescription(),
+        price: "199",
+        weight: "25",
+    };
 
-//         const iconRight = await adminPage.$$('span[class="icon-sort-right rtl:icon-sort-left cursor-pointer rounded-md p-1.5 text-2xl transition-all hover:bg-gray-200 dark:hover:bg-gray-800 ltr:ml-1 rtl:mr-1"]');
+    await adminPage.goto("admin/catalog/products");
+    await adminPage.waitForSelector(
+        'button.primary-button:has-text("Create Product")',
+    );
+    await adminPage.getByRole("button", { name: "Create Product" }).click();
+    await adminPage.locator('select[name="type"]').selectOption("simple");
+    await adminPage
+        .locator('select[name="attribute_family_id"]')
+        .selectOption("1");
+    await adminPage.locator('input[name="sku"]').fill(generateSKU());
+    await adminPage.getByRole("button", { name: "Save Product" }).click();
+    await adminPage.waitForSelector(
+        'button.primary-button:has-text("Save Product")',
+    );
+    await adminPage.waitForSelector('form[enctype="multipart/form-data"]');
+    await adminPage.locator("#product_number").fill(product.productNumber);
+    await adminPage.locator("#name").fill(product.name);
+    await adminPage.fillInTinymce(
+        "#short_description_ifr",
+        product.shortDescription,
+    );
+    await adminPage.fillInTinymce("#description_ifr", product.description);
+    await adminPage.locator("#meta_title").fill(product.name);
+    await adminPage.locator("#meta_keywords").fill(product.name);
+    await adminPage.locator("#meta_description").fill(product.shortDescription);
+    await adminPage.locator("#price").fill(product.price);
+    await adminPage.locator("#weight").fill(product.weight);
+    await adminPage.locator('input[name="inventories\[1\]"]').click();
+    await adminPage.locator('input[name="inventories\[1\]"]').fill("5000");
+    await adminPage.getByRole("button", { name: "Save Product" }).click();
+    await expect(adminPage.locator("#app")).toContainText(
+        /product updated successfully/i,
+    );
+    await adminPage.goto("admin/catalog/products");
+    await expect(
+        adminPage
+            .locator("p.break-all.text-base")
+            .filter({ hasText: product.name }),
+    ).toBeVisible();
+}
 
-//         await iconRight[Math.floor(Math.random() * ((iconRight.length - 1) - 0 + 1)) + 0].click();
+test.describe("review management", () => {
+    test.beforeEach(async ({ adminPage }) => {
+        await createSimpleProduct(adminPage);
+        await loginAsCustomer(adminPage);
+        await addReview(adminPage);
+    });
 
-//         await adminPage.waitForSelector('select.custom-select:visible');
-//         const select = await adminPage.$('select.custom-select:visible');
+    test("should approve the review", async ({ adminPage }) => {
+        const reviewsPage = new CustomerReviewsPage(adminPage);
+        await reviewsPage.updateFirstReviewStatus("approved");
+        await expect(adminPage.getByText("Approved").first()).toBeVisible();
+        await expect(adminPage.locator("p.label-active")).toHaveText(
+            "Approved",
+        );
+    });
 
-//         let i = Math.floor(Math.random() * 10) + 1;
+    test("should disapprove the review", async ({ adminPage }) => {
+        const reviewsPage = new CustomerReviewsPage(adminPage);
+        await reviewsPage.updateFirstReviewStatus("disapproved");
+        await expect(adminPage.getByText("Disapproved").first()).toBeVisible();
+        await expect(
+            adminPage.locator("#app p", {
+                hasText: "Review Update Successfully",
+            }),
+        ).toBeVisible();
+    });
 
-//         if (i % 3 == 1) {
-//             const options = await select.$$eval('option', (options) => {
-//                 return options.map(option => option.value);
-//             });
+    test("should approve the review via mass update", async ({ adminPage }) => {
+        const reviewsPage = new CustomerReviewsPage(adminPage);
+        await reviewsPage.selectFirstReviewForMassActions();
+        await reviewsPage.openSelectActionMenu();
+        await reviewsPage.applyMassUpdateStatus("Approved");
+        await reviewsPage.confirmAgreeDialog();
+        await expect(adminPage.getByText("Approved").first()).toBeVisible();
+        await expect(
+            adminPage.locator("#app p", {
+                hasText: "Selected Review Updated Successfully",
+            }),
+        ).toBeVisible();
+    });
 
-//             if (options.length > 0) {
-//                 const randomIndex = Math.floor(Math.random() * options.length);
+    test("should disapprove the review via mass update", async ({
+        adminPage,
+    }) => {
+        const reviewsPage = new CustomerReviewsPage(adminPage);
+        await reviewsPage.selectFirstReviewForMassActions();
+        await reviewsPage.openSelectActionMenu();
+        await reviewsPage.applyMassUpdateStatus("Disapproved");
+        await reviewsPage.confirmAgreeDialog();
+        await expect(adminPage.getByText("Disapproved").first()).toBeVisible();
+        await expect(
+            adminPage.locator("#app p", {
+                hasText: "Selected Review Updated Successfully",
+            }),
+        ).toBeVisible();
+    });
 
-//                 await select.selectOption(options[randomIndex]);
-//             }
-//         }
+    test("should delete a review", async ({ adminPage }) => {
+        const reviewsPage = new CustomerReviewsPage(adminPage);
+        await reviewsPage.open();
+        await adminPage.waitForSelector("span.cursor-pointer.icon-delete");
+        const iconDelete = await adminPage.$$(
+            "span.cursor-pointer.icon-delete",
+        );
+        await iconDelete[0].click();
+        await reviewsPage.confirmAgreeDialog();
+        await expect(
+            adminPage.locator("#app p", {
+                hasText: "Review Deleted Successfully",
+            }),
+        ).toBeVisible();
+    });
 
-//         await adminPage.click('button[class="primary-button ltr:mr-11 rtl:ml-11"]:visible');
-
-//         await expect(adminPage.getByText('Reviews').first()).toBeVisible();
-//     });
-
-//     test('mass update reviews', async ({ adminPage }) => {
-//         await adminPage.goto('admin/customers/reviews');
-
-//         const checkboxs = await adminPage.$$('.icon-uncheckbox');
-
-//         await checkboxs[1].click();
-
-//         await adminPage.waitForSelector('button[class="inline-flex w-full max-w-max cursor-pointer appearance-none items-center justify-between gap-x-2 rounded-md border bg-white px-2.5 py-1.5 text-center leading-6 text-gray-600 transition-all marker:shadow hover:border-gray-400 focus:border-gray-400 focus:ring-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"]:visible', { timeout: 1000 }).catch(() => null);
-
-//         await adminPage.click('button[class="inline-flex w-full max-w-max cursor-pointer appearance-none items-center justify-between gap-x-2 rounded-md border bg-white px-2.5 py-1.5 text-center leading-6 text-gray-600 transition-all marker:shadow hover:border-gray-400 focus:border-gray-400 focus:ring-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"]:visible');
-//         await adminPage.hover('a[class="whitespace-no-wrap flex cursor-not-allowed justify-between gap-1.5 rounded-t px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-950"]:visible');
-
-//         const buttons = await adminPage.$$('a[class="whitespace-no-wrap block rounded-t px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-950"]:visible');
-
-//         await buttons[Math.floor(Math.random() * ((buttons.length - 1) - 0 + 1)) + 0].click();
-
-//         await adminPage.click('button.transparent-button + button.primary-button:visible');
-
-//         await expect(adminPage.getByText('Selected Review Updated Successfully')).toBeVisible();
-//     });
-
-//     test('delete review', async ({ adminPage }) => {
-//         await adminPage.goto('admin/customers/reviews');
-
-//         const iconDelete = await adminPage.$$('span[class="icon-delete cursor-pointer rounded-md p-1.5 text-2xl transition-all hover:bg-gray-200 dark:hover:bg-gray-800 ltr:ml-1 rtl:mr-1"]');
-
-//         await iconDelete[0].click();
-
-//         await adminPage.click('button.transparent-button + button.primary-button:visible');
-
-//         await expect(adminPage.getByText('Review Deleted Successfully')).toBeVisible();
-//     });
-
-//     test('mass delete reviews', async ({ adminPage }) => {
-//         await adminPage.goto('admin/customers/reviews');
-
-//         const checkboxs = await adminPage.$$('.icon-uncheckbox');
-
-//         await checkboxs[1].click();
-
-//         await adminPage.waitForSelector('button[class="inline-flex w-full max-w-max cursor-pointer appearance-none items-center justify-between gap-x-2 rounded-md border bg-white px-2.5 py-1.5 text-center leading-6 text-gray-600 transition-all marker:shadow hover:border-gray-400 focus:border-gray-400 focus:ring-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"]:visible', { timeout: 1000 }).catch(() => null);
-
-//         await adminPage.click('button[class="inline-flex w-full max-w-max cursor-pointer appearance-none items-center justify-between gap-x-2 rounded-md border bg-white px-2.5 py-1.5 text-center leading-6 text-gray-600 transition-all marker:shadow hover:border-gray-400 focus:border-gray-400 focus:ring-black dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"]:visible');
-//         await adminPage.click('a[class="whitespace-no-wrap flex gap-1.5 rounded-b px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-950"]:visible');
-
-//         await adminPage.click('button.transparent-button + button.primary-button:visible');
-
-//         await expect(adminPage.getByText('Selected Review Deleted Successfully')).toBeVisible();
-//     });
-// });
+    test("should mass delete reviews", async ({ adminPage }) => {
+        const reviewsPage = new CustomerReviewsPage(adminPage);
+        await reviewsPage.selectFirstReviewForMassActions();
+        await reviewsPage.openSelectActionMenu();
+        await reviewsPage.applyMassDelete();
+        await reviewsPage.confirmAgreeDialog();
+        await expect(
+            adminPage.getByText("Selected Review Deleted Successfully"),
+        ).toBeVisible();
+    });
+});

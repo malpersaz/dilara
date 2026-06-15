@@ -5,7 +5,9 @@ namespace Webkul\Product\Type;
 use Webkul\Attribute\Repositories\AttributeRepository;
 use Webkul\Checkout\Models\CartItem;
 use Webkul\Customer\Repositories\CustomerRepository;
+use Webkul\Product\Contracts\Product;
 use Webkul\Product\DataTypes\CartItemValidationResult;
+use Webkul\Product\Exceptions\InsufficientProductInventoryException;
 use Webkul\Product\Helpers\BundleOption;
 use Webkul\Product\Helpers\Indexers\Price\Bundle as BundleIndexer;
 use Webkul\Product\Repositories\ProductAttributeValueRepository;
@@ -102,7 +104,7 @@ class Bundle extends AbstractType
      *
      * @param  int  $id
      * @param  array  $attributes
-     * @return \Webkul\Product\Contracts\Product
+     * @return Product
      */
     public function update(array $data, $id, $attributes = [])
     {
@@ -179,24 +181,24 @@ class Bundle extends AbstractType
         return [
             'from' => [
                 'regular' => [
-                    'price'           => core()->convertPrice($regularMinimalPrice = $this->getRegularMinimalPrice()),
+                    'price' => core()->convertPrice($regularMinimalPrice = $this->getRegularMinimalPrice()),
                     'formatted_price' => core()->currency($regularMinimalPrice),
                 ],
 
-                'final'   => [
-                    'price'           => core()->convertPrice($minimalPrice = $this->getMinimalPrice()),
+                'final' => [
+                    'price' => core()->convertPrice($minimalPrice = $this->getMinimalPrice()),
                     'formatted_price' => core()->currency($minimalPrice),
                 ],
             ],
 
             'to' => [
                 'regular' => [
-                    'price'           => core()->convertPrice($regularMaximumPrice = $this->getRegularMaximumPrice()),
+                    'price' => core()->convertPrice($regularMaximumPrice = $this->getRegularMaximumPrice()),
                     'formatted_price' => core()->currency($regularMaximumPrice),
                 ],
 
-                'final'   => [
-                    'price'           => core()->convertPrice($maximumPrice = $this->getMaximumPrice()),
+                'final' => [
+                    'price' => core()->convertPrice($maximumPrice = $this->getMaximumPrice()),
                     'formatted_price' => core()->currency($maximumPrice),
                 ],
             ],
@@ -212,7 +214,7 @@ class Bundle extends AbstractType
     {
         return view('shop::products.prices.bundle', [
             'product' => $this->product,
-            'prices'  => $this->getProductPrices(),
+            'prices' => $this->getProductPrices(),
         ])->render();
     }
 
@@ -221,6 +223,8 @@ class Bundle extends AbstractType
      *
      * @param  array  $data
      * @return array|string
+     *
+     * @throws InsufficientProductInventoryException
      */
     public function prepareForCart($data)
     {
@@ -237,10 +241,14 @@ class Bundle extends AbstractType
         }
 
         if (! $this->haveSufficientQuantity($data['quantity'])) {
-            return trans('product::app.checkout.cart.inventory-warning');
+            throw new InsufficientProductInventoryException(trans('product::app.checkout.cart.inventory-warning'));
         }
 
         $products = parent::prepareForCart($data);
+
+        if (gettype($products) == 'string') {
+            return $products;
+        }
 
         foreach ($this->getCartChildProducts($data) as $productId => $data) {
             $product = $this->productRepository->find($productId);
@@ -251,7 +259,7 @@ class Bundle extends AbstractType
 
             /* need to check each individual quantity as well if don't have then show error */
             if (! $product->getTypeInstance()->haveSufficientQuantity($data['quantity'] * $bundleQuantity)) {
-                return trans('product::app.checkout.cart.inventory-warning');
+                throw new InsufficientProductInventoryException(trans('product::app.checkout.cart.inventory-warning'));
             }
 
             if (! $product->getTypeInstance()->isSaleable()) {
@@ -283,6 +291,8 @@ class Bundle extends AbstractType
 
         $products[0]['total_weight'] = $products[0]['base_total_weight'] = $products[0]['weight'] * $products[0]['quantity'];
 
+        $products[0]['total'] = $products[0]['base_total'] = $products[0]['base_total'] * $products[0]['quantity'];
+
         return $products;
     }
 
@@ -303,7 +313,7 @@ class Bundle extends AbstractType
                 }
 
                 $optionProduct = $this->productBundleOptionProductRepository->findOneWhere([
-                    'id'                       => $optionProductId,
+                    'id' => $optionProductId,
                     'product_bundle_option_id' => $optionId,
                 ]);
 
@@ -316,7 +326,7 @@ class Bundle extends AbstractType
                 if (! isset($products[$optionProduct->product_id])) {
                     $products[$optionProduct->product_id] = [
                         'product_id' => $optionProduct->product_id,
-                        'quantity'   => $qty,
+                        'quantity' => $qty,
                     ];
                 } else {
                     $products[$optionProduct->product_id] = array_merge($products[$optionProduct->product_id], [
@@ -417,8 +427,8 @@ class Bundle extends AbstractType
             if (count($labels)) {
                 $data['attributes'][] = [
                     'attribute_name' => $option->label,
-                    'option_id'      => $option->id,
-                    'option_label'   => implode(', ', $labels),
+                    'option_id' => $option->id,
+                    'option_label' => implode(', ', $labels),
                 ];
             }
         }

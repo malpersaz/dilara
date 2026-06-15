@@ -4,13 +4,12 @@ namespace Webkul\Installer\Console\Commands;
 
 use DateTimeZone;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use Webkul\Installer\Database\Seeders\DatabaseSeeder as BagistoDatabaseSeeder;
 use Webkul\Installer\Events\ComposerEvents;
 use Webkul\Installer\Helpers\DatabaseManager;
+use Webkul\Installer\Helpers\EnvironmentManager;
 
 use function Laravel\Prompts\multiselect;
 use function Laravel\Prompts\password;
@@ -27,7 +26,10 @@ class Installer extends Command
      */
     protected $signature = 'bagisto:install
         { --skip-env-check : Skip env check. }
-        { --skip-admin-creation : Skip admin creation. }';
+        { --skip-admin-creation : Skip admin creation. }
+        { --skip-cloud-promotion : Skip Bagisto Cloud hosting prompt. }
+        { --skip-github-star : Skip Bagisto Cloud hosting prompt. (Deprecated: use --skip-cloud-promotion) }
+    ';
 
     /**
      * The console command description.
@@ -69,24 +71,27 @@ class Installer extends Command
      * @var array
      */
     protected $locales = [
-        'ar'    => 'Arabic',
-        'bn'    => 'Bengali',
-        'de'    => 'German',
-        'en'    => 'English',
-        'es'    => 'Spanish',
-        'fa'    => 'Persian',
-        'fr'    => 'French',
-        'he'    => 'Hebrew',
+        'ar' => 'Arabic',
+        'bn' => 'Bengali',
+        'ca' => 'Catalan',
+        'de' => 'German',
+        'en' => 'English',
+        'es' => 'Spanish',
+        'fa' => 'Persian',
+        'fr' => 'French',
+        'he' => 'Hebrew',
         'hi_IN' => 'Hindi',
-        'it'    => 'Italian',
-        'ja'    => 'Japanese',
-        'nl'    => 'Dutch',
-        'pl'    => 'Polish',
+        'id' => 'Indonesian',
+        'it' => 'Italian',
+        'ja' => 'Japanese',
+        'nl' => 'Dutch',
+        'pl' => 'Polish',
         'pt_BR' => 'Brazilian Portuguese',
-        'ru'    => 'Russian',
-        'sin'   => 'Sinhala',
-        'tr'    => 'Turkish',
-        'uk'    => 'Ukrainian',
+        'ro' => 'Romanian',
+        'ru' => 'Russian',
+        'sin' => 'Sinhala',
+        'tr' => 'Turkish',
+        'uk' => 'Ukrainian',
         'zh_CN' => 'Chinese',
     ];
 
@@ -164,6 +169,16 @@ class Installer extends Command
     ];
 
     /**
+     * Create a new command instance.
+     */
+    public function __construct(
+        public EnvironmentManager $environmentManager,
+        public DatabaseManager $databaseManager
+    ) {
+        parent::__construct();
+    }
+
+    /**
      * Install and configure bagisto.
      */
     public function handle(): void
@@ -182,26 +197,24 @@ class Installer extends Command
             ? $this->askDetailsAndUpdateEnv()
             : $this->components->warn('Skipping environment check. This will assume that the `.env` file is already configured. If not, please create it manually.');
 
-        if (! $hasExistingEnv) {
-            $this->updateEnvVariables();
+        $this->updateEnvVariables();
 
-            $this->reconnectDatabase();
-
-            $this->loadEnvConfigs();
-        } else {
-            $this->updateEnvVariables();
-
-            $this->loadEnvConfigs();
-        }
+        $this->loadEnvConfigs();
 
         $this->warn('Step: Generating key...');
         $this->call('key:generate');
 
         $this->warn('Step: Migrating all tables...');
+
+        /**
+         * When using a table prefix, `migrate:fresh` may not function as expected.
+         * To ensure a clean state, we first wipe the database and then run `migrate:fresh` again.
+         */
+        $this->call('db:wipe');
         $this->call('migrate:fresh');
 
         $this->warn('Step: Seeding basic data for Bagisto kickstart...');
-        app(BagistoDatabaseSeeder::class)->run($this->getSeederConfiguration());
+        $this->databaseManager->seed($this->getSeederConfiguration());
         $this->components->info('Basic data seeded successfully.');
 
         $this->warn('Step: Linking storage directory...');
@@ -210,10 +223,19 @@ class Installer extends Command
         if (! $this->option('skip-admin-creation')) {
             $this->warn('Step: Create admin credentials...');
             $this->askForAdminDetails();
+        } else {
+            $this->databaseManager->createAdminUser();
         }
 
         $this->warn('Step: Clearing cached bootstrap files...');
         $this->call('optimize:clear');
+
+        if (
+            ! $this->option('skip-cloud-promotion')
+            && ! $this->option('skip-github-star')
+        ) {
+            $this->askToExploreCloudHosting();
+        }
 
         ComposerEvents::postCreateProject();
     }
@@ -319,7 +341,20 @@ class Installer extends Command
             'DB_PREFIX' => text(
                 label   : 'Please enter the database prefix',
                 default : $this->getEnvVariable('DB_PREFIX', ''),
-                hint    : 'or press enter to continue'
+                hint    : 'or press enter to continue',
+                validate: function (string $value) {
+                    if (strlen($value) > 0) {
+                        if (strlen($value) > 4) {
+                            return 'The database prefix must be at most 4 characters long.';
+                        }
+
+                        if (! preg_match('/^[a-zA-Z0-9_]+$/', $value)) {
+                            return 'The database prefix can only contain letters, numbers, and underscores.';
+                        }
+                    }
+
+                    return null;
+                }
             ),
 
             'DB_USERNAME' => text(
@@ -366,7 +401,7 @@ class Installer extends Command
             default  : 'admin@example.com',
             validate : fn (string $value) => match (true) {
                 ! filter_var($value, FILTER_VALIDATE_EMAIL) => 'The email address you entered is not valid please try again.',
-                default                                     => null
+                default => null
             }
         );
 
@@ -388,26 +423,25 @@ class Installer extends Command
             hint    : 'The action will create products after installation.',
         );
 
-        $password = password_hash($adminPassword, PASSWORD_BCRYPT, ['cost' => 10]);
-
         try {
-            DB::table('admins')->updateOrInsert(
-                ['id' => 1],
-                [
-                    'name'     => $adminName,
-                    'email'    => $adminEmail,
-                    'password' => $password,
-                    'role_id'  => 1,
-                    'status'   => 1,
-                ]
-            );
+            $this->databaseManager->createAdminUser([
+                'name' => $adminName,
+                'email' => $adminEmail,
+                'password' => $adminPassword,
+            ]);
 
             if ($sampleProduct === 'true') {
                 $this->warn('Step: Seeding sample product data. Please Wait...');
 
-                app(DatabaseManager::class)->seedSampleProducts($this->getSeederConfiguration());
+                $this->components->info('Seeding time depends on the number of locales selected. This process may take up to 2 minutes to complete.');
 
-                $this->components->info('Sample product data seeded successfully.');
+                $this->databaseManager->seedSampleProducts($this->getSeederConfiguration());
+
+                $this->components->info('Now Indexing data...');
+
+                $this->call('indexer:index', ['--mode' => ['full']]);
+
+                $this->components->success('Sample product data seeded successfully.');
             }
 
             $filePath = storage_path('installed');
@@ -503,6 +537,14 @@ class Installer extends Command
     }
 
     /**
+     * Check key in `.env` file because it will help to find values at runtime.
+     */
+    protected function getEnvVariable(string $key, $default = null): string|bool
+    {
+        return $this->environmentManager->getEnvVariable($key, $default);
+    }
+
+    /**
      * Update the `.env` file with the provided details.
      */
     protected function updateEnvVariables(): void
@@ -512,25 +554,10 @@ class Installer extends Command
                 continue;
             }
 
-            $this->updateEnvVariable($key, $value, Str::startsWith($key, 'DB_'));
+            $value = trim($value, '"');
+
+            $this->environmentManager->updateEnvVariable($key, $value, Str::startsWith($key, 'DB_'));
         }
-    }
-
-    /**
-     * Update the single `.env` value.
-     */
-    protected function updateEnvVariable(string $key, string $value, bool $addQuotes = false): void
-    {
-        $data = file_get_contents(base_path('.env'));
-
-        // Check if $value contains spaces, and if so, add double quotes, or if $addQuotes is true.
-        if ($addQuotes || preg_match('/\s/', $value)) {
-            $value = '"'.$value.'"';
-        }
-
-        $data = preg_replace("/$key=(.*)/", "$key=$value", $data);
-
-        file_put_contents(base_path('.env'), $data);
     }
 
     /**
@@ -540,91 +567,12 @@ class Installer extends Command
     {
         $this->warn('Step: Loading configurations...');
 
-        /**
-         * Setting application environment.
-         */
-        app()['env'] = $this->getEnvVariable('APP_ENV');
+        $this->environmentManager->loadEnvConfigs();
 
-        /**
-         * Setting application configuration.
-         */
-        config([
-            'app.env'      => $this->getEnvVariable('APP_ENV'),
-            'app.name'     => $this->getEnvVariable('APP_NAME'),
-            'app.url'      => $this->getEnvVariable('APP_URL'),
-            'app.timezone' => $this->getEnvVariable('APP_TIMEZONE'),
-            'app.locale'   => $this->getEnvVariable('APP_LOCALE'),
-            'app.currency' => $this->getEnvVariable('APP_CURRENCY'),
-        ]);
-
-        /**
-         * Setting database configurations.
-         */
-        $databaseConnection = $this->getEnvVariable('DB_CONNECTION');
-
-        config([
-            "database.connections.{$databaseConnection}.host"     => $this->getEnvVariable('DB_HOST'),
-            "database.connections.{$databaseConnection}.port"     => $this->getEnvVariable('DB_PORT'),
-            "database.connections.{$databaseConnection}.database" => $this->getEnvVariable('DB_DATABASE'),
-            "database.connections.{$databaseConnection}.username" => $this->getEnvVariable('DB_USERNAME'),
-            "database.connections.{$databaseConnection}.password" => $this->getEnvVariable('DB_PASSWORD'),
-            "database.connections.{$databaseConnection}.prefix"   => $this->getEnvVariable('DB_PREFIX'),
-        ]);
-
-        DB::purge($databaseConnection);
-
-        $this->components->info('Configuration loaded successfully.');
-    }
-
-    /**
-     * Check key in `.env` file because it will help to find values at runtime.
-     */
-    protected function getEnvVariable(string $key, $default = null): string|bool
-    {
-        if ($data = file(base_path('.env'))) {
-            foreach ($data as $line) {
-                $line = preg_replace('/\s+/', '', $line);
-
-                $rowValues = explode('=', $line);
-
-                if (strlen($line) !== 0) {
-                    if (strpos($key, $rowValues[0]) !== false) {
-                        return $rowValues[1];
-                    }
-                }
-            }
-        }
-
-        return $default;
-    }
-
-    /**
-     * Reconnect to the database with new credentials.
-     */
-    protected function reconnectDatabase(): void
-    {
-        $connection = $this->envDetails['DB_CONNECTION'] ?? 'mysql';
-
-        config([
-            "database.connections.{$connection}.host"     => $this->envDetails['DB_HOST'] ?? '',
-            "database.connections.{$connection}.port"     => $this->envDetails['DB_PORT'] ?? '',
-            "database.connections.{$connection}.database" => $this->envDetails['DB_DATABASE'] ?? '',
-            "database.connections.{$connection}.username" => $this->envDetails['DB_USERNAME'] ?? '',
-            "database.connections.{$connection}.password" => $this->envDetails['DB_PASSWORD'] ?? '',
-            "database.connections.{$connection}.prefix"   => $this->envDetails['DB_PREFIX'] ?? '',
-        ]);
-
-        DB::purge($connection);
-        DB::reconnect($connection);
-
-        try {
-            DB::connection()->getPdo();
-
+        if ($this->databaseManager->checkDatabaseConnection()) {
             $this->components->info('Database connection established successfully.');
-        } catch (\Exception $e) {
-            $this->error('Database connection failed. Please check your credentials.');
 
-            abort(400);
+            $this->components->info('Configuration loaded successfully.');
         }
     }
 
@@ -656,10 +604,35 @@ class Installer extends Command
     protected function getSeederConfiguration(): array
     {
         return [
-            'default_locale'     => $this->envDetails['APP_LOCALE'] ?? $this->getEnvVariable('APP_LOCALE', 'en'),
-            'allowed_locales'    => $this->envDetails['APP_ALLOWED_LOCALES'] ?? [$this->getEnvVariable('APP_LOCALE', 'en')],
-            'default_currency'   => $this->envDetails['APP_CURRENCY'] ?? $this->getEnvVariable('APP_CURRENCY', 'USD'),
+            'default_locale' => $this->envDetails['APP_LOCALE'] ?? $this->getEnvVariable('APP_LOCALE', 'en'),
+            'allowed_locales' => $this->envDetails['APP_ALLOWED_LOCALES'] ?? [$this->getEnvVariable('APP_LOCALE', 'en')],
+            'default_currency' => $this->envDetails['APP_CURRENCY'] ?? $this->getEnvVariable('APP_CURRENCY', 'USD'),
             'allowed_currencies' => $this->envDetails['APP_ALLOWED_CURRENCIES'] ?? [$this->getEnvVariable('APP_CURRENCY', 'USD')],
+            'skip_admin_creation' => true,
         ];
+    }
+
+    /**
+     * Ask user to explore Bagisto Cloud hosting.
+     */
+    protected function askToExploreCloudHosting(): void
+    {
+        if (! $this->confirm('Would you like to explore managed Bagisto Cloud hosting?', true)) {
+            return;
+        }
+
+        $cloudUrl = 'https://bagisto.com/en/cloud/';
+
+        if (PHP_OS_FAMILY == 'Darwin') {
+            exec("open {$cloudUrl}");
+        }
+
+        if (PHP_OS_FAMILY == 'Windows') {
+            exec("start {$cloudUrl}");
+        }
+
+        if (PHP_OS_FAMILY == 'Linux') {
+            exec("xdg-open {$cloudUrl}");
+        }
     }
 }

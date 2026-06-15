@@ -98,7 +98,7 @@
 
                                                         <!-- If Allow Single Value -->
                                                         <span
-                                                            v-text="column.filterable_options.find((option => option.value === getAppliedColumnValues(column.index)))?.label ?? '@lang('admin::app.components.datagrid.filters.select')'"
+                                                            v-text="column.filterable_options.find((option => option.value === getAppliedColumnValues(column.index)))?.label ?? '@lang('shop::app.components.datagrid.filters.select')'"
                                                             v-else
                                                         >
                                                         </span>
@@ -323,7 +323,7 @@
                                                     type="datetime-local"
                                                     :name="`${column.index}[from]`"
                                                     value=""
-                                                    class="flex min-h-10 w-full rounded-md border px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400"
+                                                    class="flex min-h-10 w-full rounded-md border px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400"
                                                     :placeholder="column.label"
                                                     :ref="`${column.index}[from]`"
                                                     @change="addFilter(
@@ -339,7 +339,7 @@
                                                     type="datetime-local"
                                                     :name="`${column.index}[to]`"
                                                     value=""
-                                                    class="flex min-h-10 w-full rounded-md border px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400"
+                                                    class="flex min-h-10 w-full rounded-md border px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400"
                                                     :placeholder="column.label"
                                                     :ref="`${column.index}[from]`"
                                                     @change="addFilter(
@@ -395,7 +395,7 @@
                                                     :type="datetime-local"
                                                     :name="column.index"
                                                     value=""
-                                                    class="flex min-h-10 w-full rounded-md border px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400"
+                                                    class="flex min-h-10 w-full rounded-md border px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400"
                                                     :placeholder="column.label"
                                                     :ref="column.index"
                                                     @change="addFilter($event, column)"
@@ -460,7 +460,7 @@
 
                                                         <!-- If Allow Single Value -->
                                                         <span
-                                                            v-text="column.filterable_options.find((option => option.value === getAppliedColumnValues(column.index)))?.label ?? '@lang('admin::app.components.datagrid.filters.select')'"
+                                                            v-text="column.filterable_options.find((option => option.value === getAppliedColumnValues(column.index)))?.label ?? '@lang('shop::app.components.datagrid.toolbar.filter.dropdown.select')'"
                                                             v-else
                                                         >
                                                         </span>
@@ -578,7 +578,7 @@
                                 @click="applyFilters"
                                 :disabled="! isFilterDirty"
                             >
-                                @lang('admin::app.components.datagrid.toolbar.filter.apply-filters-btn')
+                                @lang('shop::app.components.datagrid.toolbar.filter.apply-filter')
                             </button>
                         </div>
                     </x-slot>

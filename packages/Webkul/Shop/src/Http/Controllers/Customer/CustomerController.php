@@ -2,9 +2,11 @@
 
 namespace Webkul\Shop\Http\Controllers\Customer;
 
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Webkul\Core\Repositories\SubscribersListRepository;
 use Webkul\Customer\Repositories\CustomerRepository;
 use Webkul\Product\Repositories\ProductReviewRepository;
@@ -28,7 +30,7 @@ class CustomerController extends Controller
     /**
      * Taking the customer to profile details page.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function index()
     {
@@ -40,7 +42,7 @@ class CustomerController extends Controller
     /**
      * For loading the edit form page.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function edit()
     {
@@ -52,7 +54,7 @@ class CustomerController extends Controller
     /**
      * Edit function for editing customer profile.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(ProfileRequest $profileRequest)
     {
@@ -61,14 +63,7 @@ class CustomerController extends Controller
         $data = $profileRequest->validated();
 
         if (empty($data['date_of_birth'])) {
-            unset($data['date_of_birth']);
-        }
-
-        if (
-            core()->getCurrentChannel()->theme === 'default'
-            && ! isset($data['image'])
-        ) {
-            $data['image']['image_0'] = '';
+            $data['date_of_birth'] = null;
         }
 
         $data['subscribed_to_news_letter'] = isset($data['subscribed_to_news_letter']);
@@ -101,16 +96,16 @@ class CustomerController extends Controller
 
                 if ($subscription) {
                     $this->subscriptionRepository->update([
-                        'customer_id'   => $customer->id,
+                        'customer_id' => $customer->id,
                         'is_subscribed' => 1,
                     ], $subscription->id);
                 } else {
                     $this->subscriptionRepository->create([
-                        'email'         => $data['email'],
-                        'customer_id'   => $customer->id,
-                        'channel_id'    => core()->getCurrentChannel()->id,
+                        'email' => $data['email'],
+                        'customer_id' => $customer->id,
+                        'channel_id' => core()->getCurrentChannel()->id,
                         'is_subscribed' => 1,
-                        'token'         => $token = uniqid(),
+                        'token' => $token = uniqid(),
                     ]);
                 }
             } else {
@@ -118,7 +113,7 @@ class CustomerController extends Controller
 
                 if ($subscription) {
                     $this->subscriptionRepository->update([
-                        'customer_id'   => $customer->id,
+                        'customer_id' => $customer->id,
                         'is_subscribed' => 0,
                     ], $subscription->id);
                 }
@@ -152,7 +147,7 @@ class CustomerController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy()
     {
@@ -190,7 +185,7 @@ class CustomerController extends Controller
     /**
      * Load the view for the customer account panel, showing approved reviews.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function reviews()
     {
@@ -202,7 +197,7 @@ class CustomerController extends Controller
     /**
      * Taking the customer to account details page.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function account()
     {

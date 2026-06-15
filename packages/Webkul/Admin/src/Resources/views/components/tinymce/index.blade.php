@@ -1,3 +1,13 @@
+@php
+    use Webkul\MagicAI\AiProvider;
+
+    $enabledProviders = array_filter(explode(',', core()->getConfigData('magic_ai.admin_features.text_generation.providers') ?? ''));
+    
+    $models = AiProvider::modelsForProviders($enabledProviders, 'text');
+    
+    $defaultModel = $models[0]['value'] ?? '';
+@endphp
+
 <v-tinymce {{ $attributes }}></v-tinymce>
 
 @pushOnce('scripts')
@@ -33,71 +43,6 @@
 
                     <!-- Modal Content -->
                     <x-slot:content>
-                        <!-- LLM Model -->
-                        <x-admin::form.control-group>
-                            <x-admin::form.control-group.label class="required">
-                                @lang('admin::app.components.tinymce.ai-generation.model')
-                            </x-admin::form.control-group.label>
-
-                            <x-admin::form.control-group.control
-                                type="select"
-                                name="model"
-                                rules="required"
-                                v-model="ai.model"
-                                :label="trans('admin::app.components.tinymce.ai-generation.model')"
-                            >
-                                <option value="gpt-3.5-turbo">
-                                    @lang('admin::app.components.tinymce.ai-generation.gpt-3-5-turbo')
-                                </option>
-
-                                <option value="llama2">
-                                    @lang('admin::app.components.tinymce.ai-generation.llama2')
-                                </option>
-
-                                <option value="mistral">
-                                    @lang('admin::app.components.tinymce.ai-generation.mistral')
-                                </option>
-
-                                <option value="dolphin-phi">
-                                    @lang('admin::app.components.tinymce.ai-generation.dolphin-phi')
-                                </option>
-
-                                <option value="phi">
-                                    @lang('admin::app.components.tinymce.ai-generation.phi')
-                                </option>
-
-                                <option value="starling-lm">
-                                    @lang('admin::app.components.tinymce.ai-generation.starling-lm')
-                                </option>
-
-                                <option value="llama2-uncensored">
-                                    @lang('admin::app.components.tinymce.ai-generation.llama2-uncensored')
-                                </option>
-
-                                <option value="llama2:13b">
-                                    @lang('admin::app.components.tinymce.ai-generation.llama2:13b')
-                                </option>
-
-                                <option value="llama2:70b">
-                                    @lang('admin::app.components.tinymce.ai-generation.llama2:70b')
-                                </option>
-
-                                <option value="orca-mini">
-                                    @lang('admin::app.components.tinymce.ai-generation.orca-mini')
-                                </option>
-
-                                <option value="vicuna">
-                                    @lang('admin::app.components.tinymce.ai-generation.vicuna')
-                                </option>
-
-                                <option value="llava">
-                                    @lang('admin::app.components.tinymce.ai-generation.llava')
-                                </option>
-                            </x-admin::form.control-group.control>
-
-                            <x-admin::form.control-group.error control-name="model"></x-admin::form.control-group.error>
-                        </x-admin::form.control-group>
-
                         <!-- Prompt -->
                         <x-admin::form.control-group>
                             <x-admin::form.control-group.label class="required">
@@ -114,6 +59,27 @@
                             />
 
                             <x-admin::form.control-group.error control-name="prompt" />
+                        </x-admin::form.control-group>
+
+                        <!-- Model Select -->
+                        <x-admin::form.control-group v-if="ai.models && ai.models.length">
+                            <x-admin::form.control-group.label>
+                                @lang('admin::app.components.tinymce.ai-generation.model')
+                            </x-admin::form.control-group.label>
+
+                            <x-admin::form.control-group.control
+                                type="select"
+                                name="model"
+                                v-model="ai.model"
+                                :label="trans('admin::app.components.tinymce.ai-generation.model')"
+                            >
+                                <option
+                                    v-for="option in ai.models"
+                                    :key="option.value"
+                                    :value="option.value"
+                                    v-text="option.title"
+                                ></option>
+                            </x-admin::form.control-group.control>
                         </x-admin::form.control-group>
 
                         <!-- Modal Submission -->
@@ -161,16 +127,14 @@
 
                     <!-- Modal Footer -->
                     <x-slot:footer>
-                        <div class="flex items-center gap-x-2.5">
-                            <button
-                                type="button"
-                                class="primary-button"
-                                :disabled="!ai.content"
-                                @click="apply"
-                            >
-                                @lang('admin::app.components.tinymce.ai-generation.apply')
-                            </button>
-                        </div>
+                        <!-- Save Button -->
+                        <x-admin::button
+                            button-type="button"
+                            class="primary-button"
+                            :title="trans('admin::app.components.media.images.ai-generation.apply')"
+                            ::disabled="! ai.content"
+                            @click="apply"
+                        />
                     </x-slot>
                 </x-admin::modal>
             </form>
@@ -192,9 +156,11 @@
                     isLoading: false,
 
                     ai: {
-                        enabled: Boolean("{{ core()->getConfigData('general.magic_ai.settings.enabled') && core()->getConfigData('general.magic_ai.content_generation.enabled') }}"),
+                        enabled: Boolean("{{ core()->getConfigData('magic_ai.general.settings.enabled') && core()->getConfigData('magic_ai.admin_features.text_generation.enabled') }}"),
 
-                        model: null,
+                        models: {!! json_encode($models) !!},
+
+                        model: "{{ $defaultModel }}",
 
                         prompt: null,
 
@@ -207,10 +173,10 @@
                 this.init();
 
                 this.$emitter.on('change-theme', (theme) => {
-                    tinymce.activeEditor.destroy();
+                    tinymce.get(0).destroy();
 
-                    this.currentSkin = (theme === 'dark') ? 'oxide-dark' : 'oxide';
-                    this.currentContentCSS = (theme === 'dark') ? 'dark' : 'default';
+                    this.currentSkin = theme === 'dark' ? 'oxide-dark' : 'oxide';
+                    this.currentContentCSS = theme === 'dark' ? 'dark' : 'default';
 
                     this.init();
                 });
@@ -293,7 +259,7 @@
                                 let json;
 
                                 if (xhr.status === 403) {
-                                    reject("@lang('admin::app.error.tinymce.http-error')", {
+                                    reject("@lang('admin::app.components.tinymce.errors.http-error')", {
                                         remove: true
                                     });
 
@@ -301,7 +267,17 @@
                                 }
 
                                 if (xhr.status < 200 || xhr.status >= 300) {
-                                    reject("@lang('admin::app.error.tinymce.http-error')");
+                                    try {
+                                        json = JSON.parse(xhr.responseText);
+                                        
+                                        if (json.error) {
+                                            reject(json.error);
+                                        } else {
+                                            reject("@lang('admin::app.components.tinymce.errors.http-error')");
+                                        }
+                                    } catch (e) {
+                                        reject("@lang('admin::app.components.tinymce.errors.http-error')");
+                                    }
 
                                     return;
                                 }
@@ -309,7 +285,7 @@
                                 json = JSON.parse(xhr.responseText);
 
                                 if (! json || typeof json.location != 'string') {
-                                    reject("@lang('admin::app.error.tinymce.invalid-json')" + xhr.responseText);
+                                    reject("@lang('admin::app.components.tinymce.errors.invalid-json')" + xhr.responseText);
 
                                     return;
                                 }
@@ -317,7 +293,7 @@
                                 resolve(json.location);
                             };
 
-                            xhr.onerror = (()=>reject("@lang('admin::app.error.tinymce.upload-failed')"));
+                            xhr.onerror = (()=>reject("@lang('admin::app.components.tinymce.errors.upload-failed')"));
 
                             formData = new FormData();
                             formData.append('_token', config.csrfToken);
@@ -344,6 +320,10 @@
 
                                 onAction: function () {
                                     self.ai = {
+                                        models: self.ai.models,
+
+                                        model: self.ai.model,
+
                                         prompt: self.prompt,
 
                                         content: null,
@@ -365,7 +345,7 @@
 
                     this.$axios.post("{{ route('admin.magic_ai.content') }}", {
                         prompt: params['prompt'],
-                        model: params['model']
+                        model: this.ai.model,
                     })
                         .then(response => {
                             this.isLoading = false;

@@ -2,6 +2,10 @@
 
 namespace Webkul\Admin\Http\Controllers\User;
 
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Response;
+use Illuminate\Support\Collection;
+use Illuminate\View\View;
 use Webkul\Admin\Http\Controllers\Controller;
 
 class SessionController extends Controller
@@ -9,7 +13,7 @@ class SessionController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function create()
     {
@@ -31,12 +35,12 @@ class SessionController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function store()
     {
         $this->validate(request(), [
-            'email'    => 'required|email',
+            'email' => 'required|email',
             'password' => 'required',
         ]);
 
@@ -57,15 +61,7 @@ class SessionController extends Controller
         }
 
         if (! bouncer()->hasPermission('dashboard')) {
-            $permissions = auth()->guard('admin')->user()->role->permissions;
-
-            foreach ($permissions as $permission) {
-                if (bouncer()->hasPermission($permission)) {
-                    $permissionDetails = collect(config('acl'))->firstWhere('key', $permission);
-
-                    return redirect()->route($permissionDetails['route']);
-                }
-            }
+            return $this->redirectToFirstAccessibleRoute();
         }
 
         return redirect()->intended(route('admin.dashboard.index'));
@@ -75,12 +71,99 @@ class SessionController extends Controller
      * Remove the specified resource from storage.
      *
      * @param  int  $id
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function destroy()
     {
         auth()->guard('admin')->logout();
 
+        session()->forget('two_factor_passed');
+
         return redirect()->route('admin.session.create');
+    }
+
+    /**
+     * Redirect to the first accessible route based on user permissions.
+     *
+     * @return RedirectResponse
+     */
+    private function redirectToFirstAccessibleRoute()
+    {
+        $allPermissions = collect(config('acl'));
+        $userPermissions = auth()->guard('admin')->user()->role->permissions;
+
+        foreach ($userPermissions as $permission) {
+            if (! bouncer()->hasPermission($permission)) {
+                continue;
+            }
+
+            $permissionDetails = $allPermissions->firstWhere('key', $permission);
+
+            if (str_contains($permission, '.')) {
+                return redirect()->route($permissionDetails['route']);
+            }
+
+            $childPermission = $this->findFirstAccessibleChildPermission($allPermissions, $permission);
+
+            if ($childPermission) {
+                return redirect()->route($childPermission['route']);
+            }
+        }
+
+        return redirect()->intended(route('admin.dashboard.index'));
+    }
+
+    /**
+     * Recursively find the first accessible child permission.
+     *
+     * @param  Collection  $allPermissions
+     * @param  string  $parentKey
+     * @return array|null
+     */
+    private function findFirstAccessibleChildPermission($allPermissions, $parentKey)
+    {
+        $children = $allPermissions->filter(function ($item) use ($parentKey) {
+            return str_starts_with($item['key'], $parentKey.'.')
+                && substr_count($item['key'], '.') === substr_count($parentKey, '.') + 1
+                && bouncer()->hasPermission($item['key']);
+        })->values();
+
+        if ($children->isEmpty()) {
+            return null;
+        }
+
+        foreach ($children as $child) {
+            if ($this->hasAllRequiredPermissionsForRoute($allPermissions, $child['route'])) {
+                return $child;
+            }
+
+            $descendant = $this->findFirstAccessibleChildPermission($allPermissions, $child['key']);
+
+            if ($descendant) {
+                return $descendant;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if user has all required permissions for a given route.
+     *
+     * @param  Collection  $allPermissions
+     * @param  string  $route
+     * @return bool
+     */
+    private function hasAllRequiredPermissionsForRoute($allPermissions, $route)
+    {
+        $requiredPermissions = $allPermissions->where('route', $route);
+
+        foreach ($requiredPermissions as $permission) {
+            if (! bouncer()->hasPermission($permission['key'])) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

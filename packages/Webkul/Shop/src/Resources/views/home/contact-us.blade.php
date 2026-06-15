@@ -16,7 +16,10 @@
                 @lang('shop::app.home.contact.about')
             </p>
 
-            <div class="mt-14 rounded max-sm:mt-8">
+            <div
+                id="contact-us-form"
+                class="mt-14 rounded max-sm:mt-8"
+            >
                 <!-- Contact Form -->
                 <x-shop::form :action="route('shop.home.contact_us.send_mail')">
                     <!-- Name -->
@@ -102,11 +105,13 @@
                         <x-shop::form.control-group.error control-name="message" />
                     </x-shop::form.control-group>
 
-                    <!-- Re captcha -->
+                    <!-- Captcha -->
                     @if (core()->getConfigData('customer.captcha.credentials.status'))
-                        <div class="mb-5 flex">
-                            {!! Captcha::render() !!}
-                        </div>
+                        <x-shop::form.control-group class="mt-5">
+                            {!! \Webkul\Customer\Facades\Captcha::render() !!}
+
+                            <x-shop::form.control-group.error control-name="recaptcha_token" />
+                        </x-shop::form.control-group>
                     @endif
 
                     <!-- Submit Button -->
@@ -124,6 +129,6 @@
     </div>
 
     @push('scripts')
-        {!! Captcha::renderJS() !!}
+        {!! \Webkul\Customer\Facades\Captcha::renderJS() !!}
     @endpush
 </x-shop::layouts>

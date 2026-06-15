@@ -51,15 +51,21 @@ class AddressController extends APIController
             'email',
         ]), [
             'customer_id' => $customer->id,
-            'address'     => implode(PHP_EOL, array_filter($request->input('address'))),
+            'address' => implode(PHP_EOL, array_filter($request->input('address'))),
         ]);
+
+        if (! empty($data['default_address'])) {
+            $this->customerAddressRepository->where('customer_id', $data['customer_id'])
+                ->where('default_address', 1)
+                ->update(['default_address' => 0]);
+        }
 
         $customerAddress = $this->customerAddressRepository->create($data);
 
         Event::dispatch('customer.addresses.create.after', $customerAddress);
 
         return new JsonResource([
-            'data'    => new AddressResource($customerAddress),
+            'data' => new AddressResource($customerAddress),
             'message' => trans('shop::app.customers.account.addresses.index.create-success'),
         ]);
     }
@@ -70,6 +76,12 @@ class AddressController extends APIController
     public function update(AddressRequest $request): JsonResource
     {
         $customer = auth()->guard('customer')->user();
+
+        $addressToUpdate = $this->customerAddressRepository->findOrFail($request->input('id'));
+
+        if ($addressToUpdate->customer_id !== $customer->id) {
+            abort(403);
+        }
 
         Event::dispatch('customer.addresses.update.before');
 
@@ -88,13 +100,13 @@ class AddressController extends APIController
             'email',
         ]), [
             'customer_id' => $customer->id,
-            'address'     => implode(PHP_EOL, array_filter(request()->input('address'))),
+            'address' => implode(PHP_EOL, array_filter($request->input('address'))),
         ]), request('id'));
 
         Event::dispatch('customer.addresses.update.after', $customerAddress);
 
         return new JsonResource([
-            'data'    => new AddressResource($customerAddress),
+            'data' => new AddressResource($customerAddress),
             'message' => trans('shop::app.customers.account.addresses.index.update-success'),
         ]);
     }

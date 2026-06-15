@@ -246,6 +246,14 @@
                                         :label="trans('admin::app.settings.themes.edit.value-input')"
                                         :placeholder="trans('admin::app.settings.themes.edit.value-input')" 
                                     />
+                                   
+                                    <!-- Hint for parent_id -->
+                                    <p 
+                                        class="mt-1 text-xs text-gray-500" 
+                                        v-if="filters.applied.code === 'parent_id' || filters.applied.code === undefined"
+                                    >
+                                        @lang('admin::app.settings.themes.edit.parent-id-hint')
+                                    </p>
                                 </template>
 
                                 <x-admin::form.control-group.error control-name="value" />
@@ -254,12 +262,12 @@
 
                         <!-- Modal Footer -->
                         <x-slot:footer>
-                            <button 
-                                type="submit"
-                                class="cursor-pointer rounded-md border border-blue-700 bg-blue-600 px-3 py-1.5 font-semibold text-gray-50"
-                            >
-                                @lang('admin::app.settings.themes.edit.save-btn')
-                            </button>
+                            <!-- Save Button -->
+                            <x-admin::button
+                                button-type="submit"
+                                class="primary-button justify-center"
+                                :title="trans('admin::app.settings.themes.edit.save-btn')"
+                            />
                         </x-slot>
                     </x-admin::modal>
                 </form>

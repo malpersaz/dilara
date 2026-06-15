@@ -2,6 +2,19 @@
     <x-admin::shimmer.settings.themes.product-carousel />
 </v-product-carousel>
 
+@php
+    $filterableAttributes = app(Webkul\Attribute\Repositories\AttributeRepository::class)
+        ->with([
+            'options' => function ($query) {
+                $query->orderBy('sort_order');
+            },
+            'options.translation' => function ($q) {
+                $q->where('locale', core()->getCurrentLocale()->code);
+            },
+        ])
+        ->getFilterableAttributes();
+@endphp
+
 <!-- Product Carousel Vue Component -->
 @pushOnce('scripts')
     <script
@@ -271,12 +284,12 @@
 
                         <!-- Modal Footer -->
                         <x-slot:footer>
-                            <button
-                                type="submit"
-                                class="cursor-pointer rounded-md border border-blue-700 bg-blue-600 px-3 py-1.5 font-semibold text-gray-50"
-                            >
-                                @lang('admin::app.settings.themes.edit.save-btn')
-                            </button>
+                            <!-- Save Button -->
+                            <x-admin::button
+                                button-type="submit"
+                                class="primary-button justify-center"
+                                :title="trans('admin::app.settings.themes.edit.save-btn')"
+                            />
                         </x-slot>
                     </x-admin::modal>
                 </form>
@@ -334,7 +347,7 @@
                                 type: 'text',
                                 name: '@lang('admin::app.settings.themes.edit.category-id')',
                             },
-                            ...@json(app(Webkul\Attribute\Repositories\AttributeRepository::class)->getFilterableAttributes()),
+                            ...@json($filterableAttributes),
                         ],
 
                         applied: [],
@@ -384,4 +397,4 @@
             },
         });
     </script>
-@endPushOnce    
+@endPushOnce

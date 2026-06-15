@@ -6,6 +6,7 @@ import { configure, defineRule, Field, Form, ErrorMessage } from "vee-validate";
 import { localize, setLocale } from "@vee-validate/i18n";
 import ar from "@vee-validate/i18n/dist/locale/ar.json";
 import bn from "@vee-validate/i18n/dist/locale/bn.json";
+import ca from "@vee-validate/i18n/dist/locale/ca.json";
 import de from "@vee-validate/i18n/dist/locale/de.json";
 import en from "@vee-validate/i18n/dist/locale/en.json";
 import es from "@vee-validate/i18n/dist/locale/es.json";
@@ -13,11 +14,13 @@ import fa from "@vee-validate/i18n/dist/locale/fa.json";
 import fr from "@vee-validate/i18n/dist/locale/fr.json";
 import he from "@vee-validate/i18n/dist/locale/he.json";
 import hi_IN from "../../locales/hi_IN.json";
+import id from "@vee-validate/i18n/dist/locale/id.json";
 import it from "@vee-validate/i18n/dist/locale/it.json";
 import ja from "@vee-validate/i18n/dist/locale/ja.json";
 import nl from "@vee-validate/i18n/dist/locale/nl.json";
 import pl from "@vee-validate/i18n/dist/locale/pl.json";
 import pt_BR from "@vee-validate/i18n/dist/locale/pt_BR.json";
+import ro from "../../locales/ro.json";
 import ru from "@vee-validate/i18n/dist/locale/ru.json";
 import sin from "../../locales/sin.json";
 import tr from "@vee-validate/i18n/dist/locale/tr.json";
@@ -41,7 +44,13 @@ export default {
         /**
          * Registration of all global validators.
          */
-        Object.entries(all).forEach(([name, rule]) => defineRule(name, rule));
+        Object.entries(all).forEach(([name, rule]) => {
+            defineRule(name, (value, params, ctx) => {
+                const processedValue = typeof value === 'string' ? value.trim() : value;
+                
+                return rule(processedValue, params, ctx);
+            });
+        });
 
         /**
          * This regular expression allows phone numbers with the following conditions:
@@ -56,7 +65,9 @@ export default {
                 return true;
             }
 
-            if (!/^\+?\d+$/.test(value)) {
+            const trimmedValue = value.trim();
+
+            if (!/^\+?\d+$/.test(trimmedValue)) {
                 return false;
             }
 
@@ -68,9 +79,11 @@ export default {
                 return true;
             }
 
+            const trimmedValue = value.trim();
+
             if (
                 !/^[a-zA-Z0-9\s.\/*'\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\u0590-\u05FF\u3040-\u309F\u30A0-\u30FF\u0400-\u04FF\u0D80-\u0DFF\u3400-\u4DBF\u2000-\u2A6D\u00C0-\u017F\u0980-\u09FF\u0900-\u097F\u4E00-\u9FFF,\(\)-]{1,60}$/iu.test(
-                    value
+                    trimmedValue
                 )
             ) {
                 return false;
@@ -84,7 +97,9 @@ export default {
                 return true;
             }
 
-            if (! /^[a-zA-Z0-9][a-zA-Z0-9\s-]*[a-zA-Z0-9]$/.test(value)) {
+            const trimmedValue = value.trim();
+
+            if (! /^[a-zA-Z0-9][a-zA-Z0-9\s-]*[a-zA-Z0-9]$/.test(trimmedValue)) {
                 return false;
             }
 
@@ -144,6 +159,15 @@ export default {
                     },
                 },
 
+                ca: {
+                    ...ca,
+                    messages: {
+                        ...ca.messages,
+                        phone: "Aquest {field} ha de ser un número de telèfon vàlid",
+                        address: "Aquest {field} ha de ser una adreça vàlida",
+                    },
+                },
+
                 de: {
                     ...de,
                     messages: {
@@ -198,6 +222,15 @@ export default {
                     },
                 },
 
+                id: {
+                    ...id,
+                    messages: {
+                        ...id.messages,
+                        phone: "Nomor telepon {field} harus valid",
+                        address: "Alamat {field} harus valid",
+                    },
+                },
+
                 it: {
                     ...it,
                     messages: {
@@ -229,8 +262,9 @@ export default {
                     ...pl,
                     messages: {
                         ...pl.messages,
-                        phone: "To {field} musi być prawidłowy numer telefonu",
-                        address: "To {field} musi być prawidłowym adresem",
+                        confirmed: "Pole {field} nie zgadza się z polem potwierdzającym",
+                        phone: "Pole {field} musi zawierać prawidłowy numer telefonu",
+                        address: "Pole {field} musi zawierać prawidłowy adres",
                     },
                 },
 
@@ -240,6 +274,15 @@ export default {
                         ...pt_BR.messages,
                         phone: "Este {field} deve ser um número de telefone válido",
                         address: "Este {field} deve ser um endereço válido",
+                    },
+                },
+
+                ro: {
+                    ...ro,
+                    messages: {
+                        ...ro.messages,
+                        phone: "Acest {field} trebuie să fie un număr de telefon valid",
+                        address: "Acest {field} trebuie să fie o adresă validă",
                     },
                 },
 

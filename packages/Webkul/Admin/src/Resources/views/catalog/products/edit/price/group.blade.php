@@ -225,23 +225,22 @@
         
                         <!-- Modal Footer -->
                         <x-slot:footer>
-                            <!-- Modal Submission -->
                             <div class="flex items-center gap-x-2.5">
-                                <button
-                                    type="button"
+                                <!-- Delete Button -->
+                                <x-admin::button
+                                    button-type="button"
                                     class="cursor-pointer whitespace-nowrap rounded-md border-2 border-transparent px-3 py-1.5 font-semibold text-red-600 transition-all hover:bg-gray-100 dark:hover:bg-gray-950"
-                                    @click="remove"
+                                    :title="trans('admin::app.catalog.products.edit.price.group.create.delete-btn')"
                                     v-if="selectedPrice.id"
-                                >
-                                    @lang('admin::app.catalog.products.edit.price.group.create.delete-btn')
-                                </button>
+                                    @click="remove"
+                                />
 
-                                <button 
-                                    type="submit"
+                                <!-- Save Button -->
+                                <x-admin::button
+                                    button-type="button"
                                     class="primary-button"
-                                >
-                                    @lang('admin::app.catalog.products.edit.price.group.create.save-btn')
-                                </button>
+                                    :title="trans('admin::app.catalog.products.edit.price.group.create.save-btn')"
+                                />
                             </div>
                         </x-slot>
                     </x-admin::modal>
@@ -254,13 +253,14 @@
         app.component('v-product-customer-group-price', {
             template: '#v-product-customer-group-price-template',
 
-            data: function() {
+            data() {
                 return {
                     groups: @json($customerGroupRepository->all()),
 
                     prices: @json($product->customer_group_prices),
 
                     selectedPrice: {
+                        id: null,
                         customer_group_id: null,
                         qty: 0,
                         value_type: 'fixed',
@@ -294,6 +294,7 @@
 
                 resetForm() {
                     this.selectedPrice = {
+                        id: null,
                         customer_group_id: null,
                         qty: 0,
                         value_type: 'fixed',
@@ -302,13 +303,18 @@
                 },
 
                 remove() {
+                    const selectedId = this.selectedPrice?.id ?? null;
+
                     this.$refs.groupPriceCreateModal.close();
 
                     this.$emitter.emit('open-confirm-modal', {
                         agree: () => {
-                            let index = this.prices.indexOf(this.selectedPrice);
+                            if (selectedId == null) {
+                                this.resetForm();
+                                return;
+                            }
 
-                            this.prices.splice(index, 1);
+                            this.prices = this.prices.filter(price => price.id !== selectedId);
 
                             this.resetForm();
                         }

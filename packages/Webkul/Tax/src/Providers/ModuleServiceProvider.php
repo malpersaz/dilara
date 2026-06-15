@@ -3,12 +3,20 @@
 namespace Webkul\Tax\Providers;
 
 use Webkul\Core\Providers\CoreModuleServiceProvider;
+use Webkul\Tax\Models\TaxCategory;
+use Webkul\Tax\Models\TaxMap;
+use Webkul\Tax\Models\TaxRate;
 
 class ModuleServiceProvider extends CoreModuleServiceProvider
 {
+    /**
+     * Models.
+     *
+     * @var array
+     */
     protected $models = [
-        \Webkul\Tax\Models\TaxCategory::class,
-        \Webkul\Tax\Models\TaxMap::class,
-        \Webkul\Tax\Models\TaxRate::class,
+        TaxCategory::class,
+        TaxMap::class,
+        TaxRate::class,
     ];
 }

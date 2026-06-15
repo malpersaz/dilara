@@ -25,7 +25,7 @@ class Cart
     /**
      * The cart instance.
      *
-     * @var \Webkul\Checkout\Contracts\Cart
+     * @var Contracts\Cart
      */
     private $cart;
 
@@ -73,7 +73,7 @@ class Cart
         if ($customer) {
             $this->cart = $this->cartRepository->findOneWhere([
                 'customer_id' => $customer->id,
-                'is_active'   => 1,
+                'is_active' => 1,
             ]);
         } elseif (session()->has('cart')) {
             $this->cart = $this->cartRepository->find(session()->get('cart')->id);
@@ -123,23 +123,23 @@ class Cart
     public function createCart(array $data): ?Contracts\Cart
     {
         $data = array_merge([
-            'is_guest'              => 1,
-            'channel_id'            => core()->getCurrentChannel()->id,
-            'global_currency_code'  => $baseCurrencyCode = core()->getBaseCurrencyCode(),
-            'base_currency_code'    => $baseCurrencyCode,
+            'is_guest' => 1,
+            'channel_id' => core()->getCurrentChannel()->id,
+            'global_currency_code' => $baseCurrencyCode = core()->getBaseCurrencyCode(),
+            'base_currency_code' => $baseCurrencyCode,
             'channel_currency_code' => core()->getChannelBaseCurrencyCode(),
-            'cart_currency_code'    => core()->getCurrentCurrencyCode(),
+            'cart_currency_code' => core()->getCurrentCurrencyCode(),
         ], $data);
 
         $customer = $data['customer'] ?? auth()->guard()->user();
 
         if ($customer) {
             $data = array_merge($data, [
-                'is_guest'            => 0,
-                'customer_id'         => $customer->id,
+                'is_guest' => 0,
+                'customer_id' => $customer->id,
                 'customer_first_name' => $customer->first_name,
-                'customer_last_name'  => $customer->last_name,
-                'customer_email'      => $customer->email,
+                'customer_last_name' => $customer->last_name,
+                'customer_email' => $customer->email,
             ]);
         }
 
@@ -213,7 +213,7 @@ class Cart
 
         $cart = $this->cartRepository->findOneWhere([
             'customer_id' => $customer->id,
-            'is_active'   => 1,
+            'is_active' => 1,
         ]);
 
         $guestCart = $this->cartRepository->find(session()->get('cart')->id);
@@ -223,11 +223,11 @@ class Cart
          */
         if (! $cart) {
             $this->cartRepository->update([
-                'customer_id'         => $customer->id,
-                'is_guest'            => 0,
+                'customer_id' => $customer->id,
+                'is_guest' => 0,
                 'customer_first_name' => $customer->first_name,
-                'customer_last_name'  => $customer->last_name,
-                'customer_email'      => $customer->email,
+                'customer_last_name' => $customer->last_name,
+                'customer_email' => $customer->email,
             ], $guestCart->id);
 
             session()->forget('cart');
@@ -261,7 +261,9 @@ class Cart
             $this->createCart([]);
         }
 
-        $cartProducts = $product->getTypeInstance()->prepareForCart($data);
+        $cartProducts = $product->getTypeInstance()->prepareForCart(array_merge([
+            'cart_id' => $this->cart->id,
+        ], $data));
 
         if (is_string($cartProducts)) {
             if (! $this->cart->all_items->count()) {
@@ -318,6 +320,10 @@ class Cart
             return false;
         }
 
+        if (! $this->cart->items->pluck('id')->contains($itemId)) {
+            return false;
+        }
+
         Event::dispatch('checkout.cart.delete.before', $itemId);
 
         Shipping::removeAllShippingRates();
@@ -341,33 +347,37 @@ class Cart
                 continue;
             }
 
+            if ($item->cart_id !== $this->cart->id) {
+                continue;
+            }
+
             if (! $item->product->status) {
-                throw new \Exception(__('shop::app.checkout.cart.inactive'));
+                throw new \Exception(trans('shop::app.checkout.cart.inactive'));
             }
 
             if ($quantity <= 0) {
                 $this->removeItem($itemId);
 
-                throw new \Exception(__('shop::app.checkout.cart.illegal'));
+                throw new \Exception(trans('shop::app.checkout.cart.illegal'));
             }
 
             $item->quantity = $quantity;
 
             if (! $this->isItemHaveQuantity($item)) {
-                throw new \Exception(__('shop::app.checkout.cart.inventory-warning'));
+                throw new \Exception(trans('shop::app.checkout.cart.inventory-warning'));
             }
 
             Event::dispatch('checkout.cart.update.before', $item);
 
             $this->cartItemRepository->update([
-                'quantity'            => $quantity,
-                'total'               => core()->convertPrice($item->base_price * $quantity),
-                'total_incl_tax'      => core()->convertPrice($item->base_price_incl_tax * $quantity),
-                'base_total'          => $item->base_price * $quantity,
+                'quantity' => $quantity,
+                'total' => core()->convertPrice($item->base_price * $quantity),
+                'total_incl_tax' => core()->convertPrice($item->base_price_incl_tax * $quantity),
+                'base_total' => $item->base_price * $quantity,
                 'base_total_incl_tax' => $item->base_price_incl_tax * $quantity,
-                'total_weight'        => $item->weight * $quantity,
-                'base_total_weight'   => $item->weight * $quantity,
-                'additional'          => [
+                'total_weight' => $item->weight * $quantity,
+                'base_total_weight' => $item->weight * $quantity,
+                'additional' => [
                     ...$item->additional,
                     'quantity' => $quantity,
                 ],
@@ -390,11 +400,14 @@ class Cart
 
         foreach ($items as $item) {
             if ($item->getTypeInstance()->compareOptions($item->additional, $data['additional'])) {
-                if (! isset($data['additional']['parent_id'])) {
+                if (
+                    ! isset($data['additional']['parent_id'])
+                    && ! $item->parent_id
+                ) {
                     return $item;
                 }
 
-                if ($item->parent->getTypeInstance()->compareOptions($item->parent->additional, $parentData ?: request()->all())) {
+                if ($item->parent?->getTypeInstance()->compareOptions($item->parent->additional, $parentData ?: request()->all())) {
                     return $item;
                 }
             }
@@ -429,6 +442,7 @@ class Cart
                 'company_name',
                 'first_name',
                 'last_name',
+                'vat_id',
                 'email',
                 'address',
                 'country',
@@ -438,12 +452,12 @@ class Cart
                 'phone',
             ])
             ->merge([
-                'address_type'      => CartAddress::ADDRESS_TYPE_BILLING,
+                'address_type' => CartAddress::ADDRESS_TYPE_BILLING,
                 'parent_address_id' => ($params['address_type'] ?? '') == 'customer' ? $params['id'] : null,
-                'cart_id'           => $this->cart->id,
-                'customer_id'       => $this->cart->customer_id,
-                'address'           => implode(PHP_EOL, $params['address']),
-                'use_for_shipping'  => (bool) ($params['use_for_shipping'] ?? false),
+                'cart_id' => $this->cart->id,
+                'customer_id' => $this->cart->customer_id,
+                'address' => implode(PHP_EOL, $params['address']),
+                'use_for_shipping' => (bool) ($params['use_for_shipping'] ?? false),
             ])
             ->toArray();
 
@@ -492,10 +506,10 @@ class Cart
             $params = $this->cart->billing_address->only($fillableFields);
 
             $params = array_merge($params, [
-                'address_type'      => CartAddress::ADDRESS_TYPE_SHIPPING,
+                'address_type' => CartAddress::ADDRESS_TYPE_SHIPPING,
                 'parent_address_id' => $this->cart->billing_address->parent_address_id,
-                'cart_id'           => $this->cart->id,
-                'customer_id'       => $this->cart->customer_id,
+                'cart_id' => $this->cart->id,
+                'customer_id' => $this->cart->customer_id,
             ]);
         } else {
             if (empty($params)) {
@@ -505,11 +519,11 @@ class Cart
             $params = collect($params)
                 ->only($fillableFields)
                 ->merge([
-                    'address_type'      => CartAddress::ADDRESS_TYPE_SHIPPING,
+                    'address_type' => CartAddress::ADDRESS_TYPE_SHIPPING,
                     'parent_address_id' => ($params['address_type'] ?? '') == 'customer' ? $params['id'] : null,
-                    'cart_id'           => $this->cart->id,
-                    'customer_id'       => $this->cart->customer_id,
-                    'address'           => implode(PHP_EOL, $params['address']),
+                    'cart_id' => $this->cart->id,
+                    'customer_id' => $this->cart->customer_id,
+                    'address' => implode(PHP_EOL, $params['address']),
                 ])
                 ->toArray();
         }
@@ -639,7 +653,11 @@ class Cart
         $result = $this->addProduct($wishlistItem->product, $additional);
 
         if ($result) {
+            Event::dispatch('customer.wishlist.delete.before', $wishlistItem->id);
+
             $this->wishlistRepository->delete($wishlistItem->id);
+
+            Event::dispatch('customer.wishlist.delete.after', $wishlistItem->id);
 
             return true;
         }
@@ -660,33 +678,54 @@ class Cart
 
         $wishlistItems = $this->wishlistRepository->findWhere([
             'customer_id' => $this->cart->customer_id,
-            'product_id'  => $cartItem->product_id,
+            'product_id' => $cartItem->product_id,
         ]);
 
-        $found = false;
+        $existingWishlistItem = null;
 
         foreach ($wishlistItems as $wishlistItem) {
-            $options = $wishlistItem->item_options;
+            $options = is_array($wishlistItem->additional) ? $wishlistItem->additional : [];
 
             if (! $options) {
                 $options = ['product_id' => $wishlistItem->product_id];
             }
 
             if ($cartItem->getTypeInstance()->compareOptions($cartItem->additional, $options)) {
-                $found = true;
+                $existingWishlistItem = $wishlistItem;
+
+                break;
             }
         }
 
-        if (! $found) {
-            $this->wishlistRepository->create([
-                'channel_id'  => $this->cart->channel_id,
+        if ($existingWishlistItem) {
+            $existingAdditional = is_array($existingWishlistItem->additional) ? $existingWishlistItem->additional : [];
+
+            $existingQuantity = $existingAdditional['quantity'] ?? 1;
+
+            Event::dispatch('customer.wishlist.update.before', $cartItem->product_id);
+
+            $this->wishlistRepository->update([
+                'additional' => [
+                    ...$existingAdditional,
+                    'quantity' => $existingQuantity + $quantity,
+                ],
+            ], $existingWishlistItem->id);
+
+            Event::dispatch('customer.wishlist.update.after', $existingWishlistItem);
+        } else {
+            Event::dispatch('customer.wishlist.create.before', $cartItem->product_id);
+
+            $wishlist = $this->wishlistRepository->create([
+                'channel_id' => $this->cart->channel_id,
                 'customer_id' => $this->cart->customer_id,
-                'product_id'  => $cartItem->product_id,
-                'additional'  => [
+                'product_id' => $cartItem->product_id,
+                'additional' => [
                     ...$cartItem->additional,
                     'quantity' => $quantity,
                 ],
             ]);
+
+            Event::dispatch('customer.wishlist.create.after', $wishlist);
         }
 
         if (! $this->cart->items->count()) {
@@ -720,14 +759,14 @@ class Cart
         if (! $this->cart) {
             return [
                 'error_code' => 'CART_NOT_FOUND',
-                'message'    => trans('shop::app.checkout.cart.index.empty-product'),
+                'message' => trans('shop::app.checkout.cart.index.empty-product'),
             ];
         }
 
         if (! $this->isItemsHaveSufficientQuantity()) {
             return [
                 'error_code' => 'INSUFFICIENT_QUANTITY',
-                'message'    => trans('shop::app.checkout.cart.inventory-warning'),
+                'message' => trans('shop::app.checkout.cart.inventory-warning'),
             ];
         }
 
@@ -736,8 +775,8 @@ class Cart
 
             return [
                 'error_code' => 'MINIMUM_ORDER_AMOUNT',
-                'message'    => $minimumOrderDescription ?: trans('shop::app.checkout.cart.minimum-order-message'),
-                'amount'     => core()->formatPrice((int) core()->getConfigData('sales.order_settings.minimum_order.minimum_order_amount') ?: $this->getOrderAmount()),
+                'message' => $minimumOrderDescription ?: trans('shop::app.checkout.cart.minimum-order-message'),
+                'amount' => core()->formatPrice((int) core()->getConfigData('sales.order_settings.minimum_order.minimum_order_amount') ?: $this->getOrderAmount()),
             ];
         }
 
@@ -928,7 +967,7 @@ class Cart
 
                 $isInvalid = true;
 
-                session()->flash('info', __('shop::app.checkout.cart.inactive'));
+                session()->flash('info', trans('shop::app.checkout.cart.inactive'));
             } else {
                 if (Tax::isInclusiveTaxProductPrices()) {
                     $itemBasePrice = $item->base_price_incl_tax;
@@ -946,13 +985,13 @@ class Cart
                  */
                 if ($price != $item->price) {
                     $item = $this->cartItemRepository->update([
-                        'price'               => $price,
-                        'price_incl_tax'      => $price,
-                        'base_price'          => $basePrice,
+                        'price' => $price,
+                        'price_incl_tax' => $price,
+                        'base_price' => $basePrice,
                         'base_price_incl_tax' => $basePrice,
-                        'total'               => $total = core()->convertPrice($basePrice * $item->quantity),
-                        'total_incl_tax'      => $total,
-                        'base_total'          => ($baseTotal = $basePrice * $item->quantity),
+                        'total' => $total = core()->convertPrice($basePrice * $item->quantity),
+                        'total_incl_tax' => $total,
+                        'base_total' => ($baseTotal = $basePrice * $item->quantity),
                         'base_total_incl_tax' => $baseTotal,
                     ], $item->id);
 

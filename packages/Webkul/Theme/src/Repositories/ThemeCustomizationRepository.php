@@ -5,7 +5,7 @@ namespace Webkul\Theme\Repositories;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\ImageManager;
+use Stevebauman\Purify\Facades\Purify;
 use Webkul\Core\Eloquent\Repository;
 use Webkul\Theme\Contracts\ThemeCustomization;
 
@@ -30,8 +30,15 @@ class ThemeCustomizationRepository extends Repository
         $locale = core()->getRequestedLocaleCode();
 
         if ($data['type'] == 'static_content') {
-            $data[$locale]['options']['html'] = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $data[$locale]['options']['html']);
-            $data[$locale]['options']['css'] = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '', $data[$locale]['options']['css']);
+            $config = [
+                'HTML.Allowed' => null,
+                'HTML.ForbiddenElements' => 'script,iframe,form',
+                'CSS.AllowedProperties' => null,
+            ];
+
+            $data[$locale]['options']['html'] = Purify::config($config)->clean($data[$locale]['options']['html']);
+
+            $data[$locale]['options']['css'] = Purify::config($config)->clean($data[$locale]['options']['css']);
         }
 
         if (in_array($data['type'], ['image_carousel', 'services_content'])) {
@@ -86,16 +93,16 @@ class ThemeCustomizationRepository extends Repository
             if (isset($image['service_icon'])) {
                 $options['services'][] = [
                     'service_icon' => $image['service_icon'],
-                    'description'  => $image['description'],
-                    'title'        => $image['title'],
+                    'description' => $image['description'],
+                    'title' => $image['title'],
                 ];
             } elseif ($image['image'] instanceof UploadedFile) {
                 try {
-                    $manager = new ImageManager;
-
                     $path = 'theme/'.$theme->id.'/'.Str::random(40).'.webp';
 
-                    Storage::put($path, $manager->make($image['image'])->encode('webp'));
+                    $encoded = image_manager()->read($image['image'])->encodeByExtension('webp');
+
+                    Storage::put($path, (string) $encoded);
                 } catch (\Exception $e) {
                     session()->flash('error', $e->getMessage());
 
@@ -108,7 +115,7 @@ class ThemeCustomizationRepository extends Repository
 
                 $options['images'][] = [
                     'image' => 'storage/'.$path,
-                    'link'  => $image['link'],
+                    'link' => $image['link'],
                     'title' => $image['title'],
                 ];
             } else {

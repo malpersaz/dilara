@@ -4,6 +4,7 @@ namespace Webkul\Product\Repositories;
 
 use Illuminate\Support\Facades\Storage;
 use Webkul\Core\Eloquent\Repository;
+use Webkul\Product\Contracts\Product;
 
 class ProductAttributeValueRepository extends Repository
 {
@@ -19,7 +20,7 @@ class ProductAttributeValueRepository extends Repository
      * Save attribute values
      *
      * @param  array  $data
-     * @param  \Webkul\Product\Contracts\Product  $product
+     * @param  Product  $product
      * @param  mixed  $attributes
      * @return void
      */
@@ -96,11 +97,11 @@ class ProductAttributeValueRepository extends Repository
 
             if (! $attributeValue) {
                 $attributeValuesToInsert[] = array_merge($this->getAttributeTypeColumnValues($attribute, $data[$attribute->code]), [
-                    'product_id'   => $product->id,
+                    'product_id' => $product->id,
                     'attribute_id' => $attribute->id,
-                    'channel'      => $channel,
-                    'locale'       => $locale,
-                    'unique_id'    => $uniqueId,
+                    'channel' => $channel,
+                    'locale' => $locale,
+                    'unique_id' => $uniqueId,
                 ]);
             } else {
                 $previousTextValue = $attributeValue->text_value;
@@ -128,7 +129,7 @@ class ProductAttributeValueRepository extends Repository
 
                 $attributeValue = $this->update([
                     $attribute->column_name => $data[$attribute->code],
-                    'unique_id'             => $uniqueId,
+                    'unique_id' => $uniqueId,
                 ], $attributeValue->id);
             }
         }

@@ -24,16 +24,23 @@ it('should copy the existing product', function () {
     // Act and Assert.
     $this->loginAsAdmin();
 
-    get(route('admin.catalog.products.copy', $product->id))
-        ->assertRedirect(route('admin.catalog.products.edit', $productId = $product->id + 1))
-        ->isRedirection();
+    postJson(route('admin.catalog.products.copy', $product->id))
+        ->assertOk()
+        ->assertJsonPath('message', trans('admin::app.catalog.products.product-copied'));
 
-    $this->assertModelWise([
-        Product::class => [
-            [
-                'id' => $productId,
-            ],
-        ],
+    // Get the newly created product (last one).
+    $copiedProduct = Product::latest('id')->first();
+
+    // Assert the copied product has a different ID.
+    expect($copiedProduct->id)->not->toBe($product->id);
+
+    // Assert the copied product has a temporary SKU (as per copy functionality).
+    expect($copiedProduct->sku)->toStartWith('temporary-sku-');
+
+    // Assert the copied product exists in `product_flat`.
+    $this->assertDatabaseHas('product_flat', [
+        'product_id' => $copiedProduct->id,
+        'sku' => $copiedProduct->sku,
     ]);
 });
 
@@ -46,7 +53,7 @@ it('should perform the mass action from update status for products', function ()
 
     postJson(route('admin.catalog.products.mass_update'), [
         'indices' => $products->pluck('id')->toArray(),
-        'value'   => 1,
+        'value' => 1,
     ])
         ->assertOk()
         ->assertJsonPath('message', trans('admin::app.catalog.products.index.datagrid.mass-update-success'));
@@ -56,8 +63,8 @@ it('should perform the mass action from update status for products', function ()
             ProductFlat::class => [
                 [
                     'product_id' => $product->id,
-                    'sku'        => $product->sku,
-                    'status'     => 1,
+                    'sku' => $product->sku,
+                    'status' => 1,
                 ],
             ],
         ]);
@@ -73,14 +80,14 @@ it('should perform the mass action for delete for products', function () {
 
     postJson(route('admin.catalog.products.mass_delete'), [
         'indices' => $products->pluck('id')->toArray(),
-        'value'   => 1,
+        'value' => 1,
     ])
         ->assertOk()
         ->assertJsonPath('message', trans('admin::app.catalog.products.index.datagrid.mass-delete-success'));
 
     foreach ($products as $product) {
         $this->assertDatabaseMissing('product_flat', [
-            'status'     => 1,
+            'status' => 1,
             'product_id' => $product->id,
         ]);
     }

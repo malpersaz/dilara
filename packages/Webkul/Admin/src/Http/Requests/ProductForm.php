@@ -2,11 +2,15 @@
 
 namespace Webkul\Admin\Http\Requests;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Webkul\Admin\Validations\ProductCategoryUniqueSlug;
+use Webkul\Attribute\Enums\AttributeTypeEnum;
 use Webkul\Core\Rules\Decimal;
 use Webkul\Core\Rules\Slug;
+use Webkul\Product\Contracts\Product;
 use Webkul\Product\Repositories\ProductAttributeValueRepository;
 use Webkul\Product\Repositories\ProductRepository;
 
@@ -18,6 +22,20 @@ class ProductForm extends FormRequest
      * @var array
      */
     protected $rules;
+
+    /**
+     * Product instance.
+     *
+     * @var Product
+     */
+    protected $product;
+
+    /**
+     * Product editable attributes.
+     *
+     * @var Collection
+     */
+    protected $productEditableAttributes;
 
     /**
      * Max video upload size.
@@ -55,23 +73,37 @@ class ProductForm extends FormRequest
      */
     public function rules()
     {
-        $product = $this->productRepository->find($this->id);
+        $this->product = $this->productRepository->find($this->id);
 
-        $this->rules = array_merge($product->getTypeInstance()->getTypeValidationRules(), [
-            'sku'                  => ['required', 'unique:products,sku,'.$this->id, new Slug],
-            'url_key'              => ['required', new ProductCategoryUniqueSlug('products', $this->id)],
-            'images.files.*'       => ['nullable', 'mimes:bmp,jpeg,jpg,png,webp'],
-            'images.positions.*'   => ['nullable', 'integer'],
-            'videos.files.*'       => ['nullable', 'mimetypes:application/octet-stream,video/mp4,video/webm,video/quicktime', 'max:'.$this->maxVideoFileSize],
-            'videos.positions.*'   => ['nullable', 'integer'],
-            'special_price_from'   => ['nullable', 'date'],
-            'special_price_to'     => ['nullable', 'date', 'after_or_equal:special_price_from'],
-            'special_price'        => ['nullable', new Decimal, 'lt:price'],
+        $currentRmaRuleId = $this->product->rma_rule_id;
+
+        $this->rules = array_merge($this->product->getTypeInstance()->getTypeValidationRules(), [
+            'sku' => ['required', 'unique:products,sku,'.$this->id, new Slug],
+            'url_key' => ['required', new ProductCategoryUniqueSlug('products', $this->id)],
+            'images.files.*' => ['nullable', 'mimes:bmp,jpeg,jpg,png,webp'],
+            'images.positions.*' => ['nullable', 'integer'],
+            'videos.files.*' => ['nullable', 'mimetypes:application/octet-stream,video/mp4,video/webm,video/quicktime', 'max:'.$this->maxVideoFileSize],
+            'videos.positions.*' => ['nullable', 'integer'],
+            'special_price_from' => ['nullable', 'date'],
+            'special_price_to' => ['nullable', 'date', 'after_or_equal:special_price_from'],
+            'special_price' => ['nullable', new Decimal, 'lt:price'],
             'visible_individually' => ['sometimes', 'required', 'in:0,1'],
-            'status'               => ['sometimes', 'required', 'in:0,1'],
-            'guest_checkout'       => ['sometimes', 'required', 'in:0,1'],
-            'new'                  => ['sometimes', 'required', 'in:0,1'],
-            'featured'             => ['sometimes', 'required', 'in:0,1'],
+            'status' => ['sometimes', 'required', 'in:0,1'],
+            'guest_checkout' => ['sometimes', 'required', 'in:0,1'],
+            'new' => ['sometimes', 'required', 'in:0,1'],
+            'featured' => ['sometimes', 'required', 'in:0,1'],
+            'rma_rule_id' => [
+                'nullable',
+                Rule::exists('rma_rules', 'id')->where(function ($query) use ($currentRmaRuleId) {
+                    $query->where(function ($q) use ($currentRmaRuleId) {
+                        $q->where('status', 1);
+
+                        if ($currentRmaRuleId) {
+                            $q->orWhere('id', $currentRmaRuleId);
+                        }
+                    });
+                }),
+            ],
         ]);
 
         if (request()->images) {
@@ -84,10 +116,12 @@ class ProductForm extends FormRequest
             }
         }
 
-        foreach ($product->getEditableAttributes() as $attribute) {
+        $this->productEditableAttributes = $this->product->getEditableAttributes();
+
+        foreach ($this->productEditableAttributes as $attribute) {
             if (
                 in_array($attribute->code, ['sku', 'url_key'])
-                || $attribute->type == 'boolean'
+                || $attribute->type == AttributeTypeEnum::BOOLEAN->value
             ) {
                 continue;
             }
@@ -101,7 +135,7 @@ class ProductForm extends FormRequest
             }
 
             if (
-                $attribute->type == 'text'
+                $attribute->type == AttributeTypeEnum::TEXT->value
                 && $attribute->validation
             ) {
                 if ($attribute->validation === 'decimal') {
@@ -113,7 +147,7 @@ class ProductForm extends FormRequest
                 }
             }
 
-            if ($attribute->type == 'price') {
+            if ($attribute->type == AttributeTypeEnum::PRICE->value) {
                 $validations[] = new Decimal;
             }
 
@@ -147,7 +181,7 @@ class ProductForm extends FormRequest
     {
         return [
             'variants.*.sku.unique' => trans('admin::app.catalog.products.index.already-taken', ['name' => ':attribute']),
-            'videos.files.*'        => trans('admin::app.catalog.products.edit.videos.error', ['max' => $this->maxVideoFileSize]),
+            'videos.files.*' => trans('admin::app.catalog.products.edit.videos.error', ['max' => $this->maxVideoFileSize]),
         ];
     }
 
@@ -163,5 +197,26 @@ class ProductForm extends FormRequest
             'videos.files.*' => 'video',
             'variants.*.sku' => 'sku',
         ];
+    }
+
+    /**
+     * Handle a passed validation attempt.
+     *
+     * @return void
+     */
+    protected function passedValidation()
+    {
+        $tinyMCEFields = $this->productEditableAttributes
+            ->filter(fn ($attribute) => $attribute->type === AttributeTypeEnum::TEXTAREA->value && $attribute->enable_wysiwyg)
+            ->pluck('code')
+            ->toArray();
+
+        foreach ($tinyMCEFields as $field) {
+            if ($this->has($field)) {
+                $this->merge([
+                    $field => clean_content($this->get($field)),
+                ]);
+            }
+        }
     }
 }

@@ -46,10 +46,10 @@ it('displays the "Sign In" and "Sign Up" buttons when the customer is not logged
      * We avoid using the `assertSeeText` method of the response because it may sometimes
      * produce false positive results when dealing with large DOM sizes.
      */
-    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.sign-in')))
+    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.desktop.bottom.sign-in')))
         ->toBeTruthy();
 
-    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.sign-up')))
+    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.desktop.bottom.sign-up')))
         ->toBeTruthy();
 });
 
@@ -66,16 +66,16 @@ it('displays navigation buttons when the customer is logged in', function () {
      * We avoid using the `assertSeeText` method of the response because it may sometimes
      * produce false positive results when dealing with large DOM sizes.
      */
-    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.profile')))
+    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.desktop.bottom.profile')))
         ->toBeTruthy();
 
-    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.orders')))
+    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.desktop.bottom.orders')))
         ->toBeTruthy();
 
-    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.wishlist')))
+    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.desktop.bottom.wishlist')))
         ->toBeTruthy();
 
-    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.logout')))
+    expect(Str::contains($response->content(), trans('shop::app.components.layouts.header.desktop.bottom.logout')))
         ->toBeTruthy();
 });
 
@@ -92,8 +92,8 @@ it('should returns the search page of the products', function () {
     // Arrange.
     $product = (new ProductFaker([
         'attributes' => [
-            5  => 'new',
-            6  => 'featured',
+            5 => 'new',
+            6 => 'featured',
             11 => 'price',
             26 => 'guest_checkout',
         ],
@@ -139,7 +139,7 @@ it('should store the subscription of the shop', function () {
     $this->assertModelWise([
         SubscribersList::class => [
             [
-                'email'         => $email,
+                'email' => $email,
                 'is_subscribed' => 1,
             ],
         ],
@@ -158,7 +158,7 @@ it('should store the subscription of the shop and send the mail to the admin', f
     $this->assertModelWise([
         SubscribersList::class => [
             [
-                'email'         => $email,
+                'email' => $email,
                 'is_subscribed' => 1,
             ],
         ],
@@ -188,8 +188,8 @@ it('should store the products to the compare list', function () {
     // Arrange.
     $product = (new ProductFaker([
         'attributes' => [
-            5  => 'new',
-            6  => 'featured',
+            5 => 'new',
+            6 => 'featured',
             11 => 'price',
             26 => 'guest_checkout',
         ],
@@ -232,8 +232,8 @@ it('should remove product from compare list', function () {
     // Arrange.
     $product = (new ProductFaker([
         'attributes' => [
-            5  => 'new',
-            6  => 'featured',
+            5 => 'new',
+            6 => 'featured',
             11 => 'price',
             26 => 'guest_checkout',
         ],
@@ -257,8 +257,8 @@ it('should remove product from compare list', function () {
     $this->loginAsCustomer();
 
     CompareItem::factory()->create([
-        'customer_id'  => auth()->guard('customer')->user()->id,
-        'product_id'   => $product->id,
+        'customer_id' => auth()->guard('customer')->user()->id,
+        'product_id' => $product->id,
     ]);
 
     deleteJson(route('shop.api.compare.destroy'), [
@@ -272,8 +272,8 @@ it('should remove all the products from compare list', function () {
     // Arrange.
     $products = (new ProductFaker([
         'attributes' => [
-            5  => 'new',
-            6  => 'featured',
+            5 => 'new',
+            6 => 'featured',
             11 => 'price',
             26 => 'guest_checkout',
         ],
@@ -298,8 +298,8 @@ it('should remove all the products from compare list', function () {
 
     foreach ($products as $product) {
         CompareItem::factory()->create([
-            'customer_id'  => auth()->guard('customer')->user()->id,
-            'product_id'   => $product->id,
+            'customer_id' => auth()->guard('customer')->user()->id,
+            'product_id' => $product->id,
         ]);
     }
 

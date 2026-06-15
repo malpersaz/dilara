@@ -68,13 +68,13 @@
                             name="name"
                             rules="required"
                             value="{{ old('name') }}"
-                            v-slot="{ field }"
+                            v-slot="{ field, errors }"
                             label="{{ trans('admin::app.catalog.categories.create.name') }}"
                         >
                             <input
                                 type="text"
                                 id="name"
-                                :class="[errors['{{ 'name' }}'] ? 'border border-red-600 hover:border-red-600' : '']"
+                                :class="[errors.length ? 'border border-red-600 hover:border-red-600' : '']"
                                 class="flex min-h-[39px] w-full rounded-md border px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400 focus:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"
                                 name="name"
                                 v-bind="field"
@@ -132,7 +132,6 @@
                                 :value="old('description')"
                                 :label="trans('admin::app.catalog.categories.create.description')"
                                 :tinymce="true"
-                                :prompt="core()->getConfigData('general.magic_ai.content_generation.category_description_prompt')"
                             />
 
                             <x-admin::form.control-group.error control-name="description" />
@@ -182,7 +181,11 @@
                     </p>
 
                     <!-- SEO Title & Description Blade Component -->
-                    <x-admin::seo />
+                    <x-admin::seo
+                        meta-title-field="meta_title"
+                        url-key-field="slug"
+                        meta-description-field="meta_description"
+                    />
 
                     <div class="mt-8">
                         <!-- Meta Title -->
@@ -213,12 +216,12 @@
                                 rules="required"
                                 value="{{ old('slug') }}"
                                 label="{{ trans('admin::app.catalog.categories.create.slug') }}"
-                                v-slot="{ field }"
+                                v-slot="{ field, errors }"
                             >
                                 <input
                                     type="text"
                                     id="slug"
-                                    :class="[errors['{{ 'slug' }}'] ? 'border border-red-600 hover:border-red-600' : '']"
+                                    :class="[errors.length ? 'border border-red-600 hover:border-red-600' : '']"
                                     class="flex min-h-[39px] w-full rounded-md border px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400 focus:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"
                                     name="slug"
                                     v-bind="field"
@@ -376,6 +379,7 @@
                                 <label
                                     class="cursor-pointer text-xs font-medium text-gray-600 dark:text-gray-300"
                                     for="{{ $attribute->name ?? $attribute->admin_name }}"
+                                    v-pre
                                 >
                                     {{ $attribute->name ?? $attribute->admin_name }}
                                 </label>

@@ -46,17 +46,28 @@
                                     <!-- Update Quantity Button -->
 
                                     @if (bouncer()->hasPermission('sales.refunds.create'))
-                                        <div 
+                                        <div
                                             class="transparent-button hover:bg-gray-200 dark:hover:bg-gray-800"
                                             @click="updateTotals"
                                         >
                                             @lang('admin::app.sales.refunds.create.update-totals-btn')
                                         </div>
 
+										@foreach ($order->items as $item)
+                                            @php
+                                                $canRefundAfterRMA = app('\Webkul\RMA\Helpers\Helper')->canRefundAfterRMA($item->id);
+                                            @endphp
+
+                                            @if (! $canRefundAfterRMA)
+                                                @break
+                                            @endif
+                                        @endforeach
+
                                         <!-- Refund Submit Button -->
                                         <button
                                             type="submit"
                                             class="primary-button ltr:mr-11 rtl:ml-11"
+                                            @if ($canRefundAfterRMA) disabled @endif
                                         >
                                             @lang('admin::app.sales.refunds.create.refund-btn')
                                         </button>
@@ -83,19 +94,22 @@
                                                 @else
                                                     <div class="relative h-[60px] max-h-[60px] w-full max-w-[60px] rounded border border-dashed border-gray-300 dark:border-gray-800 dark:mix-blend-exclusion dark:invert">
                                                         <img src="{{ bagisto_asset('images/product-placeholders/front.svg') }}">
-                                                        
-                                                        <p class="absolute bottom-1.5 w-full text-center text-[6px] font-semibold text-gray-400"> 
-                                                            @lang('admin::app.sales.invoices.view.product-image') 
+
+                                                        <p class="absolute bottom-1.5 w-full text-center text-[6px] font-semibold text-gray-400">
+                                                            @lang('admin::app.sales.invoices.view.product-image')
                                                         </p>
                                                     </div>
                                                 @endif
-                
+
                                                 <div class="grid place-content-start gap-1.5">
                                                     <!-- Item Additional Attributes -->
-                                                    <p class="break-all text-base font-semibold text-gray-800 dark:text-white">
+                                                    <p 
+                                                        class="break-all text-base font-semibold text-gray-800 dark:text-white"
+                                                        v-pre
+                                                    >
                                                         {{ $item->name }}
                                                     </p>
-                
+
                                                     <div class="flex flex-col place-items-start gap-1.5">
                                                         <p class="text-gray-600 dark:text-gray-300">
                                                             @lang('admin::app.sales.refunds.create.amount-per-unit', [
@@ -106,16 +120,34 @@
 
                                                         <!-- Item Additional Attributes -->
                                                         @if (isset($item->additional['attributes']))
-                                                            <p class="text-gray-600 dark:text-gray-300">
-                                                                @foreach ($item->additional['attributes'] as $attribute)
-                                                                    {{ $attribute['attribute_name'] }} : {{ $attribute['option_label'] }}
-                                                                @endforeach
-                                                            </p>
+                                                            @foreach ($item->additional['attributes'] as $attribute)
+                                                                <p
+                                                                    class="text-gray-600 dark:text-gray-300"
+                                                                    v-pre
+                                                                >
+                                                                    @if (
+                                                                        ! isset($attribute['attribute_type'])
+                                                                        || $attribute['attribute_type'] !== 'file'
+                                                                    )
+                                                                        {{ $attribute['attribute_name'] }} : {{ $attribute['option_label'] }}
+                                                                    @else
+                                                                        {{ $attribute['attribute_name'] }} :
+
+                                                                        <a
+                                                                            href="{{ Storage::url($attribute['option_label']) }}"
+                                                                            class="text-blue-600 hover:underline"
+                                                                            download="{{ File::basename($attribute['option_label']) }}"
+                                                                        >
+                                                                            {{ File::basename($attribute['option_label']) }}
+                                                                        </a>
+                                                                    @endif
+                                                                </p>
+                                                            @endforeach
                                                         @endif
-                
+
                                                         <!-- Item SKU -->
                                                         <p class="text-gray-600 dark:text-gray-300">
-                                                            @lang('admin::app.sales.refunds.create.sku', ['sku' => Webkul\Product\Helpers\ProductType::hasVariants($item->type) ? $item->child->sku : $item->sku])
+                                                            @lang('admin::app.sales.refunds.create.sku', ['sku' => $item->getTypeInstance()->getOrderedItem($item)->sku])
                                                         </p>
 
                                                         <!-- Item Status -->
@@ -153,7 +185,7 @@
                                                             v-model="refund.items[{{ $item->id }}]"
                                                             :label="trans('admin::app.sales.refunds.create.qty-to-refund')"
                                                         />
-                            
+
                                                         <x-admin::form.control-group.error control-name="refund[items][{{ $item->id }}]" />
                                                     </x-admin::form.control-group>
                                                 </div>
@@ -174,7 +206,7 @@
                                                         </p>
 
                                                         @if ($order->base_discount_amount > 0)
-                                                            <p class="text-gray-600 dark:text-gray-300"> 
+                                                            <p class="text-gray-600 dark:text-gray-300">
                                                                 @lang('admin::app.sales.refunds.create.discount-amount')
                                                             </p>
                                                         @endif
@@ -190,11 +222,11 @@
                                                         </p>
 
                                                         <p class="text-gray-600 dark:text-gray-300">
-                                                            {{ core()->formatBasePrice($item->base_total) }} 
+                                                            {{ core()->formatBasePrice($item->base_total) }}
                                                         </p>
 
-                                                        <p class="text-gray-600 dark:text-gray-300"> 
-                                                            {{ core()->formatBasePrice($item->base_tax_amount) }} 
+                                                        <p class="text-gray-600 dark:text-gray-300">
+                                                            {{ core()->formatBasePrice($item->base_tax_amount) }}
                                                         </p>
 
                                                         @if ($order->base_discount_amount > 0)
@@ -227,7 +259,7 @@
                                     <x-admin::form.control-group.control
                                         type="text"
                                         id="refund[shipping]"
-                                        name="refund[shipping]" 
+                                        name="refund[shipping]"
                                         v-model="refund.shipping"
                                         :rules="'required|min_value:0|max_value:' . $order->base_shipping_invoiced - $order->base_shipping_refunded"
                                         :label="trans('admin::app.sales.refunds.create.refund-shipping')"
@@ -244,7 +276,7 @@
 
                                     <x-admin::form.control-group.control
                                         type="text"
-                                        id="refund[adjustment_refund]" 
+                                        id="refund[adjustment_refund]"
                                         name="refund[adjustment_refund]"
                                         v-model="refund.adjustment_refund"
                                         rules="required|min_value:0"
@@ -262,7 +294,7 @@
 
                                     <x-admin::form.control-group.control
                                         type="text"
-                                        id="refund[adjustment_fee]" 
+                                        id="refund[adjustment_fee]"
                                         name="refund[adjustment_fee]"
                                         v-model="refund.adjustment_fee"
                                         rules="required|min_value:0"
@@ -330,7 +362,7 @@
                         shipping: "{{ $order->base_shipping_invoiced - $order->base_shipping_refunded - $order->base_shipping_discount_amount }}",
 
                         adjustment_refund: 0,
-                        
+
                         adjustment_fee: 0,
                     },
 
@@ -342,14 +374,14 @@
                 @foreach ($order->items as $item)
                     this.refund.items[{{$item->id}}] = {{ $item->qty_to_refund }};
                 @endforeach
-                
+
                 this.updateTotals();
             },
 
             methods: {
                 updateTotals() {
                     var self = this;
-                    
+
                     this.$axios.post("{{ route('admin.sales.refunds.update_totals', $order->id) }}", this.refund)
                         .then((response) => {
                             this.totals = response.data;

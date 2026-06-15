@@ -3,29 +3,29 @@
 namespace Webkul\Shop\Http\Middleware;
 
 use Closure;
+use Illuminate\Http\Request;
 
 class Theme
 {
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
+     * @param  Request  $request
      * @return mixed
      */
     public function handle($request, Closure $next)
     {
-        $themes = app('themes');
+        $themes = themes();
+
         $channel = core()->getCurrentChannel();
 
         if (
             $channel
             && $channelThemeCode = $channel->theme
         ) {
-            if ($themes->exists($channelThemeCode)) {
-                $themes->set($channelThemeCode);
-            } else {
-                $themes->set(config('themes.shop-default'));
-            }
+            $themes->exists($channelThemeCode)
+                ? $themes->set($channelThemeCode)
+                : $themes->set(config('themes.shop-default'));
         } else {
             $themes->set(config('themes.shop-default'));
         }

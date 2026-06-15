@@ -2,10 +2,10 @@
 
 namespace Webkul\Category\Repositories;
 
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Intervention\Image\ImageManager;
 use Webkul\Category\Contracts\Category;
 use Webkul\Category\Models\CategoryTranslationProxy;
 use Webkul\Core\Eloquent\Repository;
@@ -50,7 +50,8 @@ class CategoryRepository extends Repository
 
                     break;
                 case 'parent_id':
-                    $queryBuilder->where('categories.parent_id', $value);
+                    $parentIds = array_filter(array_map('trim', explode(',', $value)));
+                    $queryBuilder->whereIn('categories.parent_id', $parentIds);
 
                     break;
                 case 'locale':
@@ -66,7 +67,7 @@ class CategoryRepository extends Repository
     /**
      * Create category.
      *
-     * @return \Webkul\Category\Contracts\Category
+     * @return Category
      */
     public function create(array $data)
     {
@@ -105,7 +106,7 @@ class CategoryRepository extends Repository
      *
      * @param  int  $id
      * @param  string  $attribute
-     * @return \Webkul\Category\Contracts\Category
+     * @return Category
      */
     public function update(array $data, $id)
     {
@@ -127,35 +128,33 @@ class CategoryRepository extends Repository
     }
 
     /**
-     * Specify category tree.
+     * Retrieve category from slug.
      *
-     * @param  int  $id
-     * @return \Webkul\Category\Contracts\Category
+     * @param  string  $slug
+     * @return Category
      */
-    public function getCategoryTree($id = null)
+    public function findBySlug($slug)
     {
-        return $id
-            ? $this->model::orderBy('position', 'ASC')->where('id', '!=', $id)->get()->toTree()
-            : $this->model::orderBy('position', 'ASC')->get()->toTree();
+        if ($category = $this->model->whereTranslation('slug', $slug)->first()) {
+            return $category;
+        }
     }
 
     /**
-     * Specify category tree.
+     * Retrieve category from slug.
      *
-     * @param  int  $id
-     * @return \Illuminate\Support\Collection
+     * @param  string  $slug
+     * @return Category
      */
-    public function getCategoryTreeWithoutDescendant($id = null)
+    public function findBySlugOrFail($slug)
     {
-        return $id
-            ? $this->model::orderBy('position', 'ASC')->where('id', '!=', $id)->whereNotDescendantOf($id)->get()->toTree()
-            : $this->model::orderBy('position', 'ASC')->get()->toTree();
+        return $this->model->whereTranslation('slug', $slug)->firstOrFail();
     }
 
     /**
      * Get root categories.
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function getRootCategories()
     {
@@ -165,7 +164,7 @@ class CategoryRepository extends Repository
     /**
      * Get child categories.
      *
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function getChildCategories($parentId)
     {
@@ -173,16 +172,82 @@ class CategoryRepository extends Repository
     }
 
     /**
+     * Specify category tree.
+     *
+     * @return Category
+     */
+    public function getCategoryTree(?int $id = null)
+    {
+        return $id
+            ? $this->model::orderBy('position', 'ASC')->where('id', '!=', $id)->get()->toTree()
+            : $this->model::orderBy('position', 'ASC')->get()->toTree();
+    }
+
+    /**
+     * Specify category tree.
+     *
+     * @return Collection
+     */
+    public function getCategoryTreeWithoutDescendant(?int $id = null)
+    {
+        return $id
+            ? $this->model::orderBy('position', 'ASC')->where('id', '!=', $id)->whereNotDescendantOf($id)->get()->toTree()
+            : $this->model::orderBy('position', 'ASC')->get()->toTree();
+    }
+
+    /**
      * get visible category tree.
      *
      * @param  int  $id
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     public function getVisibleCategoryTree($id = null)
     {
         return $id
             ? $this->model::orderBy('position', 'ASC')->where('status', 1)->descendantsAndSelf($id)->toTree($id)
             : $this->model::orderBy('position', 'ASC')->where('status', 1)->get()->toTree();
+    }
+
+    /**
+     * Get the IDs of visible categories under the given root (inclusive).
+     *
+     * @param  int|null  $rootId
+     * @return array
+     */
+    public function getVisibleCategoryIds($rootId = null)
+    {
+        $query = $this->model::where('status', 1);
+
+        if ($rootId) {
+            $query = $query->descendantsAndSelf($rootId);
+        }
+
+        return $query->pluck('id')->all();
+    }
+
+    /**
+     * Get partials.
+     *
+     * @param  array|null  $columns
+     * @return array
+     */
+    public function getPartial($columns = null)
+    {
+        $categories = $this->model->all();
+
+        $trimmed = [];
+
+        foreach ($categories as $key => $category) {
+            if (! empty($category->name)) {
+                $trimmed[$key] = [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                ];
+            }
+        }
+
+        return $trimmed;
     }
 
     /**
@@ -204,34 +269,10 @@ class CategoryRepository extends Repository
     }
 
     /**
-     * Retrieve category from slug.
-     *
-     * @param  string  $slug
-     * @return \Webkul\Category\Contracts\Category
-     */
-    public function findBySlug($slug)
-    {
-        if ($category = $this->model->whereTranslation('slug', $slug)->first()) {
-            return $category;
-        }
-    }
-
-    /**
-     * Retrieve category from slug.
-     *
-     * @param  string  $slug
-     * @return \Webkul\Category\Contracts\Category
-     */
-    public function findBySlugOrFail($slug)
-    {
-        return $this->model->whereTranslation('slug', $slug)->firstOrFail();
-    }
-
-    /**
      * Upload category's images.
      *
      * @param  array  $data
-     * @param  \Webkul\Category\Contracts\Category  $category
+     * @param  Category  $category
      * @param  string  $type
      * @return void
      */
@@ -246,13 +287,11 @@ class CategoryRepository extends Repository
                         Storage::delete($category->{$type});
                     }
 
-                    $manager = new ImageManager;
-
-                    $image = $manager->make(request()->file($file))->encode('webp');
+                    $encoded = image_manager()->read(request()->file($file))->encodeByExtension('webp');
 
                     $category->{$type} = 'category/'.$category->id.'/'.Str::random(40).'.webp';
 
-                    Storage::put($category->{$type}, $image);
+                    Storage::put($category->{$type}, (string) $encoded);
 
                     $category->save();
                 }
@@ -266,31 +305,6 @@ class CategoryRepository extends Repository
 
             $category->save();
         }
-    }
-
-    /**
-     * Get partials.
-     *
-     * @param  array|null  $columns
-     * @return array
-     */
-    public function getPartial($columns = null)
-    {
-        $categories = $this->model->all();
-
-        $trimmed = [];
-
-        foreach ($categories as $key => $category) {
-            if (! empty($category->name)) {
-                $trimmed[$key] = [
-                    'id'   => $category->id,
-                    'name' => $category->name,
-                    'slug' => $category->slug,
-                ];
-            }
-        }
-
-        return $trimmed;
     }
 
     /**

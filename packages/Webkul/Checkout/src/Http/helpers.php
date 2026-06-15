@@ -1,13 +1,15 @@
 <?php
 
+use Webkul\Checkout\Facades\Cart;
+
 if (! function_exists('cart')) {
     /**
      * Cart helper.
      *
-     * @return \Webkul\Checkout\Cart
+     * @return Webkul\Checkout\Cart
      */
     function cart()
     {
-        return app()->make('cart');
+        return Cart::getFacadeRoot();
     }
 }

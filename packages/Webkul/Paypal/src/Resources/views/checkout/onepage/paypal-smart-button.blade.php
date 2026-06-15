@@ -6,11 +6,19 @@
         $clientId = core()->getConfigData('sales.payment_methods.paypal_smart_button.client_id');
 
         $acceptedCurrency = core()->getConfigData('sales.payment_methods.paypal_smart_button.accepted_currencies');
+
+        $currentCurrency = core()->getCurrentCurrencyCode();
+
+        $acceptedCurrenciesArray = array_map('trim', explode(',', $acceptedCurrency));
+
+        $currencyToUse = in_array($currentCurrency, $acceptedCurrenciesArray)
+            ? $currentCurrency
+            : $acceptedCurrenciesArray[0];
     @endphp
 
     @pushOnce('scripts')
         <script
-            src="https://www.paypal.com/sdk/js?client-id={{ $clientId }}&currency={{ $acceptedCurrency }}"
+            src="https://www.paypal.com/sdk/js?client-id={{ $clientId }}&currency={{ $currencyToUse }}"
             data-partner-attribution-id="Bagisto_Cart"
         >
         </script>
@@ -72,20 +80,20 @@
                             },
 
                             onApprove: (data, actions) => {
-                                this.$axios.post("{{ route('paypal.smart-button.capture-order') }}", {
+                                return this.$axios.post("{{ route('paypal.smart-button.capture-order') }}", {
                                     _token: "{{ csrf_token() }}",
                                     orderData: data
                                 })
-                                .then(response => {
-                                    if (response.data.success) {
-                                        if (response.data.redirect_url) {
-                                            window.location.href = response.data.redirect_url;
-                                        } else {
-                                            window.location.href = "{{ route('shop.checkout.onepage.success') }}";
+                                    .then(response => {
+                                        if (response.data.success) {
+                                            if (response.data.redirect_url) {
+                                                window.location.href = response.data.redirect_url;
+                                            } else {
+                                                window.location.href = "{{ route('shop.checkout.onepage.success') }}";
+                                            }
                                         }
-                                    }
-                                })
-                                .catch(error => window.location.href = "{{ route('shop.checkout.cart.index') }}");
+                                    })
+                                    .catch(error => window.location.href = "{{ route('shop.checkout.cart.index') }}");
                             },
 
                             onError: (error) => {

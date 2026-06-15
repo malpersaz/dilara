@@ -13,6 +13,7 @@ class Item
         public Collection $children,
         public ?array $fields,
         public ?string $icon,
+        public ?string $icon_class,
         public ?string $info,
         public string $key,
         public string $name,
@@ -54,6 +55,7 @@ class Item
                 default: $field['default'] ?? null,
                 channel_based: $field['channel_based'] ?? null,
                 locale_based: $field['locale_based'] ?? null,
+                placeholder: $field['placeholder'] ?? null,
                 options: $this->formatOptions($field['options'] ?? null),
                 is_visible: true,
             );
@@ -98,6 +100,14 @@ class Item
     public function getIcon(): ?string
     {
         return $this->icon;
+    }
+
+    /**
+     * Get Icon class.
+     */
+    public function getIconClass(): ?string
+    {
+        return $this->icon_class;
     }
 
     /**

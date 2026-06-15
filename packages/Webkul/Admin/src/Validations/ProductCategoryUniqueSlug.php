@@ -2,13 +2,13 @@
 
 namespace Webkul\Admin\Validations;
 
-use Illuminate\Contracts\Validation\Rule;
+use Closure;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Support\Facades\DB;
-use Webkul\Attribute\Repositories\AttributeRepository;
 use Webkul\Category\Models\CategoryTranslationProxy;
-use Webkul\Product\Repositories\ProductAttributeValueRepository;
+use Webkul\Product\Repositories\ProductRepository;
 
-class ProductCategoryUniqueSlug implements Rule
+class ProductCategoryUniqueSlug implements ValidationRule
 {
     /**
      * Reserved slugs.
@@ -18,13 +18,6 @@ class ProductCategoryUniqueSlug implements Rule
     protected $reservedSlugs = [
         'categories',
     ];
-
-    /**
-     * Is slug reserved.
-     *
-     * @var bool
-     */
-    protected $isSlugReserved = false;
 
     /**
      * Constructor.
@@ -38,33 +31,19 @@ class ProductCategoryUniqueSlug implements Rule
     ) {}
 
     /**
-     * Determine if the validation rule passes.
-     *
-     * @param  string  $attribute
-     * @param  mixed  $value
-     * @return bool
+     * Run the validation rule.
      */
-    public function passes($attribute, $value)
+    public function validate(string $attribute, mixed $value, Closure $fail): void
     {
         if (in_array($value, $this->reservedSlugs)) {
-            return ! ($this->isSlugReserved = true);
+            $fail('admin::app.validations.slug-reserved')->translate();
+
+            return;
         }
 
-        return $this->isSlugUnique($value);
-    }
-
-    /**
-     * Get the validation error message.
-     *
-     * @return string
-     */
-    public function message()
-    {
-        if ($this->isSlugReserved) {
-            return trans('admin::app.validations.slug-reserved');
+        if (! $this->isSlugUnique($value)) {
+            $fail('admin::app.validations.slug-being-used')->translate();
         }
-
-        return trans('admin::app.validations.slug-being-used');
     }
 
     /**
@@ -112,13 +91,24 @@ class ProductCategoryUniqueSlug implements Rule
      */
     protected function isSlugExistsInProducts($slug)
     {
-        $attribute = app(AttributeRepository::class)->findOneByField('code', 'url_key');
+        if (core()->getConfigData('catalog.products.search.engine') == 'elastic') {
+            $searchEngine = core()->getConfigData('catalog.products.search.storefront_mode');
+        }
 
-        return ! app(ProductAttributeValueRepository::class)->isValueUnique(
-            $this->id,
-            $attribute->id,
-            $attribute->column_name,
-            $slug,
-        );
+        $product = app(ProductRepository::class)
+            ->setSearchEngine($searchEngine ?? 'database')
+            ->findBySlug($slug);
+
+        if (
+            $product
+            && $this->tableName
+            && $this->id
+            && $this->tableName === 'products'
+            && $this->id == $product->id
+        ) {
+            $product = null;
+        }
+
+        return (bool) $product;
     }
 }

@@ -17,42 +17,52 @@ class Order extends Model implements OrderContract
 {
     use HasFactory;
 
+    /**
+     * Dates.
+     *
+     * @var array
+     */
     protected $dates = ['created_at'];
 
+    /**
+     * The accessors to append to the model's array form.
+     *
+     * @var array
+     */
     protected $appends = ['datetime'];
 
     /**
-     * Pending Order
+     * Pending state.
      */
     public const STATUS_PENDING = 'pending';
 
     /**
-     * Payment is in pending
+     * Payment pending state.
      */
     public const STATUS_PENDING_PAYMENT = 'pending_payment';
 
     /**
-     * Order in processing
+     * Processing state.
      */
     public const STATUS_PROCESSING = 'processing';
 
     /**
-     * Complete Order
+     * Completed state.
      */
     public const STATUS_COMPLETED = 'completed';
 
     /**
-     * Canceled Order
+     * Canceled state.
      */
     public const STATUS_CANCELED = 'canceled';
 
     /**
-     * Closed Order
+     * Closed state.
      */
     public const STATUS_CLOSED = 'closed';
 
     /**
-     * Fraud Order
+     * Fraud state.
      */
     public const STATUS_FRAUD = 'fraud';
 
@@ -73,14 +83,19 @@ class Order extends Model implements OrderContract
         'updated_at',
     ];
 
+    /**
+     * Status label.
+     *
+     * @var array
+     */
     protected $statusLabel = [
-        self::STATUS_PENDING         => 'Pending',
+        self::STATUS_PENDING => 'Pending',
         self::STATUS_PENDING_PAYMENT => 'Pending Payment',
-        self::STATUS_PROCESSING      => 'Processing',
-        self::STATUS_COMPLETED       => 'Completed',
-        self::STATUS_CANCELED        => 'Canceled',
-        self::STATUS_CLOSED          => 'Closed',
-        self::STATUS_FRAUD           => 'Fraud',
+        self::STATUS_PROCESSING => 'Processing',
+        self::STATUS_COMPLETED => 'Completed',
+        self::STATUS_CANCELED => 'Canceled',
+        self::STATUS_CLOSED => 'Closed',
+        self::STATUS_FRAUD => 'Fraud',
     ];
 
     /**
@@ -92,7 +107,7 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Returns the status label from status code
+     * Returns the status label from status code.
      */
     public function getStatusLabelAttribute()
     {
@@ -100,7 +115,7 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Return base total due amount
+     * Return base total due amount.
      */
     public function getBaseTotalDueAttribute()
     {
@@ -108,7 +123,7 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Return total due amount
+     * Return total due amount.
      */
     public function getTotalDueAttribute()
     {
@@ -116,7 +131,7 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Return Human Friendly Date
+     * Return human friendly date.
      */
     public function getDatetimeAttribute()
     {
@@ -265,7 +280,7 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Checks if cart have stockable items
+     * Checks if cart have stockable items.
      */
     public function haveStockableItems(): bool
     {
@@ -279,7 +294,22 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Checks if new shipment is allow or not
+     * Verify if a invoice is still unpaid.
+     */
+    public function hasOpenInvoice(): bool
+    {
+        $pendingInvoice = $this->invoices()
+            ->where('state', Invoice::STATUS_PENDING)
+            ->orWhere('state', Invoice::STATUS_PENDING_PAYMENT)
+            ->first();
+
+        return $pendingInvoice
+            ? true
+            : false;
+    }
+
+    /**
+     * Checks if new shipment is allow or not.
      */
     public function canShip(): bool
     {
@@ -299,7 +329,7 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Checks if new invoice is allow or not
+     * Checks if new invoice is allow or not.
      */
     public function canInvoice(): bool
     {
@@ -319,35 +349,17 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Verify if a invoice is still unpaid
+     * Checks if order can be canceled or not.
+     *
+     * @param  bool  $force  When true, customer-facing cancellation policies
+     *                       (currently the booking `allow_cancellation` flag)
+     *                       are ignored. Intended for admin overrides.
      */
-    public function hasOpenInvoice(): bool
+    public function canCancel(bool $force = false): bool
     {
-        $pendingInvoice = $this->invoices()->where('state', 'pending')
-            ->orWhere('state', 'pending_payment')
-            ->first();
-
-        if ($pendingInvoice) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Checks if order can be canceled or not
-     */
-    public function canCancel(): bool
-    {
-        $pendingInvoice = $this->invoices->where('state', 'pending')->first();
-
-        if ($pendingInvoice) {
-            return true;
-        }
-
         foreach ($this->items as $item) {
             if (
-                $item->canCancel()
+                $item->canCancel($force)
                 && ! in_array($item->order->status, [
                     self::STATUS_CLOSED,
                     self::STATUS_FRAUD,
@@ -361,7 +373,7 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Checks if order can be refunded or not
+     * Checks if order can be refunded or not.
      */
     public function canRefund(): bool
     {
@@ -385,7 +397,7 @@ class Order extends Model implements OrderContract
     }
 
     /**
-     * Checks if order can be reorder or not
+     * Checks if order can be reorder or not.
      */
     public function canReorder(): bool
     {
@@ -393,13 +405,21 @@ class Order extends Model implements OrderContract
             return false;
         }
 
+        $hasReorderable = false;
+
         foreach ($this->items as $item) {
+            if ($item->type === 'booking') {
+                continue;
+            }
+
             if (! $item->product?->getTypeInstance()->isSaleable()) {
                 return false;
             }
+
+            $hasReorderable = true;
         }
 
-        return true;
+        return $hasReorderable;
     }
 
     /**

@@ -393,15 +393,12 @@
 
                             <!-- Model Footer -->
                             <x-slot:footer>
-                                <div class="flex items-center gap-x-2.5">
-                                    <!-- Add Group Button -->
-                                    <button 
-                                        type="submit"
-                                        class="primary-button"
-                                    >
-                                        @lang('admin::app.catalog.families.create.add-group-btn')
-                                    </button>
-                                </div>
+                                <!-- Save Button -->
+                                <x-admin::button
+                                    button-type="button"
+                                    class="primary-button"
+                                    :title="trans('admin::app.catalog.families.create.add-group-btn')"
+                                />
                             </x-slot>
                         </x-admin::modal>
                     </form>
@@ -513,6 +510,7 @@
 
                         this.columnGroups[params.column].push({
                             'id': 'group_' + params.column + '_' + this.columnGroups[params.column].length,
+                            'code': params.code,
                             'name': params.name,
                             'is_user_defined': 1,
                             'custom_attributes': [],

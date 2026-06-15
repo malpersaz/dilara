@@ -78,6 +78,7 @@ class SystemConfig
                 children: $subConfigItems,
                 fields: $configItem['fields'] ?? null,
                 icon: $configItem['icon'] ?? null,
+                icon_class: $configItem['icon_class'] ?? null,
                 info: trans($configItem['info']) ?? null,
                 key: $configItem['key'],
                 name: trans($configItem['name']),
@@ -102,6 +103,7 @@ class SystemConfig
                     children: $configItemChildren,
                     fields: $subConfigItem['fields'] ?? null,
                     icon: $subConfigItem['icon'] ?? null,
+                    icon_class: $subConfigItem['icon_class'] ?? null,
                     info: trans($subConfigItem['info']) ?? null,
                     key: $subConfigItem['key'],
                     name: trans($subConfigItem['name']),
@@ -165,20 +167,20 @@ class SystemConfig
         if (! empty($fields['channel_based'])) {
             if (! empty($fields['locale_based'])) {
                 $coreConfigValue = $this->coreConfigRepository->findOneWhere([
-                    'code'         => $field,
+                    'code' => $field,
                     'channel_code' => $channel,
-                    'locale_code'  => $locale,
+                    'locale_code' => $locale,
                 ]);
             } else {
                 $coreConfigValue = $this->coreConfigRepository->findOneWhere([
-                    'code'         => $field,
+                    'code' => $field,
                     'channel_code' => $channel,
                 ]);
             }
         } else {
             if (! empty($fields['locale_based'])) {
                 $coreConfigValue = $this->coreConfigRepository->findOneWhere([
-                    'code'        => $field,
+                    'code' => $field,
                     'locale_code' => $locale,
                 ]);
             } else {

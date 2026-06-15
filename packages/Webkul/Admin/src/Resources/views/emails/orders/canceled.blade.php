@@ -9,7 +9,7 @@
         </p>
 
         <p style="font-size: 16px;color: #5E5E5E;line-height: 24px;">
-            {!! __('admin::app.emails.orders.canceled.greeting', [
+            {!! trans('admin::app.emails.orders.canceled.greeting', [
                 'order_id' => '<a href="' . route('admin.sales.orders.view', $order->id) . '" style="color: #2969FF;">#' . $order->increment_id . '</a>',
                 'created_at' => core()->formatDate($order->created_at, 'Y-m-d H:i:s')
                 ])
@@ -121,11 +121,26 @@
 
                             @if (isset($item->additional['attributes']))
                                 <div>
-
                                     @foreach ($item->additional['attributes'] as $attribute)
-                                        <b>{{ $attribute['attribute_name'] }} : </b>{{ $attribute['option_label'] }}</br>
-                                    @endforeach
+                                        @if (
+                                            ! isset($attribute['attribute_type'])
+                                            || $attribute['attribute_type'] !== 'file'
+                                        )
+                                            <b>{{ $attribute['attribute_name'] }} : </b>{{ $attribute['option_label'] }}<br>
+                                        @else
+                                            <b>{{ $attribute['attribute_name'] }} : </b>
 
+                                            <a
+                                                href="{{ Storage::url($attribute['option_label']) }}"
+                                                class="text-blue-600 hover:underline"
+                                                download="{{ File::basename($attribute['option_label']) }}"
+                                            >
+                                                {{ File::basename($attribute['option_label']) }}
+                                            </a>
+
+                                            <br>
+                                        @endif
+                                    @endforeach
                                 </div>
                             @endif
                         </td>
@@ -221,7 +236,7 @@
                         {{ core()->formatBasePrice($order->base_shipping_amount) }}
                     </span>
                 </div>
-                
+
                 <div style="display: grid;gap: 20px;grid-template-columns: repeat(2, minmax(0, 1fr));">
                     <span>
                         @lang('admin::app.emails.orders.shipping-handling-incl-tax')

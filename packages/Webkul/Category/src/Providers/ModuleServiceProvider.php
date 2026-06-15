@@ -2,12 +2,19 @@
 
 namespace Webkul\Category\Providers;
 
+use Webkul\Category\Models\Category;
+use Webkul\Category\Models\CategoryTranslation;
 use Webkul\Core\Providers\CoreModuleServiceProvider;
 
 class ModuleServiceProvider extends CoreModuleServiceProvider
 {
+    /**
+     * Models.
+     *
+     * @var array
+     */
     protected $models = [
-        \Webkul\Category\Models\Category::class,
-        \Webkul\Category\Models\CategoryTranslation::class,
+        Category::class,
+        CategoryTranslation::class,
     ];
 }

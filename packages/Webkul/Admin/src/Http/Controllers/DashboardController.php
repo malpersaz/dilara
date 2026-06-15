@@ -2,6 +2,8 @@
 
 namespace Webkul\Admin\Http\Controllers;
 
+use Illuminate\Http\JsonResponse;
+use Illuminate\View\View;
 use Webkul\Admin\Helpers\Dashboard;
 
 class DashboardController extends Controller
@@ -12,13 +14,12 @@ class DashboardController extends Controller
      * @var array
      */
     protected $typeFunctions = [
-        'over-all'                 => 'getOverAllStats',
-        'today'                    => 'getTodayStats',
+        'over-all' => 'getOverAllStats',
+        'today' => 'getTodayStats',
         'stock-threshold-products' => 'getStockThresholdProducts',
-        'total-sales'              => 'getSalesStats',
-        'total-visitors'           => 'getVisitorStats',
-        'top-selling-products'     => 'getTopSellingProducts',
-        'top-customers'            => 'getTopCustomers',
+        'total-sales' => 'getSalesStats',
+        'top-selling-products' => 'getTopSellingProducts',
+        'top-customers' => 'getTopCustomers',
     ];
 
     /**
@@ -31,20 +32,20 @@ class DashboardController extends Controller
     /**
      * Dashboard page.
      *
-     * @return \Illuminate\View\View|\Illuminate\Http\JsonResponse
+     * @return View|JsonResponse
      */
     public function index()
     {
         return view('admin::dashboard.index')->with([
             'startDate' => $this->dashboardHelper->getStartDate(),
-            'endDate'   => $this->dashboardHelper->getEndDate(),
+            'endDate' => $this->dashboardHelper->getEndDate(),
         ]);
     }
 
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function stats()
     {

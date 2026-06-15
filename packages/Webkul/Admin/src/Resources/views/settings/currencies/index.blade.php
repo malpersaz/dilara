@@ -235,14 +235,14 @@
                                     type="text"
                                     name="group_separator"
                                     :value="old('group_separator')"
-                                    ::rules="{ regex: /^[,\.]+$/ }"
+                                    ::rules="{ regex: /^[,\.' ]$/ }"
                                     v-model="selectedCurrency.group_separator"
                                     :label="trans('admin::app.settings.currencies.index.create.group-separator')"
                                     :placeholder="trans('admin::app.settings.currencies.index.create.group-separator')"
                                 />
 
                                 <p class="mt-1 block text-xs italic leading-5 text-gray-600 dark:text-gray-300">
-                                    @lang('admin::app.settings.currencies.index.create.separator-note', [
+                                    @lang('admin::app.settings.currencies.index.create.group-separator-note', [
                                         'attribute' => trans('admin::app.settings.currencies.index.create.group-separator')
                                     ])
                                 </p>
@@ -267,7 +267,7 @@
                                 />
 
                                 <p class="mt-1 block text-xs italic leading-5 text-gray-600 dark:text-gray-300">
-                                    @lang('admin::app.settings.currencies.index.create.separator-note', [
+                                    @lang('admin::app.settings.currencies.index.create.decimal-separator-note', [
                                         'attribute' => trans('admin::app.settings.currencies.index.create.decimal-separator')
                                     ])
                                 </p>
@@ -306,14 +306,14 @@
 
                         <!-- Modal Footer -->
                         <x-slot:footer>
-                            <div class="flex items-center gap-x-2.5">
-                               <button
-                                    type="submit"
-                                    class="primary-button"
-                                >
-                                    @lang('admin::app.settings.currencies.index.create.save-btn')
-                                </button>
-                            </div>
+                            <!-- Save Button -->
+                            <x-admin::button
+                                button-type="button"
+                                class="primary-button"
+                                :title="trans('admin::app.settings.currencies.index.create.save-btn')"
+                                ::loading="isLoading"
+                                ::disabled="isLoading"
+                            />
                         </x-slot>
                     </x-admin::modal>
                 </form>
@@ -327,6 +327,8 @@
                 data() {
                     return {
                         isEditable: 0,
+
+                        isLoading: false,
 
                         selectedCurrency: {},
 
@@ -352,6 +354,8 @@
 
                 methods: {
                     updateOrCreate(params, { resetForm, setErrors }) {
+                        this.isLoading = true;
+
                         let formData = new FormData(this.$refs.currencyCreateForm);
 
                         if (params.id) {
@@ -360,6 +364,8 @@
 
                         this.$axios.post(params.id ? "{{ route('admin.settings.currencies.update') }}" : "{{ route('admin.settings.currencies.store') }}", formData)
                             .then((response) => {
+                                this.isLoading = false;
+
                                 this.$refs.currencyUpdateOrCreateModal.close();
 
                                 this.$emitter.emit('add-flash', { type: 'success', message: response.data.message });
@@ -369,6 +375,8 @@
                                 resetForm();
                             })
                             .catch(error => {
+                                this.isLoading = false;
+
                                 if (error.response.status == 422) {
                                     setErrors(error.response.data.errors);
                                 }

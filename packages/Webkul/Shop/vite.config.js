@@ -11,6 +11,17 @@ export default defineConfig(({ mode }) => {
     return {
         build: {
             emptyOutDir: true,
+            minify: "esbuild",
+            cssCodeSplit: true,
+            rollupOptions: {
+                output: {
+                    manualChunks: {
+                        vue: ["vue"],
+                        veeValidate: ["vee-validate", "@vee-validate/rules", "@vee-validate/i18n"],
+                        vendor: ["axios", "mitt"]
+                    }
+                }
+            }
         },
 
         envDir,
@@ -18,6 +29,7 @@ export default defineConfig(({ mode }) => {
         server: {
             host: process.env.VITE_HOST || "localhost",
             port: process.env.VITE_PORT || 5173,
+            cors: true,
         },
 
         plugins: [
@@ -32,6 +44,7 @@ export default defineConfig(({ mode }) => {
                     "src/Resources/assets/js/app.js",
                 ],
                 refresh: true,
+                preload: false,
             }),
         ],
 

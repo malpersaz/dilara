@@ -115,7 +115,7 @@
 
                             <!-- Actions -->
                             <div class="flex justify-end">
-                                @if (bouncer()->hasPermission('marketing.search_terms.edit'))
+                                @if (bouncer()->hasPermission('marketing.search_seo.search_terms.edit'))
                                     <a @click="selectedSitemap=1; editModal(record)">
                                         <span
                                             :class="record.actions.find(action => action.index === 'edit')?.icon"
@@ -125,7 +125,7 @@
                                     </a>
                                 @endif
 
-                                @if (bouncer()->hasPermission('marketing.search_terms.delete'))
+                                @if (bouncer()->hasPermission('marketing.search_seo.search_terms.delete'))
                                     <a @click="performAction(record.actions.find(action => action.index === 'delete'))">
                                         <span
                                             :class="record.actions.find(action => action.index === 'delete')?.icon"
@@ -263,7 +263,12 @@
                                     :label="trans('admin::app.marketing.search-seo.search-terms.index.create.channel')"
                                 >
                                     @foreach (core()->getAllChannels() as $channel)
-                                        <option value="{{ $channel->id }}">{{ $channel->name }}</option>
+                                        <option 
+                                            value="{{ $channel->id }}"
+                                            v-pre
+                                        >
+                                            {{ $channel->name }}
+                                        </option>
                                     @endforeach
                                 </x-admin::form.control-group.control>
 
@@ -283,7 +288,12 @@
                                     :label="trans('admin::app.marketing.search-seo.search-terms.index.create.locale')"
                                 >
                                     @foreach (core()->getAllLocales() as $locale)
-                                        <option value="{{ $locale->code }}">{{ $locale->name }}</option>
+                                        <option 
+                                            value="{{ $locale->code }}"
+                                            v-pre
+                                        >
+                                            {{ $locale->name }}
+                                        </option>
                                     @endforeach
                                 </x-admin::form.control-group.control>
 
@@ -293,10 +303,14 @@
 
                         <!-- Modal Footer -->
                         <x-slot:footer>
-                            <!-- Save Button -->
-                            <button class="primary-button">
-                                @lang('admin::app.marketing.search-seo.search-terms.index.create.save-btn')
-                            </button>
+                             <!-- Save Button -->
+                             <x-admin::button
+                                button-type="submit"
+                                class="primary-button"
+                                :title="trans('admin::app.marketing.search-seo.search-terms.index.create.save-btn')"
+                                ::loading="isLoading"
+                                ::disabled="isLoading"
+                            />
                         </x-slot>
                     </x-admin::modal>
                 </form>
@@ -310,6 +324,8 @@
                 data() {
                     return {
                         selectedSitemap: 0,
+
+                        isLoading: false,
                     }
                 },
 
@@ -331,6 +347,8 @@
 
                 methods: {
                     updateOrCreate(params, { resetForm, setErrors }) {
+                        this.isLoading = true;
+
                         let formData = new FormData(this.$refs.sitemapCreateForm);
 
                         if (params.id) {
@@ -339,6 +357,8 @@
 
                         this.$axios.post(params.id ? "{{ route('admin.marketing.search_seo.search_terms.update') }}" : "{{ route('admin.marketing.search_seo.search_terms.store') }}", formData )
                             .then((response) => {
+                                this.isLoading = false;
+
                                 this.$emitter.emit('add-flash', { type: 'success', message: response.data.message });
 
                                 this.$refs.sitemap.toggle();
@@ -348,6 +368,8 @@
                                 resetForm();
                             })
                             .catch(error => {
+                                this.isLoading = false;
+
                                 if (error.response.status == 422) {
                                     setErrors(error.response.data.errors);
                                 }

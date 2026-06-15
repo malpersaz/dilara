@@ -5,6 +5,7 @@ namespace Webkul\Product;
 use Illuminate\Support\Facades\Storage;
 use League\Flysystem\Local\LocalFilesystemAdapter;
 use Webkul\Customer\Contracts\Wishlist;
+use Webkul\Product\Contracts\Product;
 use Webkul\Product\Repositories\ProductRepository;
 
 class ProductImage
@@ -19,7 +20,7 @@ class ProductImage
     /**
      * Retrieve collection of gallery images.
      *
-     * @param  \Webkul\Product\Contracts\Product  $product
+     * @param  Product  $product
      * @return array
      */
     public function getGalleryImages($product)
@@ -61,7 +62,7 @@ class ProductImage
     /**
      * Get product variant image if available otherwise product base image.
      *
-     * @param  \Webkul\Customer\Contracts\Wishlist  $item
+     * @param  Wishlist  $item
      * @return array
      */
     public function getProductImage($item)
@@ -83,7 +84,7 @@ class ProductImage
      * This method will first check whether the gallery images are already
      * present or not. If not then it will load from the product.
      *
-     * @param  \Webkul\Product\Contracts\Product  $product
+     * @param  Product  $product
      * @param  array
      * @return array
      */
@@ -101,7 +102,7 @@ class ProductImage
     /**
      * Load product's base image.
      *
-     * @param  \Webkul\Product\Contracts\Product  $product
+     * @param  Product  $product
      * @return array
      */
     protected function otherwiseLoadFromProduct($product)
@@ -122,17 +123,17 @@ class ProductImage
     {
         if (! $this->isDriverLocal()) {
             return [
-                'small_image_url'    => Storage::url($path),
-                'medium_image_url'   => Storage::url($path),
-                'large_image_url'    => Storage::url($path),
+                'small_image_url' => Storage::url($path),
+                'medium_image_url' => Storage::url($path),
+                'large_image_url' => Storage::url($path),
                 'original_image_url' => Storage::url($path),
             ];
         }
 
         return [
-            'small_image_url'    => url('cache/small/'.$path),
-            'medium_image_url'   => url('cache/medium/'.$path),
-            'large_image_url'    => url('cache/large/'.$path),
+            'small_image_url' => url('cache/small/'.$path),
+            'medium_image_url' => url('cache/medium/'.$path),
+            'large_image_url' => url('cache/large/'.$path),
             'original_image_url' => url('cache/original/'.$path),
         ];
     }
@@ -155,9 +156,9 @@ class ProductImage
                         : bagisto_asset('images/large-product-placeholder.webp', 'shop');
 
         return [
-            'small_image_url'    => $smallImageUrl,
-            'medium_image_url'   => $mediumImageUrl,
-            'large_image_url'    => $largeImageUrl,
+            'small_image_url' => $smallImageUrl,
+            'medium_image_url' => $mediumImageUrl,
+            'large_image_url' => $largeImageUrl,
             'original_image_url' => bagisto_asset('images/large-product-placeholder.webp', 'shop'),
         ];
     }

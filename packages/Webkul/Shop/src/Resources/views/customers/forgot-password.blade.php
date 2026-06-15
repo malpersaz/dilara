@@ -54,6 +54,7 @@
                 <x-shop::form :action="route('shop.customers.forgot_password.store')">
                     {!! view_render_event('bagisto.shop.customers.forget_password_form_controls.before') !!}
 
+                    <!-- Email -->
                     <x-shop::form.control-group class="max-sm:mb-1.5">
                         <x-shop::form.control-group.label class="required">
                             @lang('shop::app.customers.login-form.email')
@@ -76,11 +77,14 @@
 
                     {!! view_render_event('bagisto.shop.customers.forget_password_form_controls.email.after') !!}
 
-                    <div>
+                    <!-- Captcha -->
+                    @if (core()->getConfigData('customer.captcha.credentials.status'))
+                        <x-shop::form.control-group class="mt-5">
+                            {!! \Webkul\Customer\Facades\Captcha::render() !!}
 
-                        {!! Captcha::render() !!}
-
-                    </div>
+                            <x-shop::form.control-group.error control-name="recaptcha_token" />
+                        </x-shop::form.control-group>
+                    @endif
 
                     <!-- Submit Button -->
                     <div class="mt-8 flex flex-wrap items-center gap-9 max-sm:mt-0 max-sm:justify-center max-sm:text-center">
@@ -95,7 +99,8 @@
                     <p class="mt-5 font-medium text-zinc-500 max-sm:text-center max-sm:text-sm">
                         @lang('shop::app.customers.forgot-password.back')
 
-                        <a class="text-navyBlue"
+                        <a 
+                            class="text-navyBlue"
                             href="{{ route('shop.customer.session.index') }}"
                         >
                             @lang('shop::app.customers.forgot-password.sign-in-button')
@@ -117,6 +122,6 @@
     </div>
 
     @push('scripts')
-        {!! Captcha::renderJS() !!}
+        {!! \Webkul\Customer\Facades\Captcha::renderJS() !!}
     @endpush
 </x-shop::layouts>

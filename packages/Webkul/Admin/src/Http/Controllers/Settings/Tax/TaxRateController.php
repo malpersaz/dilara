@@ -3,7 +3,9 @@
 namespace Webkul\Admin\Http\Controllers\Settings\Tax;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Event;
+use Illuminate\View\View;
 use Webkul\Admin\DataGrids\Settings\TaxRateDataGrid;
 use Webkul\Admin\Http\Controllers\Controller;
 use Webkul\Admin\Http\Requests\TaxRateRequest;
@@ -21,7 +23,7 @@ class TaxRateController extends Controller
     /**
      * Display a listing resource for the available tax rates.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function index()
     {
@@ -35,9 +37,9 @@ class TaxRateController extends Controller
     /**
      * Display a create form for tax rate.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
-    public function show()
+    public function create()
     {
         if (request()->ajax()) {
             return datagrid(TaxRateDataGrid::class)->process();
@@ -49,9 +51,9 @@ class TaxRateController extends Controller
     /**
      * Create the tax rate.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
-    public function create(TaxRateRequest $request)
+    public function store(TaxRateRequest $request)
     {
         Event::dispatch('tax.rate.create.before');
 
@@ -76,7 +78,7 @@ class TaxRateController extends Controller
     /**
      * Show the edit form for the previously created tax rates.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function edit(int $id)
     {
@@ -88,7 +90,7 @@ class TaxRateController extends Controller
     /**
      * Edit the previous tax rate.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function update(TaxRateRequest $request, int $id)
     {

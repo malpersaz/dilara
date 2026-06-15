@@ -12,7 +12,15 @@ class ItemField
      * @var array
      */
     protected $veeValidateMappings = [
-        'min' => 'min_value',
+        'max' => [
+            'text' => 'max',
+            'number' => 'max_value',
+        ],
+
+        'min' => [
+            'text' => 'min',
+            'number' => 'min_value',
+        ],
     ];
 
     /**
@@ -30,6 +38,7 @@ class ItemField
         public ?string $default,
         public ?bool $channel_based,
         public ?bool $locale_based,
+        public ?string $placeholder,
         public array|string $options,
         public bool $is_visible = true,
     ) {
@@ -94,7 +103,11 @@ class ItemField
         }
 
         foreach ($this->veeValidateMappings as $laravelRule => $veeValidateRule) {
-            $this->validation = str_replace($laravelRule, $veeValidateRule, $this->validation);
+            if (! array_key_exists($this->getType(), $veeValidateRule)) {
+                continue;
+            }
+
+            $this->validation = str_replace($laravelRule, $veeValidateRule[$this->getType()], $this->validation);
         }
 
         return $this->validation;
@@ -149,6 +162,14 @@ class ItemField
     }
 
     /**
+     * Get placeholder of config item.
+     */
+    public function getPlaceholder(): ?string
+    {
+        return $this->placeholder;
+    }
+
+    /**
      * Get options of config item.
      */
     public function getOptions(): array
@@ -172,18 +193,19 @@ class ItemField
     public function toArray()
     {
         return [
-            'name'          => $this->getName(),
-            'title'         => $this->getTitle(),
-            'info'          => $this->getInfo(),
-            'type'          => $this->getType(),
-            'path'          => $this->getPath(),
-            'depends'       => $this->getDepends(),
-            'validation'    => $this->getValidations(),
-            'default'       => $this->getDefault(),
+            'name' => $this->getName(),
+            'title' => $this->getTitle(),
+            'info' => $this->getInfo(),
+            'type' => $this->getType(),
+            'path' => $this->getPath(),
+            'depends' => $this->getDepends(),
+            'validation' => $this->getValidations(),
+            'default' => $this->getDefault(),
             'channel_based' => $this->getChannelBased(),
-            'locale_based'  => $this->getLocaleBased(),
-            'options'       => $this->getOptions(),
-            'item_key'      => $this->getItemKey(),
+            'locale_based' => $this->getLocaleBased(),
+            'placeholder' => $this->getPlaceholder(),
+            'options' => $this->getOptions(),
+            'item_key' => $this->getItemKey(),
         ];
     }
 

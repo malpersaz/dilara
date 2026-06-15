@@ -4,6 +4,7 @@ namespace Webkul\Admin\Http\Controllers\Marketing\Communications;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Event;
+use Illuminate\View\View;
 use Webkul\Admin\DataGrids\Marketing\Communications\EventDataGrid;
 use Webkul\Admin\Http\Controllers\Controller;
 use Webkul\Marketing\Repositories\EventRepository;
@@ -20,7 +21,7 @@ class EventController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function index()
     {
@@ -34,14 +35,14 @@ class EventController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function store()
     {
         $this->validate(request(), [
-            'name'        => 'required',
+            'name' => 'required',
             'description' => 'required',
-            'date'        => 'date|required',
+            'date' => 'date|required',
         ]);
 
         Event::dispatch('marketing.events.create.before');
@@ -78,16 +79,16 @@ class EventController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function update()
     {
         $id = request()->id;
 
         $this->validate(request(), [
-            'name'        => 'required',
+            'name' => 'required',
             'description' => 'required',
-            'date'        => 'date|required',
+            'date' => 'date|required',
         ]);
 
         Event::dispatch('marketing.events.update.before', $id);
@@ -108,7 +109,7 @@ class EventController extends Controller
     /**
      * Remove the specified resource from storage.
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @return JsonResponse
      */
     public function destroy(int $id)
     {
@@ -128,7 +129,7 @@ class EventController extends Controller
         }
 
         return response()->json([
-            'message' => trans('admin::app.marketing.communications.events.delete-failed', ['name'  =>  'admin::app.marketing.communications.events.index.event']),
+            'message' => trans('admin::app.marketing.communications.events.delete-failed', ['name' => 'admin::app.marketing.communications.events.index.event']),
         ], 500);
     }
 }

@@ -2,10 +2,7 @@
 
 namespace Webkul\Payment\Providers;
 
-use Illuminate\Foundation\AliasLoader;
 use Illuminate\Support\ServiceProvider;
-use Webkul\Payment\Facades\Payment as PaymentFacade;
-use Webkul\Payment\Payment;
 
 class PaymentServiceProvider extends ServiceProvider
 {
@@ -28,24 +25,7 @@ class PaymentServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->registerFacades();
-
         $this->registerConfig();
-    }
-
-    /**
-     * Register Bouncer as a singleton.
-     *
-     * @return void
-     */
-    protected function registerFacades()
-    {
-        $loader = AliasLoader::getInstance();
-        $loader->alias('payment', PaymentFacade::class);
-
-        $this->app->singleton('payment', function () {
-            return new Payment;
-        });
     }
 
     /**
@@ -56,7 +36,7 @@ class PaymentServiceProvider extends ServiceProvider
     protected function registerConfig()
     {
         $this->mergeConfigFrom(
-            dirname(__DIR__).'/Config/paymentmethods.php', 'payment_methods'
+            dirname(__DIR__).'/Config/payment-methods.php', 'payment_methods'
         );
     }
 }

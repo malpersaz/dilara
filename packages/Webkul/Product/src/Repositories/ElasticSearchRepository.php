@@ -2,10 +2,12 @@
 
 namespace Webkul\Product\Repositories;
 
+use Webkul\Attribute\Enums\AttributeTypeEnum;
 use Webkul\Attribute\Repositories\AttributeRepository;
 use Webkul\Core\Facades\ElasticSearch;
 use Webkul\Customer\Repositories\CustomerRepository;
 use Webkul\Marketing\Repositories\SearchSynonymRepository;
+use Webkul\Product\Helpers\Product;
 
 class ElasticSearchRepository
 {
@@ -21,15 +23,18 @@ class ElasticSearchRepository
     ) {}
 
     /**
-     * Return elastic search index name
+     * Return elastic search index name.
      */
     public function getIndexName(): string
     {
-        return 'products_'.core()->getRequestedChannelCode().'_'.core()->getRequestedLocaleCode().'_index';
+        return Product::formatElasticSearchIndexName(
+            core()->getRequestedChannelCode(),
+            core()->getRequestedLocaleCodeInRequestedChannel()
+        );
     }
 
     /**
-     * Returns product ids from Elasticsearch
+     * Return product ids from elasticsearch.
      */
     public function search(array $params, array $options): array
     {
@@ -43,27 +48,55 @@ class ElasticSearchRepository
             $filters['filter'][]['term']['type'] = $params['type'];
         }
 
-        $results = Elasticsearch::search([
+        $results = ElasticSearch::search([
             'index' => $params['index'] ?? $this->getIndexName(),
-            'body'  => [
-                'from'          => $options['from'],
-                'size'          => $options['limit'],
+            'body' => [
+                'from' => $options['from'],
+                'size' => $options['limit'],
                 'stored_fields' => [],
-                'query'         => [
+                'query' => [
                     'bool' => $filters ?: new \stdClass,
                 ],
-                'sort'          => $this->getSortOptions($options),
+                'sort' => $this->getSortOptions($options),
             ],
         ]);
 
         return [
             'total' => $results['hits']['total']['value'],
-            'ids'   => collect($results['hits']['hits'])->pluck('_id')->toArray(),
+            'ids' => collect($results['hits']['hits'])->pluck('_id')->toArray(),
         ];
     }
 
     /**
-     * Prepare filters for search results
+     * Get suggestions based on the query text.
+     */
+    public function getSuggestions(?string $queryText): ?string
+    {
+        if (empty($queryText)) {
+            return null;
+        }
+
+        $results = ElasticSearch::search([
+            'index' => $this->getIndexName(),
+            'body' => [
+                'suggest' => [
+                    'name_suggest' => [
+                        'text' => $queryText,
+                        'term' => [
+                            'field' => 'name',
+                            'suggest_mode' => 'always',
+                        ],
+                    ],
+                ],
+                'size' => 1,
+            ],
+        ]);
+
+        return $results['suggest']['name_suggest'][0]['options'][0]['text'] ?? null;
+    }
+
+    /**
+     * Prepare filters for search results.
      */
     public function getFilters(array $params): array
     {
@@ -93,62 +126,39 @@ class ElasticSearchRepository
     }
 
     /**
-     * Return applied filters
+     * Return applied filters.
      */
     public function getFilterValue(mixed $attribute, array $params): array
     {
         switch ($attribute->type) {
-            case 'boolean':
-                /**
-                 * Need to remove this condition after the next release.
-                 *
-                 * Previously, these attributes were not indexed in Elasticsearch.
-                 * Therefore, we need to check if the attributes exist in the index
-                 * to maintain backward compatibility.
-                 */
-                if (in_array($attribute->code, ['status', 'visible_individually'])) {
-                    return [
-                        'bool' => [
-                            'should' => [
-                                [
-                                    'term' => [
-                                        $attribute->code => 1,
-                                    ],
-                                ], [
-                                    'bool' => [
-                                        'must_not' => [
-                                            'exists' => [
-                                                'field' => $attribute->code,
-                                            ],
-                                        ],
-                                    ],
-                                ],
-                            ],
-                        ],
-                    ];
-                }
+            case AttributeTypeEnum::BOOLEAN->value:
+                $values = array_map('intval', explode(',', $params[$attribute->code]));
+
+                $values = array_map('intval', explode(',', $params[$attribute->code]));
 
                 return [
-                    'term' => [
-                        $attribute->code => intval($params[$attribute->code]),
+                    'terms' => [
+                        $attribute->code => $values,
                     ],
                 ];
 
-            case 'price':
-                $customerGroup = $this->customerRepository->getCurrentGroup();
-
+            case AttributeTypeEnum::PRICE->value:
                 $range = explode(',', $params[$attribute->code]);
+
+                $field = $attribute->code === 'price'
+                    ? 'price_'.$this->customerRepository->getCurrentGroup()->id
+                    : $attribute->code;
 
                 return [
                     'range' => [
-                        $attribute->code.'_'.$customerGroup->id => [
+                        $field => [
                             'gte' => core()->convertToBasePrice(current($range)),
                             'lte' => core()->convertToBasePrice(end($range)),
                         ],
                     ],
                 ];
 
-            case 'text':
+            case AttributeTypeEnum::TEXT->value:
                 $synonyms = $this->searchSynonymRepository->getSynonymsByQuery($params[$attribute->code]);
 
                 $synonyms = array_map(function ($synonym) {
@@ -157,12 +167,12 @@ class ElasticSearchRepository
 
                 return [
                     'query_string' => [
-                        'query'         => implode(' OR ', $synonyms),
+                        'query' => implode(' OR ', $synonyms),
                         'default_field' => $attribute->code,
                     ],
                 ];
 
-            case 'select':
+            case AttributeTypeEnum::SELECT->value:
                 $filter[]['terms'][$attribute->code] = explode(',', $params[$attribute->code]);
 
                 if ($attribute->is_configurable) {
@@ -170,20 +180,33 @@ class ElasticSearchRepository
                 }
 
                 return $filter;
+
+            case AttributeTypeEnum::CHECKBOX->value:
+            case AttributeTypeEnum::MULTISELECT->value:
+                $values = explode(',', $params[$attribute->code]);
+
+                $filter[]['terms'][$attribute->code] = $values;
+
+                return $filter;
+
+            default:
+                throw new \InvalidArgumentException(
+                    'Unsupported attribute type: '.$attribute->type
+                );
         }
     }
 
     /**
-     * Returns sort options
+     * Returns sort options.
      */
     public function getSortOptions(array $options): array
     {
         if ($options['order'] == 'rand') {
             return [
                 '_script' => [
-                    'type'   => 'number',
+                    'type' => 'number',
                     'script' => 'Math.random()',
-                    'order'  => 'asc',
+                    'order' => 'asc',
                 ],
             ];
         }
@@ -205,5 +228,83 @@ class ElasticSearchRepository
                 'order' => $options['order'],
             ],
         ];
+    }
+
+    /**
+     * Get product maximum price from the product indexes.
+     */
+    public function getMaxPrice(array $params = [])
+    {
+        $filters = $this->getFilters($params);
+
+        if (! empty($params['category_id'])) {
+            $filters['filter'][]['term']['category_ids'] = $params['category_id'];
+        }
+
+        if (! empty($params['type'])) {
+            $filters['filter'][]['term']['type'] = $params['type'];
+        }
+
+        $attributeCode = $params['attribute_code'] ?? 'price';
+
+        $field = $attributeCode === 'price'
+            ? 'price_'.$this->customerRepository->getCurrentGroup()->id
+            : $attributeCode;
+
+        $results = ElasticSearch::search([
+            'index' => $params['index'] ?? $this->getIndexName(),
+            'body' => [
+                'size' => 0,
+                'query' => [
+                    'bool' => $filters ?: new \stdClass,
+                ],
+                'aggs' => [
+                    'max_price' => [
+                        'max' => [
+                            'field' => $field,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        return $results['aggregations']['max_price']['value'] ?? 0;
+    }
+
+    /**
+     * Get product minimum price from the product indexes.
+     */
+    public function getMinPrice(array $params = [])
+    {
+        $filters = $this->getFilters($params);
+
+        if (! empty($params['category_id'])) {
+            $filters['filter'][]['term']['category_ids'] = $params['category_id'];
+        }
+
+        if (! empty($params['type'])) {
+            $filters['filter'][]['term']['type'] = $params['type'];
+        }
+
+        $customerGroupId = $this->customerRepository->getCurrentGroup()->id;
+
+        $results = ElasticSearch::search([
+            'index' => $params['index'] ?? $this->getIndexName(),
+            'body' => [
+                'size' => 0,
+                'query' => [
+                    'bool' => $filters ?: new \stdClass,
+                ],
+                'aggs' => [
+                    'min_price' => [
+                        'min' => [
+                            'field' => 'price_'.$customerGroupId,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        return $results['aggregations']['min_price']['value'] ?? 0;
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Webkul\Admin\DataGrids\Marketing\SearchSEO;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Webkul\DataGrid\DataGrid;
@@ -11,7 +12,7 @@ class SitemapDataGrid extends DataGrid
     /**
      * Prepare query builder.
      *
-     * @return \Illuminate\Database\Query\Builder
+     * @return Builder
      */
     public function prepareQueryBuilder()
     {
@@ -32,36 +33,36 @@ class SitemapDataGrid extends DataGrid
     public function prepareColumns()
     {
         $this->addColumn([
-            'index'      => 'id',
-            'label'      => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.id'),
-            'type'       => 'integer',
+            'index' => 'id',
+            'label' => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.id'),
+            'type' => 'integer',
             'filterable' => true,
-            'sortable'   => true,
+            'sortable' => true,
         ]);
 
         $this->addColumn([
-            'index'      => 'file_name',
-            'label'      => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.file-name'),
-            'type'       => 'string',
+            'index' => 'file_name',
+            'label' => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.file-name'),
+            'type' => 'string',
             'searchable' => true,
             'filterable' => true,
-            'sortable'   => true,
+            'sortable' => true,
         ]);
 
         $this->addColumn([
-            'index'      => 'path',
-            'label'      => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.path'),
-            'type'       => 'string',
+            'index' => 'path',
+            'label' => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.path'),
+            'type' => 'string',
             'filterable' => true,
-            'sortable'   => true,
+            'sortable' => true,
         ]);
 
         $this->addColumn([
-            'index'      => 'url',
-            'label'      => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.link-for-google'),
-            'type'       => 'string',
-            'closure'    => function ($row) {
-                return Storage::url($row->path.'/'.$row->file_name);
+            'index' => 'url',
+            'label' => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.link-for-google'),
+            'type' => 'string',
+            'closure' => function ($row) {
+                return Storage::disk('public')->url(clean_path($row->path.'/'.$row->file_name));
             },
         ]);
     }
@@ -73,26 +74,26 @@ class SitemapDataGrid extends DataGrid
      */
     public function prepareActions()
     {
-        if (bouncer()->hasPermission('marketing.sitemaps.edit')) {
+        if (bouncer()->hasPermission('marketing.search_seo.sitemaps.edit')) {
             $this->addAction([
-                'index'  => 'edit',
-                'icon'   => 'icon-edit',
-                'title'  => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.edit'),
+                'index' => 'edit',
+                'icon' => 'icon-edit',
+                'title' => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.edit'),
                 'method' => 'GET',
-                'route'  => 'admin.marketing.search_seo.sitemaps.update',
-                'url'    => function ($row) {
+                'route' => 'admin.marketing.search_seo.sitemaps.update',
+                'url' => function ($row) {
                     return route('admin.marketing.search_seo.sitemaps.update', $row->id);
                 },
             ]);
         }
 
-        if (bouncer()->hasPermission('marketing.sitemaps.delete')) {
+        if (bouncer()->hasPermission('marketing.search_seo.sitemaps.delete')) {
             $this->addAction([
-                'index'  => 'delete',
-                'icon'   => 'icon-delete',
-                'title'  => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.delete'),
+                'index' => 'delete',
+                'icon' => 'icon-delete',
+                'title' => trans('admin::app.marketing.search-seo.sitemaps.index.datagrid.delete'),
                 'method' => 'DELETE',
-                'url'    => function ($row) {
+                'url' => function ($row) {
                     return route('admin.marketing.search_seo.sitemaps.delete', $row->id);
                 },
             ]);

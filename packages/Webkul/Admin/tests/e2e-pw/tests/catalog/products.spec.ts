@@ -1,254 +1,682 @@
-import { test, expect } from "../../setup";
+import { test } from "../../setup";
+import { expect } from "@playwright/test";
+import { ProductCreatePage } from "../../pages/admin/catalog/products/ProductCreatePage";
+import { ProductDeletePage } from "../../pages/admin/catalog/products/ProductDeletePage";
+import { ProductEditPage } from "../../pages/admin/catalog/products/ProductEditPage";
 import {
-    generateSKU,
-    generateName,
     generateDescription,
-    getImageFile,
+    generateName,
+    generateSKU,
 } from "../../utils/faker";
-import { fillInTinymce } from "../../utils/tinymce";
 
-async function createSimpleProduct(adminPage) {
-    /**
-     * Main product data which we will use to create the product.
-     */
-    const product = {
-        name: generateName(),
-        sku: generateSKU(),
-        productNumber: generateSKU(),
-        shortDescription: generateDescription(),
-        description: generateDescription(),
-        price: "199",
-        weight: "25",
-    };
-
-    /**
-     * Reaching to the create product page.
-     */
-    await adminPage.goto('admin/catalog/products');
-    await adminPage.waitForSelector(
-        'button.primary-button:has-text("Create Product")'
-    );
-    await adminPage.getByRole("button", { name: "Create Product" }).click();
-
-    /**
-     * Opening create product form in modal.
-     */
-    await adminPage.locator('select[name="type"]').selectOption("simple");
-    await adminPage
-        .locator('select[name="attribute_family_id"]')
-        .selectOption("1");
-    await adminPage.locator('input[name="sku"]').fill(generateSKU());
-    await adminPage.getByRole("button", { name: "Save Product" }).click();
-
-    /**
-     * After creating the product, the page is redirected to the edit product page, where
-     * all the details need to be filled in.
-     */
-    await adminPage.waitForSelector(
-        'button.primary-button:has-text("Save Product")'
-    );
-
-    /**
-     * Waiting for the main form to be visible.
-     */
-    await adminPage.waitForSelector('form[enctype="multipart/form-data"]');
-
-    /**
-     * General Section.
-     */
-    await adminPage.locator("#product_number").fill(product.productNumber);
-    await adminPage.locator("#name").fill(product.name);
-
-    /**
-     * Description Section.
-     */
-    await fillInTinymce(
+test.describe("simple product management", () => {
+    test("should update the product group price after delete", async ({
         adminPage,
-        "#short_description_ifr",
-        product.shortDescription
-    );
-    await fillInTinymce(adminPage, "#description_ifr", product.description);
+    }) => {
+        await new ProductEditPage(
+            adminPage,
+        ).updateProductGroupPriceAfterDelete();
 
-    /**
-     * Meta Description Section.
-     */
-    await adminPage.locator("#meta_title").fill(product.name);
-    await adminPage.locator("#meta_keywords").fill(product.name);
-    await adminPage.locator("#meta_description").fill(product.shortDescription);
+        await expect(
+            adminPage.getByText("For 022 Qty at fixed price of"),
+        ).toBeVisible();
+        await expect(
+            adminPage.getByText("For 020 Qty at discount of"),
+        ).not.toBeVisible();
+        await expect(
+            adminPage.getByText("For 015 Qty at fixed price of"),
+        ).toBeVisible();
+    });
 
-    /**
-     * Image Section.
-     */
-    // Will add images later.
-
-    /**
-     * Price Section.
-     */
-    await adminPage.locator("#price").fill(product.price);
-
-    /**
-     * Shipping Section.
-     */
-    await adminPage.locator("#weight").fill(product.weight);
-
-    /**
-     * Settings Section.
-     */
-    await adminPage
-        .locator(".mt-3\\.5 > div:nth-child(2) > div:nth-child(3) > div")
-        .first()
-        .click();
-    await adminPage.locator(".relative > label").first().click();
-    await adminPage.locator("div:nth-child(3) > .relative > label").click();
-    await adminPage.locator("div:nth-child(4) > .relative > label").click();
-    await adminPage.locator("div:nth-child(5) > .relative > label").click();
-    await adminPage.locator("div:nth-child(6) > .relative > label").click();
-
-    /**
-     * Inventories Section.
-     */
-    await adminPage.locator('input[name="inventories\\[1\\]"]').click();
-    await adminPage.locator('input[name="inventories\\[1\\]"]').fill("5000");
-
-    /**
-     * Categories Section.
-     */
-    await adminPage
-        .locator("label")
-        .filter({ hasText: "Men" })
-        .locator("span")
-        .click();
-
-    /**
-     * Saving the product.
-     */
-    await adminPage.getByRole("button", { name: "Save Product" }).click();
-
-    await expect(
-        adminPage.getByText("Product updated successfully")
-    ).toBeVisible();
-}
-
-test.describe("product management", () => {
     test("should create a simple product", async ({ adminPage }) => {
-        await createSimpleProduct(adminPage);
+        const product = {
+            name: `simple-${generateName()}`,
+            sku: generateSKU(),
+            productNumber: generateSKU(),
+            shortDescription: generateDescription(),
+            description: generateDescription(),
+            price: "199",
+            weight: "25",
+            inventory: "5000",
+        };
+
+        await new ProductCreatePage(adminPage).createSimpleProduct(product);
+
+        await expect(
+            adminPage
+                .locator("p.break-all.text-base")
+                .filter({ hasText: new RegExp(`^${product.name}$`) }),
+        ).toBeVisible();
     });
 
     test("should edit a simple product", async ({ adminPage }) => {
-        /**
-         * Reaching to the edit product page.
-         */
-        await adminPage.goto('admin/catalog/products');
-        await adminPage.waitForSelector(
-            'button.primary-button:has-text("Create Product")'
+        await new ProductEditPage(adminPage).editSimpleProduct();
+
+        await expect(adminPage.locator("#app")).toContainText(
+            /Product updated successfully/i,
         );
-        await adminPage.waitForSelector("span.cursor-pointer.icon-sort-right", {
-            state: "visible",
-        });
-        const iconRight = await adminPage.$$(
-            "span.cursor-pointer.icon-sort-right"
+    });
+
+    test("should mass update the products", async ({ adminPage }) => {
+        await new ProductEditPage(adminPage).massUpdateProducts();
+
+        await expect(adminPage.getByText("Selected Products Updated Successfully").first()).toBeVisible();
+    });
+
+    test("should mass delete the products", async ({ adminPage }) => {
+        await new ProductDeletePage(adminPage).massDeleteProducts();
+
+        await expect(adminPage.getByText("Selected Products Deleted Successfully").first()).toBeVisible();
+    });
+});
+
+test.describe("configurable product management", () => {
+    test("should create a configurable product", async ({ adminPage }) => {
+        const product = {
+            name: generateName(),
+            sku: generateSKU(),
+            productNumber: generateSKU(),
+            shortDescription: generateDescription(),
+            description: generateDescription(),
+        };
+
+        await new ProductCreatePage(adminPage).createConfigurableProduct(
+            product,
         );
-        await iconRight[0].click();
-
-        /**
-         * Waiting for the main form to be visible.
-         */
-        await adminPage.waitForSelector('form[enctype="multipart/form-data"]');
-
-        // Content will be added here. Currently just checking the general save button.
-
-        /**
-         * Saving the product.
-         */
-        await adminPage.getByRole("button", { name: "Save Product" }).click();
 
         await expect(
-            adminPage.getByText("Product updated successfully")
+            adminPage
+                .getByRole("paragraph")
+                .filter({ hasText: new RegExp(`^${product.name}$`) }),
+        ).toBeVisible();
+    });
+
+    test("should edit a configurable product", async ({ adminPage }) => {
+        await new ProductEditPage(adminPage).editConfigurableProduct();
+
+        await expect(
+            adminPage.getByText(/Product updated successfully/i).first(),
+        ).toBeVisible();
+    });
+
+    test("should mass update the config products", async ({ adminPage }) => {
+        await new ProductEditPage(adminPage).massUpdateProducts();
+
+        await expect(adminPage.getByText("Selected Products Updated Successfully").first()).toBeVisible();
+    });
+
+    test("should mass delete the products", async ({ adminPage }) => {
+        await new ProductDeletePage(adminPage).massDeleteProducts();
+
+        await expect(adminPage.getByText("Selected Products Deleted Successfully").first()).toBeVisible();
+    });
+});
+
+test.describe("grouped product management", () => {
+    test("should create a grouped product", async ({ adminPage }) => {
+        const product = {
+            name: generateName(),
+            productNumber: generateSKU(),
+            shortDescription: "test",
+            description: "test",
+        };
+
+        await new ProductCreatePage(adminPage).createGroupedProduct(product);
+
+        await expect(
+            adminPage
+                .getByRole("paragraph")
+                .filter({ hasText: new RegExp(`^${product.name}$`) }),
+        ).toBeVisible();
+    });
+
+    test("should edit a grouped product", async ({ adminPage }) => {
+        const page = new ProductEditPage(adminPage);
+
+        await page.editGroupedProduct();
+
+        await expect(
+            page.updateProductSuccessToast.first()
         ).toBeVisible();
     });
 
     test("should mass update the products", async ({ adminPage }) => {
-        await adminPage.goto('admin/catalog/products');
-        await adminPage.waitForSelector(
-            'button.primary-button:has-text("Create Product")'
-        );
+        await new ProductEditPage(adminPage).massUpdateProducts();
 
-        await adminPage.waitForSelector(".icon-uncheckbox:visible", {
-            state: "visible",
-        });
-        const checkboxes = await adminPage.$$(".icon-uncheckbox:visible");
-        await checkboxes[1].click();
-
-        let selectActionButton = await adminPage.waitForSelector(
-            'button:has-text("Select Action")',
-            { timeout: 1000 }
-        );
-        await selectActionButton.click();
-
-        await adminPage.hover('a:has-text("Update Status")', { timeout: 1000 });
-        await adminPage.waitForSelector(
-            'a:has-text("Active"), a:has-text("Disable")',
-            { state: "visible", timeout: 1000 }
-        );
-        await adminPage.click('a:has-text("Active")');
-
-        await adminPage.waitForSelector("text=Are you sure", {
-            state: "visible",
-            timeout: 1000,
-        });
-        const agreeButton = await adminPage.locator(
-            'button.primary-button:has-text("Agree")'
-        );
-
-        if (await agreeButton.isVisible()) {
-            await agreeButton.click();
-        } else {
-            console.error("Agree button not found or not visible.");
-        }
-
-        await expect(
-            adminPage.getByText("Selected Products Updated Successfully")
-        ).toBeVisible();
+        await expect(adminPage.getByText("Selected Products Updated Successfully").first()).toBeVisible();
     });
 
     test("should mass delete the products", async ({ adminPage }) => {
-        await adminPage.goto('admin/catalog/products');
-        await adminPage.waitForSelector(
-            'button.primary-button:has-text("Create Product")',
-            { state: "visible" }
-        );
+        await new ProductDeletePage(adminPage).massDeleteProducts();
 
-        await adminPage.waitForSelector(".icon-uncheckbox:visible", {
-            state: "visible",
-        });
-        const checkboxes = await adminPage.$$(".icon-uncheckbox:visible");
-        await checkboxes[1].click();
-
-        let selectActionButton = await adminPage.waitForSelector(
-            'button:has-text("Select Action")',
-            { timeout: 1000 }
-        );
-        await selectActionButton.click();
-
-        await adminPage.click('a:has-text("Delete")', { timeout: 1000 });
-
-        await adminPage.waitForSelector("text=Are you sure", {
-            state: "visible",
-            timeout: 1000,
-        });
-
-        const agreeButton = await adminPage.locator(
-            'button.primary-button:has-text("Agree")'
-        );
-
-        if (await agreeButton.isVisible()) {
-            await agreeButton.click();
-        } else {
-            console.error("Agree button not found or not visible.");
-        }
-
-        await expect(
-            adminPage.getByText("Selected Products Deleted Successfully")
-        ).toBeVisible();
+        await expect(adminPage.getByText("Selected Products Deleted Successfully").first()).toBeVisible();
     });
 });
+
+test.describe("virtual product management", () => {
+    test("should create a virtual product", async ({ adminPage }) => {
+        const product = {
+            name: generateName(),
+            productNumber: generateSKU(),
+            shortDescription: generateDescription(),
+            description: generateDescription(),
+            price: "199",
+        };
+
+        await new ProductCreatePage(adminPage).createVirtualProduct(product);
+
+        await expect(
+            adminPage
+                .getByRole("paragraph")
+                .filter({ hasText: new RegExp(`^${product.name}$`) }),
+        ).toBeVisible();
+    });
+
+    test("should edit a virtual product", async ({ adminPage }) => {
+        const page = new ProductEditPage(adminPage);
+
+        await page.editVirtualProduct();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+    });
+
+    test("should mass update the products", async ({ adminPage }) => {
+        await new ProductEditPage(adminPage).massUpdateProducts();
+
+        await expect(adminPage.getByText("Selected Products Updated Successfully").first()).toBeVisible();
+    });
+
+    test("should mass delete the products", async ({ adminPage }) => {
+        await new ProductDeletePage(adminPage).massDeleteProducts();
+
+        await expect(adminPage.getByText("Selected Products Deleted Successfully").first()).toBeVisible();
+    });
+});
+
+test.describe("downloadable product management", () => {
+    test("should create a downloadable product", async ({ adminPage }) => {
+        const product = {
+            name: generateName(),
+            productNumber: generateSKU(),
+            shortDescription: generateDescription(),
+            description: generateDescription(),
+            price: "199",
+        };
+
+        await new ProductCreatePage(adminPage).createDownloadableProduct(
+            product,
+        );
+
+        await expect(
+            adminPage
+                .getByRole("paragraph")
+                .filter({ hasText: new RegExp(`^${product.name}$`) }),
+        ).toBeVisible();
+    });
+
+    test("should edit a downloadable product", async ({ adminPage }) => {
+        const page = new ProductEditPage(adminPage);
+
+        await page.editDownloadableProduct()
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+    });
+
+    test("should mass update the products", async ({ adminPage }) => {
+        await new ProductEditPage(adminPage).massUpdateProducts();
+
+        await expect(adminPage.getByText("Selected Products Updated Successfully").first()).toBeVisible();
+    });
+
+    test("should mass delete the products", async ({ adminPage }) => {
+        await new ProductDeletePage(adminPage).massDeleteProducts();
+
+        await expect(adminPage.getByText("Selected Products Deleted Successfully").first()).toBeVisible();
+    });
+});
+
+test.describe("booking product management", () => {
+    test.describe("booking product for default booking type", () => {
+        test("should create default product with one booking for many days", async ({
+            adminPage,
+        }) => {
+            const page = new ProductCreatePage(adminPage);
+            const name = await page.createDefaultBookingProductWithOneBookingForManyDays();
+            await expect(
+                page.updateProductSuccessToast.first(),
+            ).toBeVisible();
+            await page.verifyProductVisible(name)
+
+        });
+
+        test("should create default product with many booking for one day", async ({
+            adminPage,
+        }) => {
+            const page = new ProductCreatePage(adminPage);
+
+            const name = await page.createDefaultBookingProductWithManyBookingForOneDay();
+
+            await expect(
+                page.updateProductSuccessToast.first(),
+            ).toBeVisible();
+
+            await page.verifyProductVisible(name)
+
+        });
+
+        test("should get the validation error while creating default booking product with a time range shorter than the configured slots", async ({ adminPage }) => {
+            await new ProductCreatePage(adminPage,).handleDefaultBookingWithShorterTimeRangeThanSlots()
+
+            await new ProductCreatePage(adminPage,).expectBookingErrorText(
+                "This window must span at least 45 minutes.",
+            );
+
+        });
+    })
+});
+
+
+
+test.describe("booking product for appointment booking type", () => {
+    test("should create appointment booking product that are not available every week with same slot for all days", async ({
+        adminPage,
+    }) => {
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createAppointmentBookingProductNotAvailableEveryWeekWithSameSlotForAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+
+    });
+
+    test("should create appointment booking product that are not available every week with no same slot for all days", async ({
+        adminPage,
+    }) => {
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createAppointmentBookingProductNotAvailableEveryWeekWithNoSameSlotForAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+
+    });
+
+    test("should create appointment booking product that are available every week with no same slot for all days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createAppointmentBookingProductAvailableEveryWeekWithNoSameSlotForAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+
+    });
+
+    test("should create appointment booking product that are available every week with same slot for all days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createAppointmentBookingProductAvailableEveryWeekWithSameSlotForAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+
+});
+
+test.describe("Appointment Booking - Time Range Shorter Than Configured Slots Validation", () => {
+
+    test("should get validation error when available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleAppointmentBookingWithShorterTimeRangeThanSlots(true, true);
+        await new ProductCreatePage(adminPage).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleAppointmentBookingWithShorterTimeRangeThanSlots(true, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleAppointmentBookingWithShorterTimeRangeThanSlots(false, true);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleAppointmentBookingWithShorterTimeRangeThanSlots(false, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+});
+
+test.describe("booking product for event booking type", () => {
+    test("should create event booking product ", async ({ adminPage }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createEventBookingProduct();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+});
+
+test.describe("booking product for rental booking type", () => {
+    test("should create rental booking product for daily basis with not available for every week", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createRentalBookingProductDailyBasisNotAvailableEveryWeek();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+
+    test("should create rental booking product for daily basis with available for every week", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createRentalBookingProductDailyBasisAvailableEveryWeek();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+
+    });
+
+    test("should create rental booking product for hourly basis available for same slot for All days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createRentalBookingProductHourlyBasisSameSlotAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+
+    test("should create rental booking product for hourly basis available for not same slot for All days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createRentalBookingProductHourlyBasisNotSameSlotAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+
+    test("should create rental booking product for Both(hourly or day) basis available for same slot for All days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createRentalBookingProductBothBasisSameSlotAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+
+    test("should create rental booking product for Both(hourly or day) basis not available for same slot for All days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createRentalBookingProductBothBasisNotSameSlotAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+});
+
+test.describe("Rental Booking - Time Range Shorter Than Configured Slots Validation for hourly only ", () => {
+
+    test("should get validation error when available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleRentalBookingWithShorterTimeRangeThanSlots(true, true);
+
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 60 minutes.",
+        );
+    });
+
+    test("should get validation error when available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleRentalBookingWithShorterTimeRangeThanSlots(true, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 60 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleRentalBookingWithShorterTimeRangeThanSlots(false, true);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 60 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleRentalBookingWithShorterTimeRangeThanSlots(false, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 60 minutes.",
+        );
+    });
+
+});
+
+test.describe("Rental Booking - Time Range Shorter Than Configured Slots (Daily/Hourly/Both) Validation", () => {
+
+    test("should get validation error when available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).createRentalBookingProductBothhourlyDailywith_and_withoutRange(true, true);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 60 minutes.",
+        );
+    });
+
+    test("should get validation error when available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).createRentalBookingProductBothhourlyDailywith_and_withoutRange(true, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 60 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).createRentalBookingProductBothhourlyDailywith_and_withoutRange(false, true);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 60 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).createRentalBookingProductBothhourlyDailywith_and_withoutRange(false, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 60 minutes.",
+        );
+    });
+
+});
+
+
+test.describe("booking product for table booking type", () => {
+    test("should create Table booking product and charge per guest with same slot for all days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createTableBookingProductChargePerGuestSameSlotAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+
+    test("should create Table booking product and charge per guest with not same slot for all days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createTableBookingProductChargePerGuestNotSameSlotAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+
+    test("should create Table booking product and charge per table with same slot for all days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createTableBookingProductChargePerTableSameSlotAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+
+    test("should create Table booking product and charge per table with not same slot for all days", async ({
+        adminPage,
+    }) => {
+
+        const page = new ProductCreatePage(adminPage);
+
+        const name = await page.createTableBookingProductChargePerTableNotSameSlotAllDays();
+
+        await expect(
+            page.updateProductSuccessToast.first(),
+        ).toBeVisible();
+
+        await page.verifyProductVisible(name)
+    });
+});
+
+test.describe("Table Booking - Time Range Shorter Than Configured Slots (Guest) Validation", () => {
+
+    test("should get validation error when available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleGuestTableBookingWithShorterTimeRangeThanSlots(true, true);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleGuestTableBookingWithShorterTimeRangeThanSlots(true, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleGuestTableBookingWithShorterTimeRangeThanSlots(false, true);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleGuestTableBookingWithShorterTimeRangeThanSlots(false, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+});
+
+
+
+test.describe("Table Booking - Time Range Shorter Than Configured Slots (Table) Validation", () => {
+
+    test("should get validation error when available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleTable_TableBookingWithShorterTimeRangeThanSlots(true, true);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleTable_TableBookingWithShorterTimeRangeThanSlots(true, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with same slot all days", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleTable_TableBookingWithShorterTimeRangeThanSlots(false, true);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+    test("should get validation error when not available every week with different slots per day", async ({ adminPage }) => {
+        await new ProductCreatePage(adminPage).handleTable_TableBookingWithShorterTimeRangeThanSlots(false, false);
+        await new ProductCreatePage(adminPage,).expectBookingErrorText(
+            "This window must span at least 45 minutes.",
+        );
+    });
+
+});
+
+

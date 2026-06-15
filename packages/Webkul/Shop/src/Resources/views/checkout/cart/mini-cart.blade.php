@@ -26,6 +26,7 @@
                             role="button"
                             aria-label="@lang('shop::app.checkout.cart.mini-cart.shopping-cart')"
                             tabindex="0"
+                            @click="getCart"
                         ></span>
 
                         @if (core()->getConfigData('sales.checkout.my_cart.summary') == 'display_item_quantity')
@@ -70,19 +71,19 @@
                     {!! view_render_event('bagisto.shop.checkout.mini-cart.drawer.content.before') !!}
 
                     <!-- Cart Item Listing -->
-                    <div 
-                        class="mt-9 grid gap-12 max-md:mt-2.5 max-md:gap-5" 
+                    <div
+                        class="mt-9 grid gap-12 max-md:mt-2.5 max-md:gap-5"
                         v-if="cart?.items?.length"
                     >
-                        <div 
-                            class="flex gap-x-5 max-md:gap-x-4" 
+                        <div
+                            class="flex gap-x-5 max-md:gap-x-4"
                             v-for="item in cart?.items"
                         >
                             <!-- Cart Item Image -->
                             {!! view_render_event('bagisto.shop.checkout.mini-cart.drawer.content.image.before') !!}
 
                             <div class="">
-                                <a :href="`{{ route('shop.product_or_category.index', '') }}/${item.product_url_key}`">
+                                <a :href="'{{ route('shop.product_or_category.index', ':slug') }}'.replace(':slug', item.product_url_key)">
                                     <img
                                         :src="item.base_image.small_image_url"
                                         class="max-w-28 max-h-28 rounded-xl max-md:max-h-20 max-md:max-w-[76px]"
@@ -100,7 +101,7 @@
 
                                     <a
                                     class="max-w-4/5 max-md:w-full"
-                                    :href="`{{ route('shop.product_or_category.index', '') }}/${item.product_url_key}`"
+                                    :href="'{{ route('shop.product_or_category.index', ':slug') }}'.replace(':slug', item.product_url_key)"
                                 >
                                         <p class="text-base font-medium max-md:font-normal max-sm:text-sm">
                                             @{{ item.name }}
@@ -166,14 +167,27 @@
                                         class="grid gap-2"
                                         v-show="item.option_show"
                                     >
-                                        <template v-for="option in item.options">
+                                        <template v-for="attribute in item.options">
                                             <div class="max-md:grid max-md:gap-0.5">
                                                 <p class="text-sm font-medium text-zinc-500 max-md:font-normal max-sm:text-xs">
-                                                    @{{ option.attribute_name + ':' }}
+                                                    @{{ attribute.attribute_name + ':' }}
                                                 </p>
-        
+
                                                 <p class="text-sm max-sm:text-xs">
-                                                    @{{ option.option_label }}
+                                                    <template v-if="attribute?.attribute_type === 'file'">
+                                                        <a
+                                                            :href="attribute.file_url"
+                                                            class="text-blue-700"
+                                                            target="_blank"
+                                                            :download="attribute.file_name"
+                                                        >
+                                                            @{{ attribute.file_name }}
+                                                        </a>
+                                                    </template>
+
+                                                    <template v-else>
+                                                        @{{ attribute.option_label }}
+                                                    </template>
                                                 </p>
                                             </div>
                                         </template>
@@ -187,6 +201,8 @@
 
                                 <!-- Cart Item Quantity Changer -->
                                 <x-shop::quantity-changer
+                                    v-if="item.can_change_qty"
+                                    ::key="'qty-' + item.id + '-' + refreshKey"
                                     class="max-h-9 max-w-[150px] gap-x-2.5 rounded-[54px] px-3.5 py-1.5 max-md:gap-x-2 max-md:px-1 max-md:py-0.5"
                                     name="quantity"
                                     ::value="item?.quantity"
@@ -196,7 +212,7 @@
                                     {!! view_render_event('bagisto.shop.checkout.mini-cart.drawer.content.quantity_changer.after') !!}
 
                                 {!! view_render_event('bagisto.shop.checkout.mini-cart.drawer.content.remove_button.before') !!}
-                                
+
                                 <!-- Cart Item Remove Button -->
                                 <button
                                     type="button"
@@ -221,6 +237,8 @@
                             <img
                                 class="max-md:h-[100px] max-md:w-[100px]"
                                 src="{{ bagisto_asset('images/thank-you.png') }}"
+                                loading="lazy"
+                                decoding="async"
                             >
 
                             <p
@@ -251,7 +269,7 @@
                             <p class="text-sm font-medium text-zinc-500">
                                 @lang('shop::app.checkout.cart.mini-cart.subtotal')
                             </p>
-                        
+
                         <template v-if="displayTax.subtotal == 'including_tax'">
                             <p class="text-3xl font-semibold max-md:text-base">
                                 @{{ cart.formatted_sub_total_incl_tax }}
@@ -261,10 +279,10 @@
                         <template v-else-if="displayTax.subtotal == 'both'">
                             <p class="flex flex-col text-3xl font-semibold max-md:text-sm max-sm:text-right">
                                 @{{ cart.formatted_sub_total_incl_tax }}
-                                
+
                                 <span class="text-sm font-normal text-zinc-500 max-sm:text-xs">
                                     @lang('shop::app.checkout.cart.mini-cart.excl-tax')
-                                    
+
                                     <span class="font-medium text-black">@{{ cart.formatted_sub_total }}</span>
                                 </span>
                             </p>
@@ -294,7 +312,7 @@
                                     stroke="currentColor"
                                     stroke-width="4"
                                 ></circle>
-                
+
                                 <path
                                     class="opacity-75"
                                     fill="currentColor"
@@ -360,13 +378,25 @@
         {!! view_render_event('bagisto.shop.checkout.mini-cart.drawer.after') !!}
     </script>
 
+    @php
+        /**
+         * When the cart is empty there is nothing to fetch, so the mini-cart is
+         * seeded with an empty cart server-side. This avoids an `/api/checkout/cart`
+         * request (and a `Cart::collectTotals()` recalculation) on every page view
+         * for the common case of a guest with no cart.
+         */
+        $hasCartItems = (bool) \Webkul\Checkout\Facades\Cart::getCart()?->items->isNotEmpty();
+    @endphp
+
     <script type="module">
         app.component("v-mini-cart", {
             template: '#v-mini-cart-template',
 
             data() {
                 return  {
-                    cart: null,
+                    refreshKey: 0,
+
+                    cart: {!! $hasCartItems ? 'null' : json_encode(['items_qty' => 0, 'items' => []]) !!},
 
                     isLoading:false,
 
@@ -374,15 +404,15 @@
                         prices: "{{ core()->getConfigData('sales.taxes.shopping_cart.display_prices') }}",
                         subtotal: "{{ core()->getConfigData('sales.taxes.shopping_cart.display_subtotal') }}",
                     },
-                }
+                };
             },
 
             mounted() {
-                this.getCart();
+                if (!this.cart) {
+                    this.getCart();
+                }
 
                 /**
-                 * To Do: Implement this.
-                 *
                  * Action.
                  */
                 this.$emitter.on('update-mini-cart', (cart) => {
@@ -408,14 +438,44 @@
 
                     this.$axios.put('{{ route('shop.api.checkout.cart.update') }}', { qty })
                         .then(response => {
-                            if (response.data.message) {
-                                this.cart = response.data.data;
+                            this.isLoading = false;
+
+                            /**
+                             * The update endpoint returns `{ data: CartResource, message }`
+                             * on success and only `{ message }` on failure (e.g.
+                             * inventory-warning). Only treat the payload as a cart when
+                             * it has an `items` field — otherwise surface the server
+                             * message as a warning flash.
+                             */
+                            const payload = response.data.data;
+
+                            if (payload && payload.items !== undefined) {
+                                this.cart = payload;
                             } else {
-                                this.$emitter.emit('add-flash', { type: 'warning', message: response.data.data.message });
+                                this.$emitter.emit('add-flash', {
+                                    type: 'warning',
+                                    message: payload?.message || response.data.message,
+                                });
                             }
 
+                            /**
+                             * Bump the key so the quantity-changer remounts from the
+                             * current server value even when the update was rejected
+                             * (in which case `value` didn't change and the component's
+                             * `value` watcher wouldn't fire).
+                             */
+                            this.refreshKey++;
+                        })
+                        .catch(error => {
                             this.isLoading = false;
-                        }).catch(error => this.isLoading = false);
+
+                            this.$emitter.emit('add-flash', {
+                                type: 'error',
+                                message: error.response?.data?.message || error.message,
+                            });
+
+                            this.refreshKey++;
+                        });
                 },
 
                 removeItem(itemId) {
@@ -431,7 +491,7 @@
                                 this.cart = response.data.data;
 
                                 this.$emitter.emit('add-flash', { type: 'success', message: response.data.message });
-                                
+
                                 this.isLoading = false;
                             })
                             .catch(error => {

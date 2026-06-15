@@ -1,8 +1,59 @@
 @props(['options'])
 
-<v-carousel :images="{{ json_encode($options['images'] ?? []) }}">
+@php
+    $carouselImages = $options['images'] ?? [];
+
+    $firstImage = data_get($carouselImages, '0.image');
+
+    $firstImageTitle = data_get($carouselImages, '0.title');
+@endphp
+
+@if ($firstImage)
+    {{--
+        Preload the LCP image in <head> so the browser starts fetching it
+        before HTML parse reaches the <img> tag. Directly targets the LCP
+        "resource load delay" subpart Lighthouse reports as the biggest
+        contributor on this page.
+    --}}
+    @push('meta')
+        <link
+            rel="preload"
+            as="image"
+            href="{{ str_replace('storage', 'cache/small', $firstImage) }}"
+            imagesrcset="{{ $firstImage }} 1920w, {{ str_replace('storage', 'cache/large', $firstImage) }} 1280w, {{ str_replace('storage', 'cache/medium', $firstImage) }} 1024w, {{ str_replace('storage', 'cache/small', $firstImage) }} 768w"
+            imagesizes="100vw"
+            fetchpriority="high"
+        >
+    @endpush
+@endif
+
+<v-carousel :images="{{ json_encode($carouselImages) }}">
     <div class="overflow-hidden">
-        <div class="shimmer aspect-[2.743/1] max-h-screen w-screen"></div>
+        @if ($firstImage)
+            {{--
+                Server-rendered first slide so the browser can discover and
+                fetch the LCP image immediately, before Vue mounts the
+                carousel. `sizes="100vw"` declares the actual rendered width
+                (the img has `w-screen`) so the browser picks the smallest
+                srcset variant that satisfies viewport_px × DPR — mobile
+                412 × 1.75 ≈ 721 → 768w small variant. The inline `style`
+                supplies width/aspect-ratio so the LCP element can paint
+                before the Tailwind CSS bundle finishes parsing on slow
+                mobile CPU.
+            --}}
+            <img
+                src="{{ $firstImage }}"
+                srcset="{{ $firstImage }} 1920w, {{ str_replace('storage', 'cache/large', $firstImage) }} 1280w, {{ str_replace('storage', 'cache/medium', $firstImage) }} 1024w, {{ str_replace('storage', 'cache/small', $firstImage) }} 768w"
+                sizes="100vw"
+                class="aspect-[2.743/1] max-h-screen w-screen select-none object-cover"
+                style="width:100vw;aspect-ratio:2.743/1;max-height:100vh;object-fit:cover;display:block"
+                alt="{{ $firstImageTitle ?? trans('shop::app.home.index.image-carousel') }}"
+                fetchpriority="high"
+                decoding="sync"
+            >
+        @else
+            <div class="shimmer aspect-[2.743/1] max-h-screen w-screen"></div>
+        @endif
     </div>
 </v-carousel>
 
@@ -13,23 +64,27 @@
     >
         <div class="relative m-auto flex w-full overflow-hidden">
             <!-- Slider -->
-            <div 
+            <div
                 class="inline-flex translate-x-0 cursor-pointer transition-transform duration-700 ease-out will-change-transform"
                 ref="sliderContainer"
             >
                 <div
                     class="max-h-screen w-screen bg-cover bg-no-repeat"
                     v-for="(image, index) in images"
+                    :key="index"
                     @click="visitLink(image)"
                     ref="slide"
                 >
                     <x-shop::media.images.lazy
-                        class="aspect-[2.743/1] max-h-full w-full max-w-full select-none transition-transform duration-300 ease-in-out"
-                        ::lazy="false"
+                        class="aspect-[2.743/1] max-h-full w-full max-w-full select-none transition-transform duration-300 ease-in-out will-change-transform"
+                        ::lazy="index === 0 ? false : true"
                         ::src="image.image"
-                        ::srcset="image.image + ' 1920w, ' + image.image.replace('storage', 'cache/large') + ' 1280w,' + image.image.replace('storage', 'cache/medium') + ' 1024w, ' + image.image.replace('storage', 'cache/small') + ' 525w'"
-                        ::alt="image?.title"
+                        ::srcset="image.image + ' 1920w, ' + image.image.replace('storage', 'cache/large') + ' 1280w,' + image.image.replace('storage', 'cache/medium') + ' 1024w, ' + image.image.replace('storage', 'cache/small') + ' 768w'"
+                        sizes="100vw"
+                        ::alt="image?.title || 'Carousel Image ' + (index + 1)"
                         tabindex="0"
+                        ::fetchpriority="index === 0 ? 'high' : 'low'"
+                        ::decoding="index === 0 ? 'sync' : 'async'"
                     />
                 </div>
             </div>
@@ -67,11 +122,16 @@
             <div class="absolute bottom-5 left-0 flex w-full justify-center max-md:bottom-3.5 max-sm:bottom-2.5">
                 <div
                     v-for="(image, index) in images"
-                    class="mx-1 h-3 w-3 cursor-pointer rounded-full max-md:h-2 max-md:w-2 max-sm:h-1.5 max-sm:w-1.5"
+                    :key="index"
+                    class="sm:p-2.5 mx-1 h-3 w-3 cursor-pointer rounded-full max-md:h-2 max-md:w-2 max-sm:h-1.5 max-sm:w-1.5
+                    p-2 focus:outline-none"
                     :class="{ 'bg-navyBlue': index === Math.abs(currentIndex), 'opacity-30 bg-gray-500': index !== Math.abs(currentIndex) }"
                     role="button"
                     tabindex="0"
+                    :aria-label="'Go to slide ' + (index + 1)"
                     @click="navigateByPagination(index)"
+                    @keydown.enter="navigateByPagination(index)"
+                    @keydown.space.prevent="navigateByPagination(index)"
                 >
                 </div>
             </div>
@@ -110,9 +170,26 @@
                     this.slides = Array.from(this.$refs.slide);
                 }
 
-                this.init();
+                // Use requestIdleCallback for non-critical initialization
+                if ('requestIdleCallback' in window) {
+                    requestIdleCallback(() => {
+                        this.init();
+                        setTimeout(() => {
+                            this.play();
+                        }, 4000);
+                    });
+                } else {
+                    setTimeout(() => {
+                        this.init();
+                        setTimeout(() => {
+                            this.play();
+                        }, 4000);
+                    });
+                }
+            },
 
-                this.play();
+            beforeUnmount() {
+                this.cleanup();
             },
 
             methods: {
@@ -128,13 +205,13 @@
 
                         slide.addEventListener('mousedown', this.handleDragStart);
 
-                        slide.addEventListener('touchstart', this.handleDragStart);
+                        slide.addEventListener('touchstart', this.handleDragStart, { passive: true });
 
                         slide.addEventListener('mouseup', this.handleDragEnd);
 
                         slide.addEventListener('mouseleave', this.handleDragEnd);
 
-                        slide.addEventListener('touchend', this.handleDragEnd);
+                        slide.addEventListener('touchend', this.handleDragEnd, { passive: true });
 
                         slide.addEventListener('mousemove', this.handleDrag);
 
@@ -280,6 +357,27 @@
 
                         this.setPositionByIndex();
                     }, 5000);
+                },
+
+                cleanup() {
+                    // Clear intervals and animation frames
+                    clearInterval(this.autoPlayInterval);
+                    cancelAnimationFrame(this.animationID);
+
+                    // Remove event listeners
+                    if (this.slides) {
+                        this.slides.forEach(slide => {
+                            slide.removeEventListener('mousedown', this.handleDragStart);
+                            slide.removeEventListener('touchstart', this.handleDragStart);
+                            slide.removeEventListener('mouseup', this.handleDragEnd);
+                            slide.removeEventListener('mouseleave', this.handleDragEnd);
+                            slide.removeEventListener('touchend', this.handleDragEnd);
+                            slide.removeEventListener('mousemove', this.handleDrag);
+                            slide.removeEventListener('touchmove', this.handleDrag);
+                        });
+                    }
+
+                    window.removeEventListener('resize', this.setPositionByIndex);
                 },
             },
         });

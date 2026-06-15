@@ -132,9 +132,11 @@
 
                     <!-- Captcha -->
                     @if (core()->getConfigData('customer.captcha.credentials.status'))
-                        <div class="mt-5 flex">
-                            {!! Captcha::render() !!}
-                        </div>
+                        <x-shop::form.control-group class="mt-5">
+                            {!! \Webkul\Customer\Facades\Captcha::render() !!}
+
+                            <x-shop::form.control-group.error control-name="recaptcha_token" />
+                        </x-shop::form.control-group>
                     @endif
 
                     <!-- Submit Button -->
@@ -152,6 +154,20 @@
             </div>
 
             {!! view_render_event('bagisto.shop.customers.login.after') !!}
+
+            @if (
+                request()->cookie('enable-resend')
+                && request()->cookie('email-for-resend')
+            )
+                <p class="mt-5 font-medium text-zinc-500 max-sm:text-center max-sm:text-sm">
+                    <a
+                        class="text-navyBlue"
+                        href="{{ route('shop.customers.resend.verification_email', urlencode(request()->cookie('email-for-resend'))) }}"
+                    >
+                        @lang('shop::app.customers.login-form.resend-verification')
+                    </a>
+                </p>
+            @endif
 
             <p class="mt-5 font-medium text-zinc-500 max-sm:text-center max-sm:text-sm">
                 @lang('shop::app.customers.login-form.new-customer')
@@ -171,7 +187,7 @@
     </div>
 
     @push('scripts')
-        {!! Captcha::renderJS() !!}
+        {!! \Webkul\Customer\Facades\Captcha::renderJS() !!}
 
         <script>
             function switchVisibility() {

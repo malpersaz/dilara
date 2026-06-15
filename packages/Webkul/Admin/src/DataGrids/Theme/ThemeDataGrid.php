@@ -2,6 +2,7 @@
 
 namespace Webkul\Admin\DataGrids\Theme;
 
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Webkul\DataGrid\DataGrid;
 
@@ -10,7 +11,7 @@ class ThemeDataGrid extends DataGrid
     /**
      * Prepare query builder.
      *
-     * @return \Illuminate\Database\Query\Builder
+     * @return Builder
      */
     public function prepareQueryBuilder()
     {
@@ -20,31 +21,31 @@ class ThemeDataGrid extends DataGrid
 
         $queryBuilder = DB::table('theme_customizations')
             ->distinct()
-            ->join('theme_customization_translations', function ($leftJoin) use ($whereInLocales) {
-                $leftJoin->on('theme_customizations.id', '=', 'theme_customization_translations.theme_customization_id')
+            ->leftJoin('theme_customization_translations', function ($join) use ($whereInLocales) {
+                $join->on('theme_customizations.id', '=', 'theme_customization_translations.theme_customization_id')
                     ->whereIn('theme_customization_translations.locale', $whereInLocales);
             })
-            ->join('channel_translations', function ($leftJoin) use ($whereInLocales) {
-                $leftJoin->on('theme_customizations.channel_id', '=', 'channel_translations.channel_id')
+            ->leftJoin('channel_translations', function ($join) use ($whereInLocales) {
+                $join->on('theme_customizations.channel_id', '=', 'channel_translations.channel_id')
                     ->whereIn('channel_translations.locale', $whereInLocales);
             })
             ->select(
                 'theme_customizations.id',
                 'theme_customizations.type',
                 'theme_customizations.sort_order',
-                'channel_translations.name as channel_name',
                 'theme_customizations.status',
-                'theme_customizations.name as name',
+                'theme_customizations.name as theme_customization_name',
                 'theme_customizations.theme_code',
-                'theme_customizations.channel_id'
+                'theme_customizations.channel_id',
+                'channel_translations.name as channel_name'
             );
 
         $this->addFilter('id', 'theme_customizations.id');
         $this->addFilter('type', 'theme_customizations.type');
-        $this->addFilter('name', 'theme_customizations.name');
+        $this->addFilter('theme_customization_name', 'theme_customizations.name');
         $this->addFilter('sort_order', 'theme_customizations.sort_order');
         $this->addFilter('status', 'theme_customizations.status');
-        $this->addFilter('channel_name', 'theme_customizations.channel_id');
+        $this->addFilter('channel_name', 'channel_translations.name');
         $this->addFilter('theme_code', 'theme_customizations.theme_code');
 
         return $queryBuilder;
@@ -60,67 +61,67 @@ class ThemeDataGrid extends DataGrid
         $themes = config('themes.shop');
 
         $this->addColumn([
-            'index'              => 'channel_name',
-            'label'              => trans('admin::app.settings.themes.index.datagrid.channel_name'),
-            'type'               => 'string',
-            'filterable'         => true,
-            'filterable_type'    => 'dropdown',
+            'index' => 'channel_name',
+            'label' => trans('admin::app.settings.themes.index.datagrid.channel_name'),
+            'type' => 'string',
+            'filterable' => true,
+            'filterable_type' => 'dropdown',
             'filterable_options' => core()->getAllChannels()
                 ->map(fn ($channel) => ['label' => $channel->name, 'value' => $channel->id])
                 ->values()
                 ->toArray(),
-            'sortable'   => true,
+            'sortable' => true,
         ]);
 
         $this->addColumn([
-            'index'              => 'theme_code',
-            'label'              => trans('admin::app.settings.themes.index.datagrid.theme'),
-            'type'               => 'string',
-            'filterable'         => true,
-            'filterable_type'    => 'dropdown',
+            'index' => 'theme_code',
+            'label' => trans('admin::app.settings.themes.index.datagrid.theme'),
+            'type' => 'string',
+            'filterable' => true,
+            'filterable_type' => 'dropdown',
             'filterable_options' => collect($themes = config('themes.shop'))
                 ->map(fn ($theme, $code) => ['label' => $theme['name'], 'value' => $code])
                 ->values()
                 ->toArray(),
-            'closure'=> function ($row) use ($themes) {
+            'closure' => function ($row) use ($themes) {
                 return collect($themes)->first(fn ($theme, $code) => $code === $row->theme_code)['name'] ?? 'N/A';
             },
-            'sortable'           => true,
+            'sortable' => true,
         ]);
 
         $this->addColumn([
-            'index'      => 'type',
-            'label'      => trans('admin::app.settings.themes.index.datagrid.type'),
-            'type'       => 'string',
+            'index' => 'type',
+            'label' => trans('admin::app.settings.themes.index.datagrid.type'),
+            'type' => 'string',
             'searchable' => true,
             'filterable' => true,
-            'sortable'   => true,
+            'sortable' => true,
         ]);
 
         $this->addColumn([
-            'index'      => 'name',
-            'label'      => trans('admin::app.settings.themes.index.datagrid.name'),
-            'type'       => 'string',
+            'index' => 'theme_customization_name',
+            'label' => trans('admin::app.settings.themes.index.datagrid.name'),
+            'type' => 'string',
             'searchable' => true,
             'filterable' => true,
-            'sortable'   => true,
+            'sortable' => true,
         ]);
 
         $this->addColumn([
-            'index'      => 'sort_order',
-            'label'      => trans('admin::app.settings.themes.index.datagrid.sort-order'),
-            'type'       => 'string',
+            'index' => 'sort_order',
+            'label' => trans('admin::app.settings.themes.index.datagrid.sort-order'),
+            'type' => 'string',
             'searchable' => true,
             'filterable' => true,
-            'sortable'   => true,
+            'sortable' => true,
         ]);
 
         $this->addColumn([
-            'index'              => 'status',
-            'label'              => trans('admin::app.settings.themes.index.datagrid.status'),
-            'type'               => 'boolean',
-            'searchable'         => true,
-            'filterable'         => true,
+            'index' => 'status',
+            'label' => trans('admin::app.settings.themes.index.datagrid.status'),
+            'type' => 'boolean',
+            'searchable' => true,
+            'filterable' => true,
             'filterable_options' => [
                 [
                     'label' => trans('admin::app.settings.themes.index.datagrid.active'),
@@ -131,8 +132,8 @@ class ThemeDataGrid extends DataGrid
                     'value' => 0,
                 ],
             ],
-            'sortable'   => true,
-            'closure'    => function ($value) {
+            'sortable' => true,
+            'closure' => function ($value) {
                 if ($value->status) {
                     return '<p class="label-active">'.trans('admin::app.settings.themes.index.datagrid.active').'</p>';
                 }
@@ -146,10 +147,10 @@ class ThemeDataGrid extends DataGrid
     {
         if (bouncer()->hasPermission('settings.themes.edit')) {
             $this->addAction([
-                'icon'   => 'icon-edit',
-                'title'  => trans('admin::app.settings.themes.index.datagrid.view'),
+                'icon' => 'icon-edit',
+                'title' => trans('admin::app.settings.themes.index.datagrid.view'),
                 'method' => 'GET',
-                'url'    => function ($row) {
+                'url' => function ($row) {
                     return route('admin.settings.themes.edit', $row->id);
                 },
             ]);
@@ -157,10 +158,10 @@ class ThemeDataGrid extends DataGrid
 
         if (bouncer()->hasPermission('settings.themes.delete')) {
             $this->addAction([
-                'icon'   => 'icon-delete',
-                'title'  => trans('admin::app.settings.themes.index.datagrid.delete'),
+                'icon' => 'icon-delete',
+                'title' => trans('admin::app.settings.themes.index.datagrid.delete'),
                 'method' => 'DELETE',
-                'url'    => function ($row) {
+                'url' => function ($row) {
                     return route('admin.settings.themes.delete', $row->id);
                 },
             ]);
@@ -176,16 +177,16 @@ class ThemeDataGrid extends DataGrid
     {
         if (bouncer()->hasPermission('settings.themes.edit')) {
             $this->addMassAction([
-                'title'   => trans('admin::app.settings.themes.index.datagrid.change-status'),
-                'url'     => route('admin.settings.themes.mass_update'),
-                'method'  => 'POST',
+                'title' => trans('admin::app.settings.themes.index.datagrid.change-status'),
+                'url' => route('admin.settings.themes.mass_update'),
+                'method' => 'POST',
                 'options' => [
                     [
-                        'label'  => trans('admin::app.settings.themes.index.datagrid.active'),
-                        'value'  => 1,
+                        'label' => trans('admin::app.settings.themes.index.datagrid.active'),
+                        'value' => 1,
                     ], [
-                        'label'  => trans('admin::app.settings.themes.index.datagrid.inactive'),
-                        'value'  => 0,
+                        'label' => trans('admin::app.settings.themes.index.datagrid.inactive'),
+                        'value' => 0,
                     ],
                 ],
             ]);
@@ -193,8 +194,8 @@ class ThemeDataGrid extends DataGrid
 
         if (bouncer()->hasPermission('settings.themes.delete')) {
             $this->addMassAction([
-                'title'  => trans('admin::app.settings.themes.index.datagrid.delete'),
-                'url'    => route('admin.settings.themes.mass_delete'),
+                'title' => trans('admin::app.settings.themes.index.datagrid.delete'),
+                'url' => route('admin.settings.themes.mass_delete'),
                 'method' => 'POST',
             ]);
         }

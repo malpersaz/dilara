@@ -5,6 +5,7 @@ namespace Webkul\Admin\Http\Controllers\Marketing\SearchSEO;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
 use Webkul\Admin\DataGrids\Marketing\SearchSEO\SearchSynonymDataGrid;
 use Webkul\Admin\Http\Controllers\Controller;
 use Webkul\Admin\Http\Requests\MassDestroyRequest;
@@ -22,7 +23,7 @@ class SearchSynonymController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\View\View
+     * @return View
      */
     public function index()
     {
@@ -39,7 +40,7 @@ class SearchSynonymController extends Controller
     public function store(): JsonResponse
     {
         $this->validate(request(), [
-            'name'  => 'required',
+            'name' => 'required',
             'terms' => 'required',
         ]);
 
@@ -67,7 +68,7 @@ class SearchSynonymController extends Controller
         $id = request()->id;
 
         $this->validate(request(), [
-            'name'  => 'required',
+            'name' => 'required',
             'terms' => 'required',
         ]);
 

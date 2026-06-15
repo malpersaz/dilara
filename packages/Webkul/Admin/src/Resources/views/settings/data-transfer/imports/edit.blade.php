@@ -66,19 +66,42 @@
                             :label="trans('admin::app.settings.data-transfer.imports.edit.type')"
                         >
                             @foreach (config('importers') as $code => $importer)
-                                <option value="{{ $code }}">@lang($importer['title'])</option>
+                                <option 
+                                    value="{{ $code }}"
+                                    v-pre
+                                >
+                                    @lang($importer['title'])
+                                </option>
                             @endforeach
                         </x-admin::form.control-group.control>
 
                         <!-- Source Sample Download Links -->
-                        <a
-                            :href="'{{ route('admin.settings.data_transfer.imports.download_sample') }}/' + $refs['importType']?.value"
-                            target="_blank"
-                            id="source-sample-link"
-                            class="mt-1 cursor-pointer text-sm text-blue-600 transition-all hover:underline"
-                        >
-                            @lang('admin::app.settings.data-transfer.imports.edit.download-sample')
-                        </a>
+                        <div class="flex items-center mt-2.5">
+                            <span>
+                                @lang('admin::app.settings.data-transfer.imports.create.download-sample')
+                            </span>
+
+                            <x-admin::dropdown>
+                                <x-slot:toggle>
+                                    <span class="cursor-pointer text-2xl icon-arrow-down"></span>
+                                </x-slot>
+
+                                <x-slot:content>
+                                    <div class="grid gap-2.5 max-md:my-0">
+                                        @foreach ($supportedFormats as $format)
+                                            <a
+                                                :href="'{{ route('admin.settings.data_transfer.imports.download_sample', ['type' => ':type:', 'format' => ':format:']) }}'.replace(':type:', $refs['importType']?.value).replace(':format:', '{{ $format }}')"
+                                                target="_blank"
+                                                id="source-sample-link"
+                                                class="cursor-pointer text-sm text-blue-600 transition-all hover:underline"
+                                            >
+                                                {{ strtoupper($format) }}
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                </x-slot>
+                            </x-admin::dropdown>
+                        </div>
 
                         <x-admin::form.control-group.error control-name="type" />
                     </x-admin::form.control-group>
@@ -103,6 +126,7 @@
                                     href="{{ route('admin.settings.data_transfer.imports.download', $import->id) }}" 
                                     class="cursor-pointer text-sm text-blue-600 transition-all hover:underline"
                                     target="_blank"
+                                    v-pre
                                 >
                                     {{ basename($import->file_path) }}
                                 </a>
@@ -189,7 +213,7 @@
                                 :label="trans('admin::app.settings.data-transfer.imports.edit.validation-strategy')"
                             >
                                 <option value="stop-on-errors">@lang('admin::app.settings.data-transfer.imports.edit.stop-on-errors')</option>
-                                <option value="skip-erros">@lang('admin::app.settings.data-transfer.imports.edit.skip-errors')</option>
+                                <option value="skip-errors">@lang('admin::app.settings.data-transfer.imports.edit.skip-errors')</option>
                             </x-admin::form.control-group.control>
 
                             <x-admin::form.control-group.error control-name="validation_strategy" />

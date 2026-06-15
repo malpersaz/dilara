@@ -151,7 +151,7 @@
                     const urlParams = new URLSearchParams(window.location.search);
 
                     if (urlParams.has('search')) {
-                        let searchAppliedColumn = this.findAppliedColumn('all');
+                        let searchAppliedColumn = this.applied.filters.columns.find(column => column.index === 'all');
 
                         searchAppliedColumn.value = [urlParams.get('search')];
                     }
@@ -167,7 +167,7 @@
                             this.applied.filters = currentDatagrid.applied.filters;
 
                             if (urlParams.has('search')) {
-                                let searchAppliedColumn = this.findAppliedColumn('all');
+                                let searchAppliedColumn = this.applied.filters.columns.find(column => column.index === 'all');
 
                                 searchAppliedColumn.value = [urlParams.get('search')];
                             }
@@ -411,6 +411,7 @@
                      * listen to it and update its properties accordingly.
                      */
                      this.$emitter.emit('change-datagrid', {
+                        src: this.src,
                         available: this.available,
                         applied: this.applied
                     });
@@ -437,7 +438,6 @@
                                     return {
                                         ...datagrid,
                                         requestCount: ++datagrid.requestCount,
-                                        available: this.available,
                                         applied: this.applied,
                                     };
                                 }
@@ -463,7 +463,6 @@
                     return {
                         src: this.src,
                         requestCount: 0,
-                        available: this.available,
                         applied: this.applied,
                     };
                 },

@@ -17,6 +17,7 @@
         validations="{{ $field->getValidations() }}"
         is-require="{{ $field->isRequired() }}"
         depend-name="{{ $field->getDependFieldName() }}"
+        placeholder="{{ $field->getPlaceholder() }}"
         src="{{ Storage::url($value) }}"
         field-data="{{ json_encode($field) }}"
         channel-count="{{ $channels->count() }}"
@@ -68,6 +69,7 @@
                     ::value="value"
                     ::rules="validations"
                     ::label="label"
+                    ::placeholder="placeholder"
                 />
             </template>
         
@@ -80,6 +82,7 @@
                     ::value="value"
                     ::rules="validations"
                     ::label="label"
+                    ::placeholder="placeholder"
                 />
             </template>
         
@@ -93,6 +96,7 @@
                     ::value="value"
                     ::label="label"
                     ::min="field.name == 'minimum_order_amount'"
+                    ::placeholder="placeholder"
                 />
             </template>
 
@@ -125,20 +129,30 @@
                     ::rules="validations"
                     ::value="value"
                     ::label="label"
+                    ::placeholder="placeholder"
                 />
             </template>
 
             <!-- Textarea with tinymce -->
             <template v-if="field.type == 'editor' && field.is_visible">
-                <x-admin::form.control-group.control
-                    type="textarea"
-                    class="text-gray-600 dark:text-gray-300"
-                    ::id="name"
-                    ::name="name"
-                    ::rules="validations"
-                    ::value="value"
-                    ::label="label"
-                />
+                <v-field
+                    v-slot="{ field, errors }"
+                    :name="name"
+                >
+                    <textarea
+                        :name="name"
+                        :id="name.replaceAll('[', '_').replaceAll(']', '_').replaceAll('[]', '_')"
+                        :value="value"
+                        v-bind="{field, errors}"
+                        :class="[errors.length ? 'border !border-red-600 hover:border-red-600' : '']"
+                        class="w-full rounded-md border px-3 py-2.5 text-sm text-gray-600 transition-all hover:border-gray-400 focus:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"
+                    ></textarea>
+
+                    <x-admin::tinymce
+                        ::selector="`textarea#${name.replaceAll('[', '_').replaceAll(']', '_').replaceAll('[]', '_')}`"
+                        ::field="field"
+                    />
+                </v-field>
             </template>
         
             <!-- Select input -->
@@ -214,7 +228,7 @@
                         :checked="parseInt(value || 0)"
                     >
 
-                    <div class="peer h-5 w-9 cursor-pointer rounded-full bg-gray-200 after:absolute after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-blue-300 dark:bg-gray-800 dark:after:border-white dark:after:bg-white dark:peer-checked:bg-gray-950 after:ltr:left-0.5 peer-checked:after:ltr:translate-x-full after:rtl:right-0.5 peer-checked:after:rtl:-translate-x-full"></div>
+                    <div class="peer h-5 w-9 cursor-pointer rounded-full bg-gray-200 after:absolute after:top-0.5 after:h-4 after:w-4 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-blue-300 after:ltr:left-0.5 peer-checked:after:ltr:translate-x-full after:rtl:right-0.5 peer-checked:after:rtl:-translate-x-full dark:bg-gray-800 dark:after:border-white dark:after:bg-white dark:peer-checked:bg-gray-950"></div>
                 </label>
             </template>
         
@@ -264,7 +278,7 @@
             <template v-if="field.type == 'file' && field.is_visible">
                 <a
                     v-if="value"
-                    :href="`{{ route('admin.configuration.download', [request()->route('slug'), request()->route('slug2'), '']) }}/${value.split('/')[1]}`"
+                    :href="'{{ route('admin.configuration.download', [request()->route('slug'), request()->route('slug2'), ':path']) }}'.replace(':path', value.split('/')[1])"
                 >
                     <div class="mb-1 inline-flex w-full max-w-max cursor-pointer appearance-none items-center justify-between gap-x-1 rounded-md border border-transparent p-1.5 text-center text-gray-600 transition-all marker:shadow hover:bg-gray-200 active:border-gray-300 dark:text-gray-300 dark:hover:bg-gray-800">
                         <i class="icon-down-stat text-2xl"></i>
@@ -438,6 +452,7 @@
                 'src',
                 'validations',
                 'value',
+                'placeholder',
             ],
 
             data() {

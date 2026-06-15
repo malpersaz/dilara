@@ -10,22 +10,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
-use Shetabit\Visitor\Traits\Visitable;
 use Webkul\Attribute\Models\AttributeFamilyProxy;
 use Webkul\Attribute\Models\AttributeProxy;
 use Webkul\Attribute\Repositories\AttributeRepository;
+use Webkul\BookingProduct\Models\BookingProductProxy;
 use Webkul\CatalogRule\Models\CatalogRuleProductPriceProxy;
 use Webkul\Category\Models\CategoryProxy;
 use Webkul\Core\Models\ChannelProxy;
 use Webkul\Inventory\Models\InventorySourceProxy;
 use Webkul\Product\Contracts\Product as ProductContract;
-use Webkul\Product\Database\Eloquent\Builder;
 use Webkul\Product\Database\Factories\ProductFactory;
 use Webkul\Product\Type\AbstractType;
 
 class Product extends Model implements ProductContract
 {
-    use HasFactory, Visitable;
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -47,7 +46,7 @@ class Product extends Model implements ProductContract
     /**
      * The type of product.
      *
-     * @var \Webkul\Product\Type\AbstractType
+     * @var AbstractType
      */
     protected $typeInstance;
 
@@ -204,6 +203,15 @@ class Product extends Model implements ProductContract
     }
 
     /**
+     * Get the customizable options.
+     */
+    public function customizable_options(): HasMany
+    {
+        return $this->hasMany(ProductCustomizableOptionProxy::modelClass())
+            ->orderBy('sort_order');
+    }
+
+    /**
      * Get the product variants that owns the product.
      */
     public function variants(): HasMany
@@ -217,6 +225,14 @@ class Product extends Model implements ProductContract
     public function grouped_products(): HasMany
     {
         return $this->hasMany(ProductGroupedProductProxy::modelClass());
+    }
+
+    /**
+     * Get the grouped products that owns the product.
+     */
+    public function booking_products(): HasMany
+    {
+        return $this->hasMany(BookingProductProxy::modelClass());
     }
 
     /**
@@ -280,7 +296,7 @@ class Product extends Model implements ProductContract
      *
      * @param  string  $key
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function isSaleable(): bool
     {
@@ -292,7 +308,7 @@ class Product extends Model implements ProductContract
      * Is stockable.
      *
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function isStockable(): bool
     {
@@ -304,7 +320,7 @@ class Product extends Model implements ProductContract
      * Total quantity.
      *
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function totalQuantity(): int
     {
@@ -316,7 +332,7 @@ class Product extends Model implements ProductContract
      * Have sufficient quantity.
      *
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function haveSufficientQuantity(int $qty): bool
     {
@@ -328,7 +344,7 @@ class Product extends Model implements ProductContract
      * Get type instance.
      *
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function getTypeInstance(): AbstractType
     {
@@ -393,7 +409,7 @@ class Product extends Model implements ProductContract
      * @param  Group  $group
      * @param  bool  $skipSuperAttribute
      *
-     * @throws \Exception
+     * @throws Exception
      */
     public function getEditableAttributes($group = null, $skipSuperAttribute = true): Collection
     {
@@ -495,17 +511,6 @@ class Product extends Model implements ProductContract
     {
         return core()->getSingletonInstance(AttributeRepository::class)
             ->getFamilyAttributes($this->attribute_family);
-    }
-
-    /**
-     * Overrides the default Eloquent query builder.
-     *
-     * @param  \Illuminate\Database\Query\Builder  $query
-     * @return \Webkul\Product\Database\Eloquent\Builder
-     */
-    public function newEloquentBuilder($query)
-    {
-        return new Builder($query);
     }
 
     /**

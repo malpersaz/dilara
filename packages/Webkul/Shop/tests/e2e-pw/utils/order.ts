@@ -21,21 +21,8 @@ export async function generateOrder(page) {
     /**
      * Go to the shop to buy a product.
      */
-    await page.goto("");
-    await page.waitForLoadState("networkidle");
-    await page
-        .locator("#main div")
-        .filter({ hasText: "New Products View All New" })
-        .locator("button")
-        .first()
-        .waitFor({ state: "visible" });
-
-    await page
-        .locator("#main div")
-        .filter({ hasText: "New Products View All New" })
-        .locator("button")
-        .first()
-        .click();
+    await page.goto("digital-air-fryer-with-touch-controls-45l");
+    await page.getByRole("button", { name: "Add To Cart" }).first().click();
     await expect(page.locator("#app")).toContainText("Item Added Successfully");
     await page.waitForTimeout(2000);
     await page.getByRole("button", { name: "Shopping Cart" }).click();

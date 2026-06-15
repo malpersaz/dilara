@@ -134,11 +134,7 @@ export async function addReview(page) {
         comment: generateDescription(),
     };
 
-    await page
-        .locator("#main div")
-        .filter({ hasText: "New Products View All New" })
-        .getByLabel("Arctic Touchscreen Winter")
-        .click();
+    await page.goto("digital-air-fryer-with-touch-controls-45l");
     await page.getByRole("button", { name: "Reviews" }).click();
     await page.locator("#review-tab").getByText("Write a Review").click();
     await page.locator("#review-tab span").nth(3).click();

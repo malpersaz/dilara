@@ -8,28 +8,19 @@
         id="v-shimmer-image-template"
     >
         <div
-            :id="'image-shimmer-' + $.uid"
-            class="shimmer"
-            v-bind="$attrs"
+            v-bind="filteredAttrs"
+            :class="['shimmer', $attrs.class]"
             v-if="isLoading"
+            ref="shimmer"
         >
         </div>
 
         <img
-            v-bind="$attrs"
-            :data-src="src"
-            :id="'image-' + $.uid"
-            @load="onLoad"
-            v-show="! isLoading"
-            v-if="lazy"
-        >
-
-        <img
-            v-bind="$attrs"
-            :data-src="src"
-            :id="'image-' + $.uid"
-            @load="onLoad"
-            v-else
+            v-bind="filteredAttrs"
+            :src="currentSrc"
+            :srcset="currentSrcset"
+            v-on:load="onLoad"
+            v-on:error="onError"
             v-show="! isLoading"
         >
     </script>
@@ -53,36 +44,65 @@
             data() {
                 return {
                     isLoading: true,
+                    currentSrc: '',
+                    currentSrcset: '',
                 };
             },
 
-            mounted() {
-                let self = this;
+            computed: {
+                filteredAttrs() {
+                    const { src, srcset, ...attrs } = this.$attrs;
+                    return attrs;
+                }
+            },
 
+            mounted() {
                 if (! this.lazy) {
+                    this.currentSrc = this.src;
+                    this.currentSrcset = this.$attrs.srcset || '';
                     return;
                 }
 
+                if (! window.IntersectionObserver) {
+                    this.currentSrc = this.src;
+                    this.currentSrcset = this.$attrs.srcset || '';
+                    return;
+                }
+
+                let self = this;
                 let lazyImageObserver = new IntersectionObserver(function(entries, observer) {
                     entries.forEach(function(entry) {
                         if (entry.isIntersecting) {
-                            let lazyImage = document.getElementById('image-' + self.$.uid);
-
-                            lazyImage.src = lazyImage.dataset.src;
-
-                            lazyImageObserver.unobserve(lazyImage);
+                            self.currentSrc = self.src;
+                            self.currentSrcset = self.$attrs.srcset || '';
+                            observer.unobserve(entry.target);
                         }
                     });
                 });
 
-                lazyImageObserver.observe(document.getElementById('image-shimmer-' + this.$.uid));
+                if (this.$refs.shimmer) {
+                    lazyImageObserver.observe(this.$refs.shimmer);
+                } else {
+                    this.$nextTick(() => {
+                        if (this.$refs.shimmer) {
+                            lazyImageObserver.observe(this.$refs.shimmer);
+                        } else {
+                            this.currentSrc = this.src;
+                            this.currentSrcset = this.$attrs.srcset || '';
+                        }
+                    });
+                }
             },
 
             methods: {
                 onLoad() {
                     this.isLoading = false;
                 },
+
+                onError() {
+                    this.isLoading = false;
+                }
             },
         });
     </script>
-@endPushOnce
+@endpushOnce

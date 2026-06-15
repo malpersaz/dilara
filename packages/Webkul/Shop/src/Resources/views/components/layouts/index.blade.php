@@ -87,11 +87,16 @@
                             return '<span style="color:' + color + '">• ' + log + '</span>';
                         }).join('<br>');
                         
+                        var productCardsCount = document.querySelectorAll('v-product-card').length;
+                        var productCarouselCount = document.querySelectorAll('v-products-carousel').length;
+                        
                         var innerHtml = '<button onclick="navigator.clipboard.writeText(document.getElementById(\'js-debug-logs-text\').innerText); this.innerText=\'Kopyalandı!\';" style="background:#4ade80;color:#0f172a;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;float:right;font-weight:bold;font-size:11px;margin-bottom:5px;">Kopyala</button>' +
                             '<strong>Debug Status:</strong><br>' +
                             '<div id="js-debug-logs-text">' +
                             'Vue Mounted: ' + isVueMounted + '<br>' +
                             'window.app: ' + (window.app ? 'Defined' : 'Undefined') + '<br>' +
+                            'Product Carousels in DOM: ' + productCarouselCount + '<br>' +
+                            'Product Cards in DOM: ' + productCardsCount + '<br>' +
                             '<strong style="margin-top: 5px; display: inline-block;">API Logs:</strong><br>' + (logsHtml || 'No logs yet') +
                             '</div>';
                         debugDiv.innerHTML = innerHtml;

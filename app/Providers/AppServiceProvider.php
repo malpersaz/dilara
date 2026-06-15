@@ -23,10 +23,12 @@ class AppServiceProvider extends ServiceProvider
             return;
         }
 
-        if (in_array(Request::ip(), $allowedIPs)) {
-            Debugbar::enable();
-        } else {
-            Debugbar::disable();
+        if (class_exists(\Barryvdh\Debugbar\Facades\Debugbar::class)) {
+            if (in_array(Request::ip(), $allowedIPs)) {
+                \Barryvdh\Debugbar\Facades\Debugbar::enable();
+            } else {
+                \Barryvdh\Debugbar\Facades\Debugbar::disable();
+            }
         }
     }
 

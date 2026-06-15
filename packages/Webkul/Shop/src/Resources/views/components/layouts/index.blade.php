@@ -251,6 +251,13 @@
              * avoids blocking the storefront behind every image/font download.
              */
             function mountApp() {
+                if (window.app) {
+                    window.app.config.errorHandler = function(err, vm, info) {
+                        console.error('Vue Error:', err);
+                        window.vueDebugLogs = window.vueDebugLogs || [];
+                        window.vueDebugLogs.push("Vue Crash: " + err.message + " (" + info + ")");
+                    };
+                }
                 app.mount("#app");
             }
 

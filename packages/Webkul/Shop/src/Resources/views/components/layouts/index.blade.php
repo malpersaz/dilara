@@ -105,6 +105,11 @@
                                     var cardsCount = child.querySelectorAll('.group').length;
                                     var shimmerCardsCount = child.querySelectorAll('.shimmer').length;
                                     details += ' [Cards: ' + cardsCount + ', Shimmers: ' + shimmerCardsCount + ']';
+                                    
+                                    var firstCard = child.querySelector('.group');
+                                    if (firstCard) {
+                                        details += ' [FirstCard: size=' + firstCard.offsetWidth + 'x' + firstCard.offsetHeight + 'px, display=' + window.getComputedStyle(firstCard).display + ', visibility=' + window.getComputedStyle(firstCard).visibility + ']';
+                                    }
                                 }
                                 
                                 domStructure.push(details);

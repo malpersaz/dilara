@@ -29,12 +29,13 @@ export const test = base.extend<Fixtures>({
      *  AdminPage
      */
 
-    adminPage: async ({ browser }, use) => {
+    adminPage: async ({ browser, baseURL }, use) => {
         const authExists = fs.existsSync(ADMIN_AUTH_STATE_PATH);
 
-        const context = await browser.newContext(
-            authExists ? { storageState: ADMIN_AUTH_STATE_PATH } : {}
-        );
+        const context = await browser.newContext({
+            ...(authExists ? { storageState: ADMIN_AUTH_STATE_PATH } : {}),
+            baseURL,
+        });
 
         const page = await context.newPage();
 
@@ -79,8 +80,8 @@ export const test = base.extend<Fixtures>({
      * Shop Page
      */
 
-    shopPage: async ({ browser }, use) => {
-        const context = await browser.newContext();
+    shopPage: async ({ browser, baseURL }, use) => {
+        const context = await browser.newContext({ baseURL });
         const page = await context.newPage();
 
         /**

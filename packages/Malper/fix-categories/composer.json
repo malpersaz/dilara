@@ -1,0 +1,21 @@
+{
+    "name": "malper/fix-categories",
+    "autoload": {
+        "psr-4": {
+            "Malper\\FixCategories\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "rezzan"
+        }
+    ],
+    "extra": {
+    "laravel": {
+        "providers": [
+            "Malper\\FixCategories\\Providers\\ExtendedControllersServiceProvider"
+        ]
+    }
+},
+    "require": {}
+}

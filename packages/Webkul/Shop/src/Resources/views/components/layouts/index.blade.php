@@ -90,6 +90,19 @@
                         var productCardsCount = document.querySelectorAll('v-product-card').length;
                         var productCarouselCount = document.querySelectorAll('v-products-carousel').length;
                         
+                        var domStructure = [];
+                        var mainEl = document.getElementById('main');
+                        if (mainEl) {
+                            var children = mainEl.children;
+                            for (var i = 0; i < children.length; i++) {
+                                var child = children[i];
+                                var details = child.tagName;
+                                if (child.id) details += '#' + child.id;
+                                if (child.className) details += ' (class: ' + child.className.split(' ').slice(0, 2).join('.') + ')';
+                                domStructure.push(details);
+                            }
+                        }
+                        
                         var innerHtml = '<button onclick="navigator.clipboard.writeText(document.getElementById(\'js-debug-logs-text\').innerText); this.innerText=\'Kopyalandı!\';" style="background:#4ade80;color:#0f172a;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;float:right;font-weight:bold;font-size:11px;margin-bottom:5px;">Kopyala</button>' +
                             '<strong>Debug Status:</strong><br>' +
                             '<div id="js-debug-logs-text">' +
@@ -97,6 +110,7 @@
                             'window.app: ' + (window.app ? 'Defined' : 'Undefined') + '<br>' +
                             'Product Carousels in DOM: ' + productCarouselCount + '<br>' +
                             'Product Cards in DOM: ' + productCardsCount + '<br>' +
+                            '<strong>DOM Structure under &lt;main&gt;:</strong><br>• ' + (domStructure.join('<br>• ') || 'Empty') + '<br>' +
                             '<strong style="margin-top: 5px; display: inline-block;">API Logs:</strong><br>' + (logsHtml || 'No logs yet') +
                             '</div>';
                         debugDiv.innerHTML = innerHtml;

@@ -1,6 +1,7 @@
 <?php
 
 use Webkul\Payment\Payment\CashOnDelivery;
+use Webkul\Payment\Payment\KuveytTurk;
 use Webkul\Payment\Payment\MoneyTransfer;
 
 return [
@@ -22,5 +23,19 @@ return [
         'active' => true,
         'generate_invoice' => false,
         'sort' => 8,
+    ],
+
+    'kuveytturk' => [
+        'class' => KuveytTurk::class,
+        'code' => 'kuveytturk',
+        'title' => 'Kuveyt Türk Sanal POS',
+        'description' => 'Kuveyt Türk Sanal POS Ödeme Yöntemi',
+        'active' => true,
+        'sandbox' => true,
+        'merchant_id' => '',
+        'customer_id' => '',
+        'username' => '',
+        'password' => '',
+        'sort' => 3,
     ],
 ];

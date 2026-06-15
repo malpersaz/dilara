@@ -15,6 +15,10 @@ class PaymentServiceProvider extends ServiceProvider
     {
         include __DIR__.'/../Http/helpers.php';
 
+        $this->loadRoutesFrom(__DIR__.'/../Routes/web.php');
+
+        $this->loadViewsFrom(__DIR__.'/../Resources/views', 'payment');
+
         $this->app->register(EventServiceProvider::class);
     }
 

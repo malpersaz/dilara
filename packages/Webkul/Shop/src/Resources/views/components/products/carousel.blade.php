@@ -120,17 +120,20 @@
             methods: {
                 getProducts() {
                     window.vueDebugLogs = window.vueDebugLogs || [];
-                    window.vueDebugLogs.push("Start Products (" + (this.title || "Tüm Ürünler") + ") -> " + this.src);
+                    let separator = this.src.indexOf('?') !== -1 ? '&' : '?';
+                    let url = this.src + separator + '_t=' + Date.now();
+                    window.vueDebugLogs.push("Start Products (" + (this.title || "Tüm Ürünler") + ") -> " + url);
 
-                    this.$axios.get(this.src)
+                    this.$axios.get(url)
                         .then(response => {
-                            window.vueDebugLogs.push("Success Products (" + (this.title || "Tüm Ürünler") + ") -> " + (response.data?.data?.length || 0) + " items");
+                            window.vueDebugLogs.push("Success Products (" + (this.title || "Tüm Ürünler") + ") -> Status: " + response.status + " (" + (response.data?.data?.length || 0) + " items)");
                             this.isLoading = false;
 
                             this.products = response.data.data;
                         }).catch(error => {
                             console.error(error);
-                            window.vueDebugLogs.push("Error Products (" + (this.title || "Tüm Ürünler") + ") -> " + (error.message || error));
+                            var statusText = error.response ? 'Status: ' + error.response.status : 'Network Error';
+                            window.vueDebugLogs.push("Error Products (" + (this.title || "Tüm Ürünler") + ") -> " + statusText + " - " + error.message);
                             this.isLoading = false;
                         });
                 },

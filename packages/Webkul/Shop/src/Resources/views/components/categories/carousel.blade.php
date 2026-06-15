@@ -118,17 +118,20 @@
             methods: {
                 getCategories() {
                     window.vueDebugLogs = window.vueDebugLogs || [];
-                    window.vueDebugLogs.push("Start Categories -> " + this.src);
+                    let separator = this.src.indexOf('?') !== -1 ? '&' : '?';
+                    let url = this.src + separator + '_t=' + Date.now();
+                    window.vueDebugLogs.push("Start Categories -> " + url);
 
-                    this.$axios.get(this.src)
+                    this.$axios.get(url)
                         .then(response => {
-                            window.vueDebugLogs.push("Success Categories (" + (response.data?.data?.length || 0) + " items)");
+                            window.vueDebugLogs.push("Success Categories -> Status: " + response.status + " (" + (response.data?.data?.length || 0) + " items)");
                             this.isLoading = false;
 
                             this.categories = response.data.data;
                         }).catch(error => {
                             console.error(error);
-                            window.vueDebugLogs.push("Error Categories -> " + (error.message || error));
+                            var statusText = error.response ? 'Status: ' + error.response.status : 'Network Error';
+                            window.vueDebugLogs.push("Error Categories -> " + statusText + " - " + error.message);
                             this.isLoading = false;
                         });
                 },

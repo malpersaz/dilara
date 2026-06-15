@@ -21,7 +21,8 @@
             :srcset="currentSrcset"
             v-on:load="onLoad"
             v-on:error="onError"
-            v-show="! isLoading"
+            :class="{ 'invisible absolute': isLoading }"
+            v-if="currentSrc"
         >
     </script>
 

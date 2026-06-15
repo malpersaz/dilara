@@ -66,26 +66,35 @@
                             debugDiv.style.right = '10px';
                             debugDiv.style.backgroundColor = '#1e293b';
                             debugDiv.style.color = '#ffffff';
-                            debugDiv.style.padding = '12px';
+                            debugDiv.style.padding = '15px';
                             debugDiv.style.borderRadius = '8px';
                             debugDiv.style.zIndex = '999999';
                             debugDiv.style.fontFamily = 'monospace';
-                            debugDiv.style.fontSize = '11px';
-                            debugDiv.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.3)';
-                            debugDiv.style.maxHeight = '250px';
+                            debugDiv.style.fontSize = '12px';
+                            debugDiv.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.5)';
+                            debugDiv.style.maxHeight = '400px';
                             debugDiv.style.overflowY = 'auto';
-                            debugDiv.style.width = '320px';
-                            debugDiv.style.lineHeight = '1.4';
+                            debugDiv.style.width = '600px';
+                            debugDiv.style.maxWidth = '90vw';
+                            debugDiv.style.lineHeight = '1.5';
+                            debugDiv.style.userSelect = 'text';
+                            debugDiv.style.webkitUserSelect = 'text';
+                            debugDiv.style.msUserSelect = 'text';
                             document.body.appendChild(debugDiv);
                         }
                         var logsHtml = (window.vueDebugLogs || []).map(function(log) {
                             var color = log.indexOf('Success') !== -1 ? '#4ade80' : (log.indexOf('Error') !== -1 ? '#f87171' : '#e2e8f0');
                             return '<span style="color:' + color + '">• ' + log + '</span>';
                         }).join('<br>');
-                        debugDiv.innerHTML = '<strong>Debug Status:</strong><br>' +
+                        
+                        var innerHtml = '<button onclick="navigator.clipboard.writeText(document.getElementById(\'js-debug-logs-text\').innerText); this.innerText=\'Kopyalandı!\';" style="background:#4ade80;color:#0f172a;border:none;padding:4px 8px;border-radius:4px;cursor:pointer;float:right;font-weight:bold;font-size:11px;margin-bottom:5px;">Kopyala</button>' +
+                            '<strong>Debug Status:</strong><br>' +
+                            '<div id="js-debug-logs-text">' +
                             'Vue Mounted: ' + isVueMounted + '<br>' +
                             'window.app: ' + (window.app ? 'Defined' : 'Undefined') + '<br>' +
-                            '<strong style="margin-top: 5px; display: inline-block;">API Logs:</strong><br>' + (logsHtml || 'No logs yet');
+                            '<strong style="margin-top: 5px; display: inline-block;">API Logs:</strong><br>' + (logsHtml || 'No logs yet') +
+                            '</div>';
+                        debugDiv.innerHTML = innerHtml;
                     }, 1000);
                 });
             })();

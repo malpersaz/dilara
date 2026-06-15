@@ -99,6 +99,14 @@
                                 var details = child.tagName;
                                 if (child.id) details += '#' + child.id;
                                 if (child.className) details += ' (class: ' + child.className.split(' ').slice(0, 2).join('.') + ')';
+                                
+                                // If it is a carousel container
+                                if (child.classList.contains('container') && child.classList.contains('mt-20')) {
+                                    var cardsCount = child.querySelectorAll('.group').length;
+                                    var shimmerCardsCount = child.querySelectorAll('.shimmer').length;
+                                    details += ' [Cards: ' + cardsCount + ', Shimmers: ' + shimmerCardsCount + ']';
+                                }
+                                
                                 domStructure.push(details);
                             }
                         }

@@ -11,6 +11,50 @@
     dir="{{ core()->getCurrentLocale()->direction }}"
 >
     <head>
+        <script>
+            (function() {
+                function showError(msg) {
+                    var showErrorFn = function() {
+                        var container = document.getElementById('js-debug-errors');
+                        if (!container) {
+                            container = document.createElement('div');
+                            container.id = 'js-debug-errors';
+                            container.style.position = 'fixed';
+                            container.style.top = '0';
+                            container.style.left = '0';
+                            container.style.width = '100%';
+                            container.style.zIndex = '999999';
+                            container.style.fontFamily = 'monospace';
+                            container.style.fontSize = '14px';
+                            document.body.appendChild(container);
+                        }
+                        var errorDiv = document.createElement('div');
+                        errorDiv.style.backgroundColor = '#f43f5e';
+                        errorDiv.style.color = '#ffffff';
+                        errorDiv.style.padding = '15px';
+                        errorDiv.style.borderBottom = '2px solid #be123c';
+                        errorDiv.style.wordBreak = 'break-all';
+                        errorDiv.innerHTML = msg;
+                        container.appendChild(errorDiv);
+                    };
+                    if (document.body) {
+                        showErrorFn();
+                    } else {
+                        document.addEventListener('DOMContentLoaded', showErrorFn);
+                    }
+                }
+                window.addEventListener('error', function(event) {
+                    showError('<strong>JS Error:</strong> ' + event.message + ' <br>Dosya: ' + event.filename + ' <br>Satır: ' + event.lineno);
+                });
+                window.addEventListener('unhandledrejection', function(event) {
+                    var reason = event.reason;
+                    if (reason && reason.stack) {
+                        reason = reason.message + '<br>' + reason.stack.replace(/\n/g, '<br>');
+                    }
+                    showError('<strong>Promise Rejection:</strong> ' + reason);
+                });
+            })();
+        </script>
 
         {!! view_render_event('bagisto.shop.layout.head.before') !!}
 

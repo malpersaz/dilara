@@ -53,6 +53,26 @@
                     }
                     showError('<strong>Promise Rejection:</strong> ' + reason);
                 });
+                window.addEventListener('load', function() {
+                    setTimeout(function() {
+                        var appEl = document.getElementById('app');
+                        var isVueMounted = appEl && appEl.__vue_app__ ? 'EVET (Yes)' : 'HAYIR (No)';
+                        var debugDiv = document.createElement('div');
+                        debugDiv.style.position = 'fixed';
+                        debugDiv.style.bottom = '10px';
+                        debugDiv.style.right = '10px';
+                        debugDiv.style.backgroundColor = '#1e293b';
+                        debugDiv.style.color = '#ffffff';
+                        debugDiv.style.padding = '12px';
+                        debugDiv.style.borderRadius = '8px';
+                        debugDiv.style.zIndex = '999999';
+                        debugDiv.style.fontFamily = 'monospace';
+                        debugDiv.style.fontSize = '12px';
+                        debugDiv.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.1)';
+                        debugDiv.innerHTML = '<strong>Debug Status:</strong><br>Vue Mounted: ' + isVueMounted + '<br>window.app: ' + (window.app ? 'Defined' : 'Undefined');
+                        document.body.appendChild(debugDiv);
+                    }, 1000);
+                });
             })();
         </script>
 

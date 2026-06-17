@@ -159,11 +159,14 @@ class KuveytTurkController extends Controller
      */
     public function callback()
     {
+        logger()->info('Kuveyt Turk VPOS Callback Params: ', request()->all());
+
         $responseCode = request()->input('ResponseCode');
         $merchantOrderId = request()->input('MerchantOrderId');
         $orderId = request()->input('OrderId');
         $md = request()->input('MD');
         $responseMessage = request()->input('ResponseMessage') ?? '3D doğrulama başarısız oldu.';
+
 
         if ($responseCode !== '00' || empty($md)) {
             session()->flash('error', 'Ödeme başarısız: '.$responseMessage);

@@ -123,6 +123,7 @@ class KuveytTurkController extends Controller
     <DisplayAmount>'.$amount.'</DisplayAmount>
     <CurrencyCode>0949</CurrencyCode>
     <CardNumber>'.$validatedData['card_number'].'</CardNumber>
+    <CardHolderName>'.$validatedData['cardholder_name'].'</CardHolderName>
     <CardExpireDateYear>'.$validatedData['expiration_year'].'</CardExpireDateYear>
     <CardExpireDateMonth>'.$validatedData['expiration_month'].'</CardExpireDateMonth>
     <CardCVV2>'.$validatedData['cvv'].'</CardCVV2>

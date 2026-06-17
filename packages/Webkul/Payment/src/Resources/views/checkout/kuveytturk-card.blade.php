@@ -624,6 +624,14 @@
                 <div class="error-message" style="display: block;">
                     {{ session()->get('error') }}
                 </div>
+            @elseif($errors->any())
+                <div class="error-message" style="display: block;">
+                    <ul style="list-style-type: none; margin: 0; padding: 0;">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
             @endif
             <div class="error-message" id="jsError"></div>
 

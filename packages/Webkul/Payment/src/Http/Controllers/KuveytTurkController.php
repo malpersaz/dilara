@@ -62,6 +62,12 @@ class KuveytTurkController extends Controller
      */
     public function process()
     {
+        if (request()->has('card_number')) {
+            request()->merge([
+                'card_number' => str_replace(' ', '', request()->input('card_number')),
+            ]);
+        }
+
         $validatedData = request()->validate([
             'cardholder_name' => 'required|string|max:100',
             'card_number' => 'required|numeric|digits_between:15,16',
@@ -69,6 +75,7 @@ class KuveytTurkController extends Controller
             'expiration_year' => 'required|numeric|digits:2',
             'cvv' => 'required|numeric|digits_between:3,4',
         ]);
+
 
         $cart = Cart::getCart();
 

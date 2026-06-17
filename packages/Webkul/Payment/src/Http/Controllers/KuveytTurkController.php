@@ -127,6 +127,7 @@ class KuveytTurkController extends Controller
     <CardExpireDateMonth>'.$validatedData['expiration_month'].'</CardExpireDateMonth>
     <CardCVV2>'.$validatedData['cvv'].'</CardCVV2>
     <TransactionType>Sale</TransactionType>
+    <TransactionSecurity>3</TransactionSecurity>
     <InstallmentCount>1</InstallmentCount>
     <MerchantOrderId>'.$merchantOrderId.'</MerchantOrderId>
 </KuveytTurkVPosMessage>';

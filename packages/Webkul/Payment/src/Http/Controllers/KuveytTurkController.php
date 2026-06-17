@@ -161,11 +161,27 @@ class KuveytTurkController extends Controller
     {
         logger()->info('Kuveyt Turk VPOS Callback Params: ', request()->all());
 
+        if (request()->has('AuthenticationResponse')) {
+            $xmlContent = html_entity_decode(urldecode(request()->input('AuthenticationResponse')));
+            $xml = simplexml_load_string($xmlContent);
+            if ($xml !== false) {
+                logger()->info('Kuveyt Turk VPOS Decoded XML: ', (array) $xml);
+                request()->merge([
+                    'ResponseCode'    => (string) $xml->ResponseCode,
+                    'MerchantOrderId' => (string) $xml->MerchantOrderId,
+                    'OrderId'         => (string) $xml->OrderId,
+                    'MD'              => (string) $xml->MD,
+                    'ResponseMessage' => (string) $xml->ResponseMessage,
+                ]);
+            }
+        }
+
         $responseCode = request()->input('ResponseCode');
         $merchantOrderId = request()->input('MerchantOrderId');
         $orderId = request()->input('OrderId');
         $md = request()->input('MD');
         $responseMessage = request()->input('ResponseMessage') ?? '3D doğrulama başarısız oldu.';
+
 
 
         if ($responseCode !== '00' || empty($md)) {

@@ -76,7 +76,6 @@ class KuveytTurkController extends Controller
             'cvv' => 'required|numeric|digits_between:3,4',
         ]);
 
-
         $cart = Cart::getCart();
 
         if (! $cart) {
@@ -169,10 +168,10 @@ class KuveytTurkController extends Controller
             if ($xml !== false) {
                 logger()->info('Kuveyt Turk VPOS Decoded XML: ', (array) $xml);
                 request()->merge([
-                    'ResponseCode'    => (string) $xml->ResponseCode,
+                    'ResponseCode' => (string) $xml->ResponseCode,
                     'MerchantOrderId' => (string) $xml->MerchantOrderId,
-                    'OrderId'         => (string) $xml->OrderId,
-                    'MD'              => (string) $xml->MD,
+                    'OrderId' => (string) $xml->OrderId,
+                    'MD' => (string) $xml->MD,
                     'ResponseMessage' => (string) $xml->ResponseMessage,
                 ]);
             }
@@ -183,8 +182,6 @@ class KuveytTurkController extends Controller
         $orderId = request()->input('OrderId');
         $md = request()->input('MD');
         $responseMessage = request()->input('ResponseMessage') ?? '3D doğrulama başarısız oldu.';
-
-
 
         if ($responseCode !== '00' || empty($md)) {
             session()->flash('error', 'Ödeme başarısız: '.$responseMessage);

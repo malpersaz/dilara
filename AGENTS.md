@@ -188,6 +188,13 @@ php artisan db:seed              # Seed database
   - Always request the exact error logs or stack traces from the user or the test runner before proposing fixes, to avoid blind trial-and-error.
   - GitHub is not a testing playground; it is a repository for storing verified, final code. NEVER suggest pushing to GitHub until we are 100% sure the problem is fully resolved and verified locally.
 
+- **Information Gathering & Investigation Rails:**
+  - Before proposing or making any code changes, the agent must identify all required information that it cannot access directly (such as GitHub Actions logs, test runner outputs, or host environment details).
+  - The agent must clearly explain to the user:
+    1. WHAT specific reports or information are needed.
+    2. HOW the user can retrieve this information (e.g., specific URLs, commands, or UI steps).
+  - The agent must WAIT and NOT make any file edits or start executing fixes until this requested information is fully provided and complete.
+
 ## Validation Checklist (Before Marking Complete)
 
 1. `vendor/bin/pint --dirty` — no style violations

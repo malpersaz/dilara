@@ -194,9 +194,7 @@ php artisan db:seed              # Seed database
     1. WHAT specific reports or information are needed.
     2. HOW the user can retrieve this information (e.g., specific URLs, commands, or UI steps).
   - The agent must WAIT and NOT make any file edits or start executing fixes until this requested information is fully provided and complete.
-  - To fetch GitHub Actions logs automatically, the agent must use the GitHub REST API (`https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/jobs`).
-  - When a GitHub run fails, the agent should request the Run ID (or URL containing the Run ID) from the user.
-  - The agent must then use `curl` or a python script to fetch the failed job list and download the raw log files of the failed jobs directly from the GitHub API, rather than asking the user to manually copy-paste log text.
+  - To fetch GitHub Actions logs automatically, the agent must try to use the GitHub REST API (`https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/jobs`). If the repository is private and API access is unauthorized, the agent must request the user to download the log archive from the GitHub Actions UI (using the "Download log archive" option under the log settings gear or three-dot icon) and place the downloaded log file in the workspace directory so the agent can read and process it directly, avoiding manual copy-paste.
 
 ## Validation Checklist (Before Marking Complete)
 

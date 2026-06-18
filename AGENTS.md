@@ -175,6 +175,12 @@ php artisan db:seed              # Seed database
 - **Tests must pass.** Run affected package tests after changes. Do not delete tests without approval.
 - **Do not add/remove composer dependencies without approval.**
 - **Do not create documentation files unless explicitly requested.**
+- **Bagisto Coding & E2E Testing Standards:**
+  - Never hardcode localized UI text (e.g. Turkish `"Giyim"`, Spanish `"Roba"`, etc.) in Playwright page models or test scripts.
+  - To handle localized dropdowns (like `attribute_family_id`), use database values (like value `"3"` for clothing family) or language-independent identifiers that remain constant across all database locales.
+- **Update & Upgrade Safety Rails:**
+  - To prevent changes from being lost or broken during upstream Bagisto updates, keep modifications minimally invasive and fully conformant to Bagisto architecture guidelines.
+  - When customizing default behavior, prefer Laravel events, observers, or inheritance over direct core file mutations where possible. If direct core file modification is required, keep it localized and document the reasoning.
 
 ## Validation Checklist (Before Marking Complete)
 

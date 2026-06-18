@@ -51,12 +51,12 @@ export class SalesCreatePage extends BasePage {
         const attributeFamilySelect = this.page.locator('select[name="attribute_family_id"]');
         await attributeFamilySelect.waitFor({ state: "visible" });
         
-        const options = await attributeFamilySelect.locator('option').evaluateAll(
-            (opts: any) => opts.map((o: any) => o.text.trim())
-        );
-        
-        const targetLabel = options.find((opt: string) => ["Clothing", "Giyim"].includes(opt)) || options[0];
-        await attributeFamilySelect.selectOption({ label: targetLabel });
+        const hasValue3 = await attributeFamilySelect.locator('option[value="3"]').count() > 0;
+        if (hasValue3) {
+            await attributeFamilySelect.selectOption({ value: "3" });
+        } else {
+            await attributeFamilySelect.selectOption({ index: 0 });
+        }
 
         await this.page.locator('input[name="sku"]').fill(generateSKU());
         await this.page.getByRole("button", { name: "Save Product" }).click();

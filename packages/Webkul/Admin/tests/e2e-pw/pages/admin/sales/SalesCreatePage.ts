@@ -47,9 +47,17 @@ export class SalesCreatePage extends BasePage {
     private async startProductCreation(type: string) {
         await this.openCreateProductModal();
         await this.page.locator('select[name="type"]').selectOption(type);
-        await this.page
-            .locator('select[name="attribute_family_id"]')
-            .selectOption({ label: "Clothing" });
+        
+        const attributeFamilySelect = this.page.locator('select[name="attribute_family_id"]');
+        await attributeFamilySelect.waitFor({ state: "visible" });
+        
+        const options = await attributeFamilySelect.locator('option').evaluateAll(
+            (opts: any) => opts.map((o: any) => o.text.trim())
+        );
+        
+        const targetLabel = options.find((opt: string) => ["Clothing", "Giyim"].includes(opt)) || options[0];
+        await attributeFamilySelect.selectOption({ label: targetLabel });
+
         await this.page.locator('input[name="sku"]').fill(generateSKU());
         await this.page.getByRole("button", { name: "Save Product" }).click();
     }

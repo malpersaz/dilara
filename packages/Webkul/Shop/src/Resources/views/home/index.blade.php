@@ -38,6 +38,10 @@
     @foreach ($customizations as $customization)
         @php ($data = $customization->options) @endphp
 
+        @if (empty($data))
+            @continue
+        @endif
+
         <!-- Static content -->
         @switch ($customization->type)
             @case ($customization::IMAGE_CAROUSEL)

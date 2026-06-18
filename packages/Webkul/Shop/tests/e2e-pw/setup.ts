@@ -82,6 +82,15 @@ export const test = base.extend<Fixtures>({
 
     shopPage: async ({ browser, baseURL }, use) => {
         const context = await browser.newContext({ baseURL });
+        const url = new URL(baseURL || "http://localhost");
+        await context.addCookies([
+            {
+                name: "cookie-consent",
+                value: "1",
+                domain: url.hostname,
+                path: "/",
+            },
+        ]);
         const page = await context.newPage();
 
         /**

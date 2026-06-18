@@ -182,6 +182,11 @@ php artisan db:seed              # Seed database
   - To prevent changes from being lost or broken during upstream Bagisto updates, keep modifications minimally invasive and fully conformant to Bagisto architecture guidelines.
   - When customizing default behavior, prefer Laravel events, observers, or inheritance over direct core file mutations where possible. If direct core file modification is required, keep it localized and document the reasoning.
 
+- **Token & CI Efficiency Rules:**
+  - NEVER run full Playwright/E2E test suites inside the agent environment. It consumes too many tokens and takes hours.
+  - Only run targeted E2E tests for verification (e.g., specifying a single test name or single file).
+  - Always request the exact error logs or stack traces from the user or the test runner before proposing fixes, to avoid blind trial-and-error.
+
 ## Validation Checklist (Before Marking Complete)
 
 1. `vendor/bin/pint --dirty` — no style violations

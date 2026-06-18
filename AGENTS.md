@@ -186,6 +186,7 @@ php artisan db:seed              # Seed database
   - NEVER run full Playwright/E2E test suites inside the agent environment. It consumes too many tokens and takes hours.
   - Only run targeted E2E tests for verification (e.g., specifying a single test name or single file).
   - Always request the exact error logs or stack traces from the user or the test runner before proposing fixes, to avoid blind trial-and-error.
+  - GitHub is not a testing playground; it is a repository for storing verified, final code. NEVER suggest pushing to GitHub until we are 100% sure the problem is fully resolved and verified locally.
 
 ## Validation Checklist (Before Marking Complete)
 

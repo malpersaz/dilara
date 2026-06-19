@@ -25,7 +25,7 @@ test.describe('general configuration', () => {
 
         await adminPage.click('button[type="submit"].primary-button:visible');
 
-        await expect(adminPage.getByText('Configuration saved successfully')).toBeVisible();
+        await expect(adminPage.getByText('Configuration saved successfully').first()).toBeVisible();
     });
 
     test('Content of General', async ({ adminPage }) => {
@@ -48,7 +48,7 @@ test.describe('general configuration', () => {
 
         await adminPage.click('button[type="submit"].primary-button:visible');
 
-        await expect(adminPage.getByText('Configuration saved successfully')).toBeVisible();
+        await expect(adminPage.getByText('Configuration saved successfully').first()).toBeVisible();
     });
 
     test('Design of General', async ({ adminPage }) => {
@@ -76,11 +76,11 @@ test.describe('general configuration', () => {
 
         await adminPage.click('button[type="submit"].primary-button:visible');
 
-        await expect(adminPage.getByText('Configuration saved successfully')).toBeVisible();
+        await expect(adminPage.getByText('Configuration saved successfully').first()).toBeVisible();
     });
 
     test('Magic AI of General', async ({ adminPage }) => {
-        await adminPage.goto('admin/configuration/general/magic_ai');
+        await adminPage.goto('admin/configuration/magic_ai/general');
 
         const selects = await adminPage.$$('select.custom-select');
 
@@ -108,6 +108,6 @@ test.describe('general configuration', () => {
 
         await adminPage.click('button[type="submit"].primary-button:visible');
 
-        await expect(adminPage.getByText('Configuration saved successfully')).toBeVisible();
+        await expect(adminPage.getByText('Configuration saved successfully').first()).toBeVisible();
     });
 });

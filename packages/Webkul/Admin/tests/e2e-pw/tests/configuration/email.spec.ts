@@ -9,21 +9,21 @@ test.describe('email configuration', () => {
 
         const inputs = await adminPage.$$('input[type="text"].rounded-md:visible');
 
-        let i = 0;
-
         for (let input of inputs) {
-            if (i % 2 == 0) {
-                await input.fill(forms.generateRandomStringWithSpaces(50));
-            } else {
-                await input.fill(forms.form.email);
-            }
+            const name = await input.getAttribute('name');
 
-            i++;
+            if (name && (name.includes('port') || name.includes('sort'))) {
+                await input.fill('1025');
+            } else if (name && name.includes('email')) {
+                await input.fill(forms.form.email);
+            } else {
+                await input.fill(forms.generateRandomStringWithSpaces(50));
+            }
         }
 
         await adminPage.click('button[type="submit"].primary-button:visible');
 
-        await expect(adminPage.getByText('Configuration saved successfully')).toBeVisible();
+        await expect(adminPage.getByText('Configuration saved successfully').first()).toBeVisible();
     });
 
     test('Notifications of Email', async ({ adminPage }) => {
@@ -31,6 +31,6 @@ test.describe('email configuration', () => {
 
         await adminPage.click('button[type="submit"].primary-button:visible');
 
-        await expect(adminPage.getByText('Configuration saved successfully')).toBeVisible();
+        await expect(adminPage.getByText('Configuration saved successfully').first()).toBeVisible();
     });
 });

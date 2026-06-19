@@ -445,6 +445,7 @@ export class ProductCreatePage extends BasePage {
             location: generateLocation(),
         };
         const availableFromDate = new Date();
+        availableFromDate.setDate(availableFromDate.getDate() + 1);
 
         const availableToDate = new Date(
             availableFromDate.getTime() + 24 * 60 * 60000,

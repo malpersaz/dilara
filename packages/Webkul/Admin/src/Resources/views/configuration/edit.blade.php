@@ -1,11 +1,15 @@
 @php
+    $activeConfiguration = system_config()->getActiveConfigurationItem();
+
+    if (! $activeConfiguration) {
+        abort(404);
+    }
+
     $channels = core()->getAllChannels();
 
     $currentChannel = core()->getRequestedChannel();
 
     $currentLocale = core()->getRequestedLocale();
-
-    $activeConfiguration = system_config()->getActiveConfigurationItem();
 @endphp
 
 <x-admin::layouts>

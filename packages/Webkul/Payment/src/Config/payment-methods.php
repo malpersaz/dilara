@@ -30,7 +30,7 @@ return [
         'code' => 'kuveytturk',
         'title' => 'Kuveyt Türk Sanal POS',
         'description' => 'Kuveyt Türk Sanal POS Ödeme Yöntemi',
-        'active' => true,
+        'active' => false,
         'sandbox' => true,
         'merchant_id' => '',
         'customer_id' => '',

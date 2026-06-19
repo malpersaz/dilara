@@ -195,12 +195,12 @@ php artisan db:seed              # Seed database
     2. HOW the user can retrieve this information (e.g., specific URLs, commands, or UI steps).
   - The agent must WAIT and NOT make any file edits or start executing fixes until this requested information is fully provided and complete.
   - To fetch GitHub Actions logs automatically, the agent must try to use the GitHub REST API (`https://api.github.com/repos/{owner}/{repo}/actions/runs/{run_id}/jobs`). If the repository is private and API access is unauthorized, the agent must request the user to download the log archive from the GitHub Actions UI (using the "Download log archive" option under the log settings gear or three-dot icon) and place the downloaded log file in the workspace directory so the agent can read and process it directly, avoiding manual copy-paste.
-  - **Strict Verification Gate (Dergehê Kontrolê yê Hişk):**
-    - Before making any code changes or running tests, the agent must create and display a Compliance Table (Tabloya Rewşê) in its thoughts and responses.
+  - **Strict Verification Gate:**
+    - Before making any code changes or running tests, the agent must create and display a Compliance Table in its thoughts and responses.
     - The table must verify:
       1. Are all requested external reports/files downloaded and locally accessible in the workspace? (Yes/No)
       2. Has the user explicitly approved proceeding to the next step? (Yes/No)
-      3. Is the current plan written and explained in Kurdish (Kurmancî)? (Yes/No)
+      3. Is the current plan written and explained in Kurdish? (Yes/No)
     - If any of these are "No", the agent MUST STOP and wait. Under no circumstances should the agent use any file-editing (`write_to_file`, `replace_file_content`, etc.) or execution tools until all answers are "Yes".
 
 ## Validation Checklist (Before Marking Complete)

@@ -12,7 +12,7 @@
                         class="flex gap-2.5 p-1.5 items-center cursor-pointer hover:rounded-lg {{ $menuItem->isActive() == 'active' ? 'bg-blue-600 rounded-lg' : ' hover:bg-gray-100 hover:dark:bg-gray-950' }} peer"
                     >
                         <span class="{{ $menuItem->getIcon() }} text-2xl {{ $menuItem->isActive() ? 'text-white' : ''}}"></span>
-                        
+
                         <p class="text-gray-600 dark:text-gray-300 font-semibold whitespace-nowrap group-[.sidebar-collapsed]/container:hidden {{ $menuItem->isActive() ? 'text-white' : ''}}">
                             {{ $menuItem->getName() }}
                         </p>
@@ -23,10 +23,23 @@
                             @foreach ($menuItem->getChildren() as $subMenuItem)
                                 <a
                                     href="{{ $subMenuItem->getUrl() }}"
-                                    class="text-sm text-{{ $subMenuItem->isActive() ? 'blue':'gray' }}-600 dark:text-{{ $subMenuItem->isActive() ? 'blue':'gray' }}-300 whitespace-nowrap py-1 group-[.sidebar-collapsed]/container:px-5 group-[.sidebar-collapsed]/container:py-2.5 group-[.inactive]/item:px-5 group-[.inactive]/item:py-2.5 hover:text-blue-600 dark:hover:bg-gray-950"
+                                    class="{{ $subMenuItem->haveChildren() ? 'font-medium' : '' }} text-sm text-{{ $subMenuItem->isActive() ? 'blue':'gray' }}-600 dark:text-{{ $subMenuItem->isActive() ? 'blue':'gray' }}-300 whitespace-nowrap py-1 group-[.sidebar-collapsed]/container:px-5 group-[.sidebar-collapsed]/container:py-2.5 group-[.inactive]/item:px-5 group-[.inactive]/item:py-2.5 hover:text-blue-600 dark:hover:bg-gray-950"
                                 >
                                     {{ $subMenuItem->getName() }}
                                 </a>
+
+                                @if ($subMenuItem->haveChildren())
+                                    <div class="grid ltr:pl-4 rtl:pr-4 group-[.inactive]/item:hidden group-[.sidebar-collapsed]/container:hidden">
+                                        @foreach ($subMenuItem->getChildren() as $subSubMenuItem)
+                                            <a
+                                                href="{{ $subSubMenuItem->getUrl() }}"
+                                                class="text-sm text-{{ $subSubMenuItem->isActive() ? 'blue':'gray' }}-600 dark:text-{{ $subSubMenuItem->isActive() ? 'blue':'gray' }}-300 whitespace-nowrap py-1 group-[.sidebar-collapsed]/container:px-5 group-[.sidebar-collapsed]/container:py-2.5 group-[.inactive]/item:px-5 group-[.inactive]/item:py-2.5 hover:text-blue-600 dark:hover:bg-gray-950"
+                                            >
+                                                {{ $subSubMenuItem->getName() }}
+                                            </a>
+                                        @endforeach
+                                    </div>
+                                @endif
                             @endforeach
                         </div>
                     @endif
@@ -46,7 +59,19 @@
                     href="{{ route('admin.help.index') }}"
                     class="flex gap-2.5 p-1.5 items-center cursor-pointer hover:rounded-lg {{ $isHelpActive ? 'bg-blue-600 rounded-lg' : 'hover:bg-gray-100 hover:dark:bg-gray-950' }}"
                 >
-                    <span class="icon-information text-2xl {{ $isHelpActive ? 'text-white' : '' }}"></span>
+                    <svg
+                        class="h-6 w-6 shrink-0 {{ $isHelpActive ? 'text-white' : 'text-gray-600 dark:text-gray-300' }}"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="12" cy="12" r="9"></circle>
+                        <path d="M9.4 9.3a2.6 2.6 0 0 1 5.05.85c0 1.7-2.45 2.05-2.45 3.6"></path>
+                        <path d="M12 17.2h.01"></path>
+                    </svg>
 
                     <p class="text-gray-600 dark:text-gray-300 font-semibold whitespace-nowrap group-[.sidebar-collapsed]/container:hidden {{ $isHelpActive ? 'text-white' : '' }}">
                         @lang('admin::app.components.layouts.sidebar.help')
@@ -112,7 +137,7 @@
                             return value;
                         }
                     }
-                    
+
                     return 0;
                 },
             },

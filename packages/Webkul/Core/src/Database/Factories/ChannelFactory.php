@@ -40,8 +40,8 @@ class ChannelFactory extends Factory
             'theme' => $code,
             'hostname' => 'http://'.$this->faker->ipv4(),
             'root_category_id' => 1,
-            'default_locale_id' => 1,
-            'base_currency_id' => 1,
+            'default_locale_id' => Locale::first()?->id ?? 1,
+            'base_currency_id' => Currency::first()?->id ?? 1,
         ];
     }
 }

@@ -108,12 +108,12 @@ return [
                 'name' => 'enabled',
                 'title' => 'admin::app.configuration.index.general.content.speculation-rules.enable-speculation',
                 'type' => 'boolean',
-                'default' => true,
+                'default' => false,
             ], [
                 'name' => 'prerender_enabled',
                 'title' => 'admin::app.configuration.index.general.content.speculation-rules.prerender.enabled',
                 'type' => 'boolean',
-                'default' => true,
+                'default' => false,
             ], [
                 'name' => 'prerender_ignore_urls',
                 'title' => 'admin::app.configuration.index.general.content.speculation-rules.prerender.ignore-urls',
@@ -3016,6 +3016,21 @@ return [
                         'value' => 'including_tax',
                     ],
                 ],
+            ], [
+                'name' => 'apply_tax_on',
+                'title' => 'admin::app.configuration.index.sales.taxes.calculation.apply-tax-on',
+                'info' => 'admin::app.configuration.index.sales.taxes.calculation.apply-tax-on-info',
+                'type' => 'select',
+                'default' => 'after_discount',
+                'options' => [
+                    [
+                        'title' => 'admin::app.configuration.index.sales.taxes.calculation.before-discount',
+                        'value' => 'before_discount',
+                    ], [
+                        'title' => 'admin::app.configuration.index.sales.taxes.calculation.after-discount',
+                        'value' => 'after_discount',
+                    ],
+                ],
             ],
         ],
     ], [
@@ -3098,6 +3113,12 @@ return [
                         'value' => 'both',
                     ],
                 ],
+            ], [
+                'name' => 'show_tax_breakdown',
+                'title' => 'admin::app.configuration.index.sales.taxes.shopping-cart.show-tax-breakdown',
+                'info' => 'admin::app.configuration.index.sales.taxes.shopping-cart.show-tax-breakdown-info',
+                'type' => 'boolean',
+                'default' => false,
             ],
         ],
     ], [
@@ -3261,6 +3282,7 @@ return [
             ], [
                 'name' => 'return_policy',
                 'title' => 'admin::app.configuration.index.sales.rma.return-policy',
+                'info' => 'admin::app.configuration.index.sales.rma.return-policy-info',
                 'type' => 'textarea',
                 'validation' => 'required',
                 'default' => '7 days return policy.',
@@ -3269,15 +3291,13 @@ return [
             ], [
                 'name' => 'allowed_file_extension',
                 'title' => 'admin::app.configuration.index.sales.rma.allowed-file-extension',
+                'info' => 'admin::app.configuration.index.sales.rma.file-extension-info',
                 'validation' => 'required',
-                'default' => 'image/jpg,image/jpeg,image/png,image/webp',
+                'default' => 'image/jpeg,image/png,image/webp',
                 'type' => 'multiselect',
                 'options' => [
                     [
-                        'title' => 'JPG',
-                        'value' => 'image/jpg',
-                    ], [
-                        'title' => 'JPEG',
+                        'title' => 'JPG / JPEG',
                         'value' => 'image/jpeg',
                     ], [
                         'title' => 'PNG',
@@ -3292,6 +3312,7 @@ return [
             ], [
                 'name' => 'allowed_new_rma_request_for_cancelled_request',
                 'title' => 'admin::app.configuration.index.sales.rma.allowed-request-cancelled-request',
+                'info' => 'admin::app.configuration.index.sales.rma.cancelled-request-info',
                 'type' => 'select',
                 'validation' => 'required',
                 'default' => 'yes',
@@ -3309,6 +3330,7 @@ return [
             ], [
                 'name' => 'allowed_new_rma_request_for_declined_request',
                 'title' => 'admin::app.configuration.index.sales.rma.allowed-request-declined-request',
+                'info' => 'admin::app.configuration.index.sales.rma.declined-request-info',
                 'type' => 'select',
                 'validation' => 'required',
                 'default' => 'yes',
@@ -3326,6 +3348,7 @@ return [
             ], [
                 'name' => 'select_allowed_product_type',
                 'title' => 'admin::app.configuration.index.sales.rma.allow-product-type-for-rma',
+                'info' => 'admin::app.configuration.index.sales.rma.product-type-info',
                 'type' => 'multiselect',
                 'default' => 'simple,configurable,bundle,grouped',
                 'options' => [

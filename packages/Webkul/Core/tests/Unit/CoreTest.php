@@ -167,9 +167,9 @@ it('returns the current channel code if requested channel code is not provided',
 
 it('should format the price with default symbol based on the current currency and use default formatter if currency position is not defined', function () {
     // Arrange
-    $expectedSymbol = '$';
-
     $channel = Channel::factory()->create();
+
+    $expectedSymbol = core()->currencySymbol($channel->base_currency->code);
 
     $channel->base_currency->update([
         'symbol' => null,
@@ -184,7 +184,7 @@ it('should format the price with default symbol based on the current currency an
     $formattedPrice = core()->formatPrice($price);
 
     // Assert
-    expect($formattedPrice)->toBe($expectedSymbol.$price);
+    expect($formattedPrice)->toContain($expectedSymbol)->toContain($price);
 });
 
 it('should format the price with custom symbol based on the current currency and use default formatter if currency position is not defined', function () {

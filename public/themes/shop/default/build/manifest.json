@@ -15,7 +15,7 @@
     "name": "vue"
   },
   "src/Resources/assets/css/app.css": {
-    "file": "assets/app-DAK3g6hY.css",
+    "file": "assets/app-CdSfEKLy.css",
     "src": "src/Resources/assets/css/app.css",
     "isEntry": true
   },
@@ -46,6 +46,10 @@
   "src/Resources/assets/images/hero-image.webp": {
     "file": "assets/hero-image-DwKg3YHc.webp",
     "src": "src/Resources/assets/images/hero-image.webp"
+  },
+  "src/Resources/assets/images/kuveytturk.png": {
+    "file": "assets/kuveytturk-DUyL61Xi.png",
+    "src": "src/Resources/assets/images/kuveytturk.png"
   },
   "src/Resources/assets/images/large-product-placeholder.webp": {
     "file": "assets/large-product-placeholder-B9xoAuKQ.webp",

@@ -2,6 +2,8 @@
 
 namespace Webkul\Payment\Payment;
 
+use Illuminate\Support\Facades\Storage;
+
 class KuveytTurk extends Payment
 {
     /**
@@ -96,5 +98,17 @@ class KuveytTurk extends Payment
         return $this->isSandbox()
             ? 'https://boa.kuveytturk.com.tr/sanalposservice/Home/ThreeDModelProvisionGate'
             : 'https://sanalpos.kuveytturk.com.tr/ServiceGateWay/Home/ThreeDModelProvisionGate';
+    }
+
+    /**
+     * Get payment method image.
+     *
+     * @return string
+     */
+    public function getImage()
+    {
+        $url = $this->getConfigData('image');
+
+        return $url ? Storage::url($url) : bagisto_asset('images/kuveytturk.png', 'shop');
     }
 }

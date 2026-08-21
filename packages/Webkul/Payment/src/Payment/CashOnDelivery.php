@@ -45,4 +45,36 @@ class CashOnDelivery extends Payment
 
         return $url ? Storage::url($url) : bagisto_asset('images/cash-on-delivery.png', 'shop');
     }
+
+    /**
+     * Get payment method title.
+     *
+     * @return string
+     */
+    public function getTitle()
+    {
+        $title = $this->getConfigData('title');
+
+        if ($title === 'Cash On Delivery') {
+            return trans('admin::app.configuration.index.sales.payment-methods.cash-on-delivery');
+        }
+
+        return $title;
+    }
+
+    /**
+     * Get payment method description.
+     *
+     * @return string
+     */
+    public function getDescription()
+    {
+        $description = $this->getConfigData('description');
+
+        if ($description === 'Cash On Delivery') {
+            return trans('admin::app.configuration.index.sales.payment-methods.cash-on-delivery-info');
+        }
+
+        return $description;
+    }
 }

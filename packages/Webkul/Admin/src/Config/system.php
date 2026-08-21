@@ -2297,6 +2297,15 @@ return [
                 'channel_based' => true,
                 'locale_based' => true,
             ], [
+                'name' => 'image',
+                'title' => 'admin::app.configuration.index.sales.payment-methods.logo',
+                'type' => 'image',
+                'info' => 'admin::app.configuration.index.sales.payment-methods.logo-information',
+                'depends' => 'active:1',
+                'channel_based' => true,
+                'locale_based' => false,
+                'validation' => 'mimes:bmp,jpeg,jpg,png,webp',
+            ], [
                 'name' => 'merchant_id',
                 'title' => 'Mağaza No (Merchant ID)',
                 'type' => 'text',

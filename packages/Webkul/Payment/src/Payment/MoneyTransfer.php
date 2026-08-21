@@ -48,4 +48,36 @@ class MoneyTransfer extends Payment
 
         return $url ? Storage::url($url) : bagisto_asset('images/money-transfer.png', 'shop');
     }
+
+    /**
+     * Get payment method title.
+     *
+     * @return string
+     */
+    public function getTitle()
+    {
+        $title = $this->getConfigData('title');
+
+        if ($title === 'Money Transfer') {
+            return trans('admin::app.configuration.index.sales.payment-methods.money-transfer');
+        }
+
+        return $title;
+    }
+
+    /**
+     * Get payment method description.
+     *
+     * @return string
+     */
+    public function getDescription()
+    {
+        $description = $this->getConfigData('description');
+
+        if ($description === 'Money Transfer') {
+            return trans('admin::app.configuration.index.sales.payment-methods.money-transfer-info');
+        }
+
+        return $description;
+    }
 }

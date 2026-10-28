@@ -1,13 +1,13 @@
 <x-shop::layouts.account>
     <!-- Page Title -->
     <x-slot:title>
-        @lang('shop::app.customers.account.orders.title')
+        @lang('shop::app.layouts.my-account')
     </x-slot>
 
     <!-- Breadcrumbs -->
     @if ((core()->getConfigData('general.general.breadcrumbs.shop')))
         @section('breadcrumbs')
-            <x-shop::breadcrumbs name="orders" />
+            <x-shop::breadcrumbs name="account" />
         @endSection
     @endif
 
@@ -20,7 +20,7 @@
     <!--Customers logout-->
     @auth('customer')
         <div class="mx-4">
-            <div class="mx-auto w-[400px] rounded-lg border border-navyBlue py-2.5 text-center max-sm:w-full max-sm:py-1.5">
+            <div class="mx-auto w-100 rounded-lg border border-navyBlue py-2.5 text-center max-sm:w-full max-sm:py-1.5">
                 <x-shop::form
                     method="DELETE"
                     action="{{ route('shop.customer.session.destroy') }}"
@@ -38,4 +38,4 @@
         </div>
     @endauth
 
-</x-shop::layouts.accounts>
+</x-shop::layouts.account>

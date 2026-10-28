@@ -3,6 +3,13 @@
 namespace Webkul\Product\Providers;
 
 use Illuminate\Foundation\Support\Providers\EventServiceProvider as ServiceProvider;
+use Webkul\Product\Listeners\AttributeFamily;
+use Webkul\Product\Listeners\Category;
+use Webkul\Product\Listeners\Import;
+use Webkul\Product\Listeners\InventorySource;
+use Webkul\Product\Listeners\Order;
+use Webkul\Product\Listeners\Product;
+use Webkul\Product\Listeners\Refund;
 
 class EventServiceProvider extends ServiceProvider
 {
@@ -13,22 +20,47 @@ class EventServiceProvider extends ServiceProvider
      */
     protected $listen = [
         'catalog.product.create.after' => [
-            'Webkul\Product\Listeners\Product@afterCreate',
+            [Product::class, 'afterCreate'],
         ],
+
         'catalog.product.update.after' => [
-            'Webkul\Product\Listeners\Product@afterUpdate',
+            [Product::class, 'afterUpdate'],
         ],
+
         'catalog.product.delete.before' => [
-            'Webkul\Product\Listeners\Product@beforeDelete',
+            [Product::class, 'beforeDelete'],
         ],
+
+        'catalog.category.update.after' => [
+            [Category::class, 'afterUpdate'],
+        ],
+
+        'catalog.category.delete.after' => [
+            [Category::class, 'afterDelete'],
+        ],
+
+        'catalog.attribute_family.update.after' => [
+            [AttributeFamily::class, 'afterUpdate'],
+        ],
+
+        'data_transfer.imports.batch.indexing.after' => [
+            [Import::class, 'afterBatchIndexing'],
+        ],
+
+        'inventory.inventory_source.delete.after' => [
+            [InventorySource::class, 'afterDelete'],
+        ],
+
         'checkout.order.save.after' => [
-            'Webkul\Product\Listeners\Order@afterCancelOrCreate',
+            [Order::class, 'afterCancelOrCreate'],
         ],
+
         'sales.order.cancel.after' => [
-            'Webkul\Product\Listeners\Order@afterCancelOrCreate',
+            [Order::class, 'afterCancelOrCreate'],
         ],
+
         'sales.refund.save.after' => [
-            'Webkul\Product\Listeners\Refund@afterCreate',
+            [Refund::class, 'afterCreate'],
         ],
     ];
 }

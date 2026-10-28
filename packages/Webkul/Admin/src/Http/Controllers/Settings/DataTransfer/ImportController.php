@@ -23,6 +23,21 @@ class ImportController extends Controller
     protected const MAX_IMAGES_ARCHIVE_SIZE = 102400;
 
     /**
+     * The most files an images archive may carry.
+     */
+    protected const MAX_IMAGES_ARCHIVE_ENTRIES = 5000;
+
+    /**
+     * The extensions an images archive may carry, since the importer reads nothing else from it.
+     */
+    protected const IMAGE_ARCHIVE_EXTENSIONS = ['bmp', 'gif', 'jpeg', 'jpg', 'png', 'webp'];
+
+    /**
+     * The largest the files in an images archive may come to once unpacked, in bytes.
+     */
+    protected const MAX_IMAGES_ARCHIVE_UNPACKED_SIZE = 1073741824;
+
+    /**
      * Supported formats.
      */
     protected array $supportedFormats = ['csv', 'xls', 'xlsx', 'xml'];
@@ -298,14 +313,16 @@ class ImportController extends Controller
     {
         $import = $this->importRepository->findOrFail($id);
 
-        $isValid = $this->importHelper
-            ->setImport($import)
-            ->validate();
+        return $this->attempt(function () use ($import) {
+            $isValid = $this->importHelper
+                ->setImport($import)
+                ->validate();
 
-        return new JsonResponse([
-            'is_valid' => $isValid,
-            'import' => $this->importHelper->getImport()->unsetRelations(),
-        ]);
+            return new JsonResponse([
+                'is_valid' => $isValid,
+                'import' => $this->importHelper->getImport()->unsetRelations(),
+            ]);
+        });
     }
 
     /**
@@ -318,11 +335,9 @@ class ImportController extends Controller
     {
         $import = $this->importRepository->findOrFail($id);
 
-        $progress = $this->importHelper
-            ->setImport($import)
-            ->validateChunk();
-
-        return new JsonResponse($progress);
+        return $this->attempt(fn () => new JsonResponse(
+            $this->importHelper->setImport($import)->validateChunk()
+        ));
     }
 
     /**
@@ -335,11 +350,9 @@ class ImportController extends Controller
     {
         $import = $this->importRepository->findOrFail($id);
 
-        $total = $this->importHelper
-            ->setImport($import)
-            ->queueValidation();
-
-        return new JsonResponse(['total' => $total]);
+        return $this->attempt(fn () => new JsonResponse([
+            'total' => $this->importHelper->setImport($import)->queueValidation(),
+        ]));
     }
 
     /**
@@ -350,17 +363,19 @@ class ImportController extends Controller
     {
         $import = $this->importRepository->findOrFail($id);
 
-        $this->importHelper->setImport($import);
+        return $this->attempt(function () use ($import) {
+            $this->importHelper->setImport($import);
 
-        $progress = $this->importHelper->queuedValidationProgress();
+            $progress = $this->importHelper->queuedValidationProgress();
 
-        if ($progress['done']) {
-            $progress['is_valid'] = $this->importHelper->isValid();
+            if ($progress['done']) {
+                $progress['is_valid'] = $this->importHelper->isValid();
 
-            $progress['import'] = $this->importHelper->getImport()->unsetRelations();
-        }
+                $progress['import'] = $this->importHelper->getImport()->unsetRelations();
+            }
 
-        return new JsonResponse($progress);
+            return new JsonResponse($progress);
+        });
     }
 
     /**
@@ -371,9 +386,9 @@ class ImportController extends Controller
     {
         $import = $this->importRepository->findOrFail($id);
 
-        return new JsonResponse(
+        return $this->attempt(fn () => new JsonResponse(
             $this->importHelper->setImport($import)->downloadImages()
-        );
+        ));
     }
 
     /**
@@ -385,11 +400,9 @@ class ImportController extends Controller
     {
         $import = $this->importRepository->findOrFail($id);
 
-        $total = $this->importHelper
-            ->setImport($import)
-            ->queueImageDownload();
-
-        return new JsonResponse(['total' => $total]);
+        return $this->attempt(fn () => new JsonResponse([
+            'total' => $this->importHelper->setImport($import)->queueImageDownload(),
+        ]));
     }
 
     /**
@@ -399,9 +412,9 @@ class ImportController extends Controller
     {
         $import = $this->importRepository->findOrFail($id);
 
-        return new JsonResponse(
+        return $this->attempt(fn () => new JsonResponse(
             $this->importHelper->setImport($import)->queuedImageProgress()
-        );
+        ));
     }
 
     /**
@@ -443,9 +456,11 @@ class ImportController extends Controller
                 if ($this->importHelper->claimForProcessing()) {
                     $this->importHelper->start();
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return new JsonResponse([
-                    'message' => $e->getMessage(),
+                    'message' => trans('admin::app.settings.data-transfer.imports.processing-failed'),
                 ], 400);
             }
 
@@ -473,9 +488,11 @@ class ImportController extends Controller
              */
             try {
                 $this->importHelper->start($importBatch);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return new JsonResponse([
-                    'message' => $e->getMessage(),
+                    'message' => trans('admin::app.settings.data-transfer.imports.processing-failed'),
                 ], 400);
             }
         } else {
@@ -536,9 +553,11 @@ class ImportController extends Controller
              */
             try {
                 $this->importHelper->link($importBatch);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return new JsonResponse([
-                    'message' => $e->getMessage(),
+                    'message' => trans('admin::app.settings.data-transfer.imports.processing-failed'),
                 ], 400);
             }
         } else {
@@ -597,9 +616,11 @@ class ImportController extends Controller
              */
             try {
                 $this->importHelper->index($importBatch);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                report($e);
+
                 return new JsonResponse([
-                    'message' => $e->getMessage(),
+                    'message' => trans('admin::app.settings.data-transfer.imports.processing-failed'),
                 ], 400);
             }
         } else {
@@ -687,6 +708,26 @@ class ImportController extends Controller
         }
 
         return Storage::disk('private')->download($import->error_file_path);
+    }
+
+    /**
+     * Run a step of an import, answering with something the merchant can act on if it fails.
+     *
+     * The step reads a file they supplied, so it fails in ways that carry internal detail — a
+     * storage path, a type error from a file that is empty or is not of the shape claimed. That
+     * belongs in the log rather than in a notification on their screen.
+     */
+    protected function attempt(callable $step): JsonResponse
+    {
+        try {
+            return $step();
+        } catch (\Throwable $e) {
+            report($e);
+
+            return new JsonResponse([
+                'message' => trans('admin::app.settings.data-transfer.imports.processing-failed'),
+            ], 400);
+        }
     }
 
     /**
@@ -800,6 +841,70 @@ class ImportController extends Controller
     }
 
     /**
+     * Unpack the entries of an images archive that are actually images, one by one.
+     */
+    protected function extractImages(ZipArchive $zip, $disk, string $directory): void
+    {
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $name = $zip->getNameIndex($index);
+
+            if (! $this->isExtractableImage($name)) {
+                continue;
+            }
+
+            $stream = $zip->getStream($name);
+
+            if (! is_resource($stream)) {
+                continue;
+            }
+
+            $disk->writeStream($directory.'/'.$name, $stream);
+
+            fclose($stream);
+        }
+    }
+
+    /**
+     * Whether an archive entry is an image the importer may read, named somewhere it may write.
+     */
+    protected function isExtractableImage(string|false $name): bool
+    {
+        if (
+            ! $name
+            || str_ends_with($name, '/')
+            || str_contains($name, '..')
+            || str_contains($name, '\\')
+            || str_starts_with($name, '/')
+        ) {
+            return false;
+        }
+
+        return in_array(strtolower(pathinfo($name, PATHINFO_EXTENSION)), self::IMAGE_ARCHIVE_EXTENSIONS, true);
+    }
+
+    /**
+     * Whether an images archive stays within the file count and unpacked size an import allows.
+     */
+    protected function archiveUnpacksWithinLimits(ZipArchive $zip): bool
+    {
+        if ($zip->numFiles > self::MAX_IMAGES_ARCHIVE_ENTRIES) {
+            return false;
+        }
+
+        $unpackedSize = 0;
+
+        for ($index = 0; $index < $zip->numFiles; $index++) {
+            $unpackedSize += $zip->statIndex($index)['size'] ?? 0;
+
+            if ($unpackedSize > self::MAX_IMAGES_ARCHIVE_UNPACKED_SIZE) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Unpack an uploaded images archive into the import's own folder and return
      * the directory the importer should resolve images from.
      */
@@ -814,7 +919,9 @@ class ImportController extends Controller
         $zip = new ZipArchive;
 
         if ($zip->open($disk->path($archivePath)) === true) {
-            $zip->extractTo($disk->path($directory));
+            if ($this->archiveUnpacksWithinLimits($zip)) {
+                $this->extractImages($zip, $disk, $directory);
+            }
 
             $zip->close();
         }

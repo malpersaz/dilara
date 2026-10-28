@@ -5,6 +5,7 @@ namespace Webkul\Sales\Repositories;
 use Illuminate\Container\Container;
 use Webkul\Core\Eloquent\Repository;
 use Webkul\Product\Repositories\ProductDownloadableLinkRepository;
+use Webkul\Sales\Contracts\DownloadableLinkPurchased;
 use Webkul\Sales\Contracts\OrderItem;
 
 class DownloadableLinkPurchasedRepository extends Repository
@@ -22,14 +23,16 @@ class DownloadableLinkPurchasedRepository extends Repository
     }
 
     /**
-     * Specify Model class name
+     * Specify the model class name.
      */
     public function model(): string
     {
-        return 'Webkul\Sales\Contracts\DownloadableLinkPurchased';
+        return DownloadableLinkPurchased::class;
     }
 
     /**
+     * Save the links bought with an ordered downloadable item, skipping any that is not one of its product's links.
+     *
      * @param  OrderItem  $orderItem
      * @return void
      */
@@ -40,7 +43,12 @@ class DownloadableLinkPurchasedRepository extends Repository
         }
 
         foreach ($orderItem->additional['links'] as $linkId) {
-            if (! $productDownloadableLink = $this->productDownloadableLinkRepository->find($linkId)) {
+            $productDownloadableLink = $this->productDownloadableLinkRepository->findOneWhere([
+                'id' => $linkId,
+                'product_id' => $orderItem->product_id,
+            ]);
+
+            if (! $productDownloadableLink) {
                 continue;
             }
 
@@ -61,23 +69,8 @@ class DownloadableLinkPurchasedRepository extends Repository
     }
 
     /**
-     * Return true, if ordered item is valid downloadable product with links
+     * Update the status of the links bought with an ordered item.
      *
-     * @param  OrderItem  $orderItem
-     */
-    private function isValidDownloadableProduct($orderItem): bool
-    {
-        if (
-            stristr($orderItem->type, 'downloadable') !== false
-            && isset($orderItem->additional['links'])
-        ) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
      * @param  OrderItem  $orderItem
      * @param  string  $status
      * @return void
@@ -114,5 +107,22 @@ class DownloadableLinkPurchasedRepository extends Repository
                 ], $purchasedLink->id);
             }
         }
+    }
+
+    /**
+     * Whether the ordered item is a downloadable product carrying links.
+     *
+     * @param  OrderItem  $orderItem
+     */
+    private function isValidDownloadableProduct($orderItem): bool
+    {
+        if (
+            stristr($orderItem->type, 'downloadable') !== false
+            && isset($orderItem->additional['links'])
+        ) {
+            return true;
+        }
+
+        return false;
     }
 }

@@ -1,5 +1,5 @@
 @php
-    $customAttributes = app('Webkul\RMA\Repositories\RMACustomFieldRepository')->with('options')->where('status', 1)->get();
+    $customAttributes = app(\Webkul\RMA\Repositories\RMACustomFieldRepository::class)->with('options')->where('status', 1)->get();
 @endphp
 
 <x-admin::layouts>
@@ -183,7 +183,7 @@
                         enctype="multipart/form-data"
                         ref="rmaSubmit"
                     >
-                        <x-admin::modal ref="rmaModel" panel-class="max-w-[768px]">
+                        <x-admin::modal ref="rmaModel" panel-class="max-w-192">
                             <!-- Modal Header -->
                             <x-slot:header>
                                 <h2 class="text-base font-medium max-md:text-base dark:text-gray-300">
@@ -235,7 +235,7 @@
                 />
 
                 <div v-for="product in products">
-                    <div class="mb-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:border-zinc-300 dark:border-gray-800 dark:bg-gray-900">
+                    <div class="mb-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-xs transition-all hover:border-zinc-300 dark:border-gray-800 dark:bg-gray-900">
                         <div class="flex gap-4">
                             <!-- Checkbox -->
                             <p>
@@ -688,7 +688,7 @@
 
                                 @case('checkbox')
                                     @foreach($attribute->options ?? [] as $option)
-                                        <x-admin::form.control-group class="flex gap-2.5 items-center !mb-2 select-none">
+                                        <x-admin::form.control-group class="flex gap-2.5 items-center mb-2! select-none">
                                             <x-admin::form.control-group.control
                                                 type="checkbox"
                                                 id="{{ $attribute->id }}"
@@ -716,7 +716,7 @@
                                 @case('radio')
                                     @foreach($attribute->options ?? [] as $key => $option)
                                         <div class="flex items-center gap-2.5">
-                                            <x-admin::form.control-group class="!mb-0">
+                                            <x-admin::form.control-group class="mb-0!">
                                                 <x-admin::form.control-group.control
                                                     type="radio"
                                                     name="customAttributes[{{ $attribute->id }}]"
@@ -781,7 +781,7 @@
                                 <!-- Image -->
                                 <img
                                     :src="image"
-                                    class="w-full h-full object-cover rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm"
+                                    class="w-full h-full object-cover rounded-lg border border-gray-200 dark:border-gray-700 shadow-xs"
                                 />
 
                                 <!-- Remove button -->
@@ -790,7 +790,7 @@
                                     class="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
                                     @click="removeImage(index)"
                                 >
-                                    <i class="icon-cancel-1 cursor-pointer rounded-full text-2xl text-white bg-gray-950"></i>
+                                    <i class="icon-close cursor-pointer rounded-full text-2xl text-white bg-gray-950"></i>
                                 </button>
                             </div>
                         </div>
@@ -864,11 +864,7 @@
                         try {
                             const response = await this.$axios.post("{{ route('admin.sales.rma.requests.store') }}", formData);
 
-                            this.$emitter.emit('add-flash', { type: 'success', message: response.data.messages });
-
-                            setTimeout(() => {
-                                window.location.href = response.data.redirect_url;
-                            }, 1000);
+                            window.location.href = response.data.redirect_url;
                         } catch (error) {
                             this.rmaFormSubmit = true;
 
@@ -963,7 +959,7 @@
 
                     getOrderItems(orderId) {
                         if (this.orderId) {
-                            this.$axios.get('{{ route("admin.sales.rma.requests.get-order-items", ":id") }}'.replace(':id', this.orderId))
+                            this.$axios.get('{{ route("admin.sales.rma.requests.get_order_items", ":id") }}'.replace(':id', this.orderId))
                                 .then(response => {
                                     this.isLoading = false;
 
@@ -1001,7 +997,7 @@
 
                         this.rma_qty[product_id] = null;
 
-                        let url = '{{route("admin.sales.rma.requests.get-resolution-reasons", ":resolutionType")}}';
+                        let url = '{{route("admin.sales.rma.requests.get_resolution_reasons", ":resolutionType")}}';
 
                         url = url.replace(':resolutionType', resolutionType);
 

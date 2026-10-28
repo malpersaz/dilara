@@ -2,14 +2,28 @@
 
 namespace Webkul\Admin\Http\Controllers\User;
 
+use Illuminate\Foundation\Auth\ThrottlesLogins;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Route;
 use Illuminate\View\View;
 use Webkul\Admin\Http\Controllers\Controller;
 
 class SessionController extends Controller
 {
+    use ThrottlesLogins;
+
+    /**
+     * The failed login attempts an email address and caller may make before waiting.
+     */
+    protected $maxAttempts = 5;
+
+    /**
+     * How many minutes those failed attempts are remembered for.
+     */
+    protected $decayMinutes = 1;
+
     /**
      * Show the form for creating a new resource.
      *
@@ -33,6 +47,14 @@ class SessionController extends Controller
     }
 
     /**
+     * The request field holding the identifier login attempts are counted against.
+     */
+    public function username(): string
+    {
+        return 'email';
+    }
+
+    /**
      * Store a newly created resource in storage.
      *
      * @return Response
@@ -46,11 +68,23 @@ class SessionController extends Controller
 
         $remember = request('remember');
 
+        if ($this->hasTooManyLoginAttempts(request())) {
+            $this->fireLockoutEvent(request());
+
+            return $this->sendLockoutResponse(request());
+        }
+
         if (! auth()->guard('admin')->attempt(request(['email', 'password']), $remember)) {
+            $this->incrementLoginAttempts(request());
+
             session()->flash('error', trans('admin::app.settings.users.login-error'));
 
             return redirect()->back();
         }
+
+        $this->clearLoginAttempts(request());
+
+        session()->forget('two_factor_passed_for');
 
         if (! auth()->guard('admin')->user()->status) {
             session()->flash('warning', trans('admin::app.settings.users.activate-warning'));
@@ -76,7 +110,9 @@ class SessionController extends Controller
     {
         auth()->guard('admin')->logout();
 
-        session()->forget('two_factor_passed');
+        session()->invalidate();
+
+        session()->regenerateToken();
 
         return redirect()->route('admin.session.create');
     }
@@ -98,18 +134,57 @@ class SessionController extends Controller
 
             $permissionDetails = $allPermissions->firstWhere('key', $permission);
 
-            if (str_contains($permission, '.')) {
-                return redirect()->route($permissionDetails['route']);
+            if (! $permissionDetails) {
+                continue;
+            }
+
+            if ($route = $this->navigableRoute($permissionDetails)) {
+                return redirect()->route($route);
             }
 
             $childPermission = $this->findFirstAccessibleChildPermission($allPermissions, $permission);
 
-            if ($childPermission) {
-                return redirect()->route($childPermission['route']);
+            if (
+                $childPermission
+                && $route = $this->navigableRoute($childPermission)
+            ) {
+                return redirect()->route($route);
             }
         }
 
         return redirect()->intended(route('admin.dashboard.index'));
+    }
+
+    /**
+     * The route a permission can land an admin on, or null when it has none: a GET route with no
+     * required parameter, guarded by a permission the admin holds, as a parent's route is a child's.
+     */
+    private function navigableRoute($permission): ?string
+    {
+        $guards = acl()->getRoles();
+
+        foreach ((array) ($permission['route'] ?? []) as $name) {
+            $route = Route::getRoutes()->getByName($name);
+
+            if (
+                ! $route
+                || ! in_array('GET', $route->methods())
+                || (
+                    isset($guards[$name])
+                    && ! bouncer()->hasPermission($guards[$name])
+                )
+            ) {
+                continue;
+            }
+
+            if (preg_match('/\{[^}?]+\}/', $route->uri())) {
+                continue;
+            }
+
+            return $name;
+        }
+
+        return null;
     }
 
     /**

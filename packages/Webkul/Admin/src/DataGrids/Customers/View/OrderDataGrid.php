@@ -34,12 +34,12 @@ class OrderDataGrid extends DataGrid
                 'status',
                 'order_address_billing.email as customer_email',
                 'orders.cart_id as image',
-                DB::raw('CONCAT('.$tablePrefix.'order_address_billing.first_name, " ", '.$tablePrefix.'order_address_billing.last_name) as full_name'),
-                DB::raw('CONCAT('.$tablePrefix.'order_address_billing.address, ", ", '.$tablePrefix.'order_address_billing.city,", ", '.$tablePrefix.'order_address_billing.state, ", ", '.$tablePrefix.'order_address_billing.country) as location')
+                DB::raw(db_grammar()->concat($tablePrefix.'order_address_billing.first_name', "' '", $tablePrefix.'order_address_billing.last_name').' as full_name'),
+                DB::raw(db_grammar()->concat($tablePrefix.'order_address_billing.address', "', '", $tablePrefix.'order_address_billing.city', "', '", $tablePrefix.'order_address_billing.state', "', '", $tablePrefix.'order_address_billing.country').' as location')
             )
             ->where('orders.customer_id', request()->route('id'));
 
-        $this->addFilter('full_name', DB::raw('CONCAT('.$tablePrefix.'orders.customer_first_name, " ", '.$tablePrefix.'orders.customer_last_name)'));
+        $this->addFilter('full_name', DB::raw(db_grammar()->concat($tablePrefix.'orders.customer_first_name', "' '", $tablePrefix.'orders.customer_last_name')));
         $this->addFilter('created_at', 'orders.created_at');
 
         return $queryBuilder;
@@ -128,7 +128,7 @@ class OrderDataGrid extends DataGrid
         $this->addColumn([
             'index' => 'base_grand_total',
             'label' => trans('admin::app.customers.customers.view.datagrid.orders.grand-total'),
-            'type' => 'string',
+            'type' => 'decimal',
             'filterable' => true,
             'sortable' => true,
         ]);

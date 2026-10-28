@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Arr;
 use Webkul\Attribute\Repositories\AttributeRepository;
 use Webkul\BookingProduct\Helpers\Booking as BookingHelper;
+use Webkul\BookingProduct\Models\BookingProduct;
 use Webkul\BookingProduct\Repositories\BookingProductRepository;
 use Webkul\Checkout\Models\CartItem;
 use Webkul\Customer\Repositories\CustomerRepository;
@@ -217,7 +218,7 @@ class Booking extends AbstractType
     public function prepareForCart($data)
     {
         if (empty($data['booking'])) {
-            return trans('shop::app.products.booking.cart.integrity.missing_options');
+            return trans('shop::app.products.booking.cart.integrity.missing-options');
         }
 
         $products = [];
@@ -229,7 +230,7 @@ class Booking extends AbstractType
                 $duration = (int) $data['booking']['slot']['to'] - (int) $data['booking']['slot']['from'];
 
                 if ($duration < 3600) {
-                    return trans('shop::app.products.booking.cart.integrity.select_hourly_duration');
+                    return trans('shop::app.products.booking.cart.integrity.select-hourly-duration');
                 }
             }
 
@@ -244,7 +245,7 @@ class Booking extends AbstractType
             });
 
             if (! count($filtered)) {
-                return trans('shop::app.products.booking.cart.integrity.missing_options');
+                return trans('shop::app.products.booking.cart.integrity.missing-options');
             }
 
             $cartProductsList = [];
@@ -283,11 +284,11 @@ class Booking extends AbstractType
                     $available = $typeHelper->getAvailableTicketQuantity($product);
 
                     $message = $available > 0
-                        ? trans('shop::app.products.booking.cart.integrity.event.ticket_exceeds_available', [
+                        ? trans('shop::app.products.booking.cart.integrity.event.ticket-exceeds-available', [
                             'ticket' => $ticketName,
                             'qty' => $available,
                         ])
-                        : trans('shop::app.products.booking.cart.integrity.event.ticket_sold_out', [
+                        : trans('shop::app.products.booking.cart.integrity.event.ticket-sold-out', [
                             'ticket' => $ticketName,
                         ]);
 
@@ -296,8 +297,8 @@ class Booking extends AbstractType
             }
 
             $messageKey = match ($bookingProduct->type) {
-                'rental' => 'shop::app.products.booking.cart.integrity.rental_unavailable',
-                default => 'shop::app.products.booking.cart.integrity.inventory_warning',
+                'rental' => 'shop::app.products.booking.cart.integrity.rental-unavailable',
+                default => 'shop::app.products.booking.cart.integrity.inventory-warning',
             };
 
             throw new InsufficientProductInventoryException(trans($messageKey));
@@ -708,5 +709,50 @@ class Booking extends AbstractType
         }
 
         return ($to - $from) >= $minMinutes;
+    }
+
+    /**
+     * Copy relationships.
+     *
+     * @param  \Webkul\Product\Models\Product  $product
+     * @return void
+     */
+    protected function copyRelationships($product)
+    {
+        parent::copyRelationships($product);
+
+        $attributesToSkip = config('products.copy.skip_attributes') ?? [];
+
+        if (in_array('booking_products', $attributesToSkip)) {
+            return;
+        }
+
+        foreach ($this->product->booking_products as $bookingProduct) {
+            $this->copyBookingSlots(
+                $bookingProduct,
+                $product->booking_products()->save($bookingProduct->replicate())
+            );
+        }
+    }
+
+    /**
+     * Copy the slots, or the tickets, a booking is sold by.
+     *
+     * @param  BookingProduct  $bookingProduct
+     * @param  BookingProduct  $copiedBookingProduct
+     */
+    protected function copyBookingSlots($bookingProduct, $copiedBookingProduct): void
+    {
+        foreach (['default_slot', 'appointment_slot', 'rental_slot', 'table_slot'] as $relation) {
+            $slot = $bookingProduct->{$relation};
+
+            if ($slot) {
+                $copiedBookingProduct->{$relation}()->save($slot->replicate());
+            }
+        }
+
+        foreach ($bookingProduct->event_tickets as $eventTicket) {
+            $copiedBookingProduct->event_tickets()->save($eventTicket->replicate());
+        }
     }
 }

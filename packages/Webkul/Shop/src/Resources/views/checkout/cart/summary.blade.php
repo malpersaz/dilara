@@ -1,4 +1,4 @@
-<div class="w-[418px] max-w-full max-md:w-full">
+<div class="w-104.5 max-w-full max-md:w-full">
     {!! view_render_event('bagisto.shop.checkout.cart.summary.title.before') !!}
 
     <p
@@ -216,8 +216,9 @@
                 class="flex flex-col gap-2 border-y py-2"
                 v-else
             >
-                <div
-                    class="flex cursor-pointer items-center justify-between gap-2 text-right"
+                <button
+                    type="button"
+                    class="flex w-full cursor-pointer items-center justify-between gap-2 rounded text-right focus-visible:ring-2 focus-visible:ring-navyBlue focus-visible:outline-hidden"
                     @click="cart.show_taxes = ! cart.show_taxes"
                 >
                     <p class="text-base max-md:font-normal max-sm:text-sm">
@@ -240,7 +241,7 @@
                             :class="{'icon-arrow-up': cart.show_taxes, 'icon-arrow-down': ! cart.show_taxes}"
                         ></span>
                     </p>
-                </div>
+                </button>
 
                 <div
                     class="flex flex-col gap-2"

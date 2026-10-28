@@ -11,7 +11,8 @@ return [
             'footer' => '© Copyright 2010 - :current_year, Webkul Software (Registered in India). All rights reserved.',
             'forgot-password-text' => 'If you forgot your password, recover it by entering your email address.',
             'page-title' => 'Forgot your password ?',
-            'reset-link-sent' => 'We have e-mailed your reset password link.',
+            'reset-link-sent' => 'If this email address is registered, a password reset link has been sent to it.',
+            'reset-link-failed' => 'Unable to send the password reset link. Please try again later.',
             'sign-in-button' => 'Sign In',
             'submit' => 'Reset Password',
             'title' => 'Recover Password',
@@ -42,7 +43,7 @@ return [
             'page-title' => 'Customer Login',
             'password' => 'Password',
             'resend-verification' => 'Resend Verification Email',
-            'show-password' => 'Show Password',
+            'social-account-exists' => 'An account with this email already exists. Please sign in with your email and password.',
             'title' => 'Sign In',
             'verify-first' => 'Verify your email account first.',
         ],
@@ -323,8 +324,6 @@ return [
                 'invoice-pdf' => [
                     'bank-details' => 'Bank Details',
                     'bill-to' => 'Bill to',
-                    'contact-number' => 'Contact Number',
-                    'contact' => 'Contact',
                     'date' => 'Invoice Date',
                     'discount' => 'Discount',
                     'excl-tax' => 'Excl. Tax:',
@@ -338,6 +337,7 @@ return [
                     'price' => 'Price',
                     'product-name' => 'Product Name',
                     'qty' => 'Quantity',
+                    'phone' => 'Phone',
                     'ship-to' => 'Ship to',
                     'shipping-handling-excl-tax' => 'Shipping Handling (Excl. Tax)',
                     'shipping-handling-incl-tax' => 'Shipping Handling (Incl. Tax)',
@@ -373,6 +373,7 @@ return [
                 'remaining-downloads' => 'Remaining Downloads',
                 'status' => 'Status',
                 'title' => 'Title',
+                'unlimited' => 'Unlimited',
             ],
 
             'wishlist' => [
@@ -541,8 +542,22 @@ return [
             'default-header' => 'Default Header',
         ],
 
+        'image-zoomer' => [
+            'close' => 'Close gallery',
+            'view-image' => 'View image',
+            'view-video' => 'View video',
+        ],
+
         'drawer' => [
             'default-toggle' => 'Default Toggle',
+        ],
+
+        'form' => [
+            'control-group' => [
+                'control' => [
+                    'show-password' => 'Show Password',
+                ],
+            ],
         ],
 
         'media' => [
@@ -554,6 +569,11 @@ return [
         ],
 
         'layouts' => [
+            'account' => [
+                'greeting' => 'Hello! :name',
+                'profile-image' => 'Profile Image',
+            ],
+
             'header' => [
                 'desktop' => [
                     'top' => [
@@ -690,6 +710,17 @@ return [
                     'custom-filters' => [
                         'clear-all' => 'Clear All',
                     ],
+
+                    'number-options' => [
+                        'between' => 'Between',
+                        'equals' => 'Equals',
+                        'from' => 'From',
+                        'greater-than' => 'Greater Than',
+                        'greater-than-or-equal' => 'Greater Than Or Equal',
+                        'less-than' => 'Less Than',
+                        'less-than-or-equal' => 'Less Than Or Equal',
+                        'to' => 'To',
+                    ],
                 ],
             ],
 
@@ -761,6 +792,10 @@ return [
     ],
 
     'products' => [
+        'omnibus' => [
+            'price-info' => 'Lowest price 30 days prior to the discount:',
+        ],
+
         'prices' => [
             'grouped' => [
                 'starting-at' => 'Starting at',
@@ -910,6 +945,7 @@ return [
                 'translate' => 'Translate',
                 'translating' => 'Translating...',
                 'write-a-review' => 'Write a Review',
+                'stars' => 'Stars',
             ],
 
             'contact-us' => [
@@ -963,16 +999,16 @@ return [
                 'integrity' => [
                     'event' => [
                         'expired' => 'This event has been expired.',
-                        'exceeds_available' => 'Only :qty tickets are available for this event.',
-                        'sold_out' => 'Tickets for this event are sold out.',
-                        'ticket_exceeds_available' => 'Only :qty ":ticket" tickets are available.',
-                        'ticket_sold_out' => '":ticket" tickets are sold out.',
+                        'exceeds-available' => 'Only :qty tickets are available for this event.',
+                        'sold-out' => 'Tickets for this event are sold out.',
+                        'ticket-exceeds-available' => 'Only :qty ":ticket" tickets are available.',
+                        'ticket-sold-out' => '":ticket" tickets are sold out.',
                     ],
 
-                    'missing_options' => 'Options are missing for this product.',
-                    'inventory_warning' => 'The requested quantity is not available, please try again later.',
-                    'rental_unavailable' => 'This rental product is not available for the selected dates.',
-                    'select_hourly_duration' => 'Select a slot duration of at least one hour.',
+                    'missing-options' => 'Options are missing for this product.',
+                    'inventory-warning' => 'The requested quantity is not available, please try again later.',
+                    'rental-unavailable' => 'This rental product is not available for the selected dates.',
+                    'select-hourly-duration' => 'Select a slot duration of at least one hour.',
                 ],
 
                 'per-guest' => 'Per Guest',
@@ -980,7 +1016,7 @@ return [
                 'rent-from' => 'Rent From',
                 'rent-till' => 'Rent Till',
                 'rent-type' => 'Rent Type',
-                'renting_type' => 'Rent Type',
+                'renting-type' => 'Rent Type',
                 'special-note' => 'Special Request/Notes',
             ],
 
@@ -1050,7 +1086,7 @@ return [
 
     'checkout' => [
         'success' => [
-            'info' => 'We will email you, your order details and tracking information',
+            'info' => 'We will email you your order details and tracking information',
             'order-id-info' => 'Your order id is #:order_id',
             'thanks' => 'Thank you for your order!',
             'title' => 'Order successfully placed',
@@ -1152,6 +1188,9 @@ return [
             'address' => [
                 'add-new' => 'Add new address',
                 'add-new-address' => 'Add new address',
+                'address-updated-payment-info' => 'Payment methods and order totals will be refreshed for your new address. Click Proceed to see the latest options.',
+                'address-updated-shipping-info' => 'Shipping methods and rates will be recalculated for your new address. Click Proceed to see the latest options.',
+                'address-updated-title' => 'Your address has been updated',
                 'back' => 'Back',
                 'billing-address' => 'Billing Address',
                 'check-billing-address' => 'Billing address is missing.',
@@ -1163,6 +1202,7 @@ return [
                 'email' => 'Email',
                 'first-name' => 'First Name',
                 'last-name' => 'Last Name',
+                'phone' => 'Phone',
                 'postcode' => 'Zip/Postcode',
                 'proceed' => 'Proceed',
                 'same-as-billing' => 'Use same address for shipping?',
@@ -1173,7 +1213,6 @@ return [
                 'shipping-address' => 'Shipping Address',
                 'state' => 'State',
                 'street-address' => 'Street Address',
-                'telephone' => 'Telephone',
                 'title' => 'Address',
                 'vat-id' => 'Vat ID',
             ],
@@ -1204,7 +1243,7 @@ return [
                 'items-discount' => 'Items Discount',
                 'shipping-discount' => 'Shipping Discount',
                 'place-order' => 'Place Order',
-                'price_and_qty' => ':price × :qty',
+                'price-and-qty' => ':price × :qty',
                 'processing' => 'Processing',
                 'sub-total' => 'Subtotal',
                 'sub-total-excl-tax' => 'Subtotal (Excl. Tax)',
@@ -1255,6 +1294,7 @@ return [
             'categories-carousel' => 'Categories Carousel',
             'image-carousel' => 'Image Carousel',
             'offer' => 'Get UPTO 40% OFF on your 1st order SHOP NOW',
+            'preview-banner' => 'Previewing the :theme theme on the :channel channel. Links are turned off in the preview.',
             'product-carousel' => 'Product Carousel',
             'resend-verify-email' => 'Resend Verification Email',
             'verify-email' => 'Verify your email account',
@@ -1760,7 +1800,9 @@ return [
 
         'response' => [
             'already-cancel' => 'RMA status already canceled.',
+            'cancel-not-allowed' => 'Canceling this RMA request is not allowed.',
             'cancel-success' => 'RMA status canceled successfully.',
+            'close-not-allowed' => 'Closing this RMA request is not allowed.',
             'create-success' => 'Request created successfully.',
             'creation-error' => 'RMA status cannot be updated as the invoice for this order has not been created.',
             'invalid-item' => 'The selected order item is invalid.',
@@ -1773,104 +1815,104 @@ return [
         ],
     ],
 
-    'eu_withdrawal' => [
+    'eu-withdrawal' => [
         'button' => [
             'withdraw' => 'Withdraw from Contract',
-            'view_existing' => 'View your withdrawal',
+            'view-existing' => 'View your withdrawal',
         ],
 
-        'guest_dropdown' => [
+        'guest-dropdown' => [
             'link' => 'Withdraw from a Contract',
         ],
 
         'lookup' => [
-            'page_title' => 'Withdraw from a Contract',
+            'page-title' => 'Withdraw from a Contract',
             'heading' => 'Withdraw from Your Contract',
             'intro' => 'Enter the order number and the email address you used at checkout. We will send you a link to file your withdrawal.',
-            'order_number' => 'Order number',
+            'order-number' => 'Order number',
             'email' => 'Email address',
             'submit' => 'Send me the withdrawal link',
-            'sent_notice' => 'If a matching order exists, we have just emailed a withdrawal link to that address. It will be valid for 24 hours.',
-            'legal_note' => 'You have the statutory right under EU Directive 2011/83/EU (as amended) to withdraw from your contract within 14 days. Other means of withdrawal — including a written statement sent to our customer service — remain valid.',
+            'sent-notice' => 'If a matching order exists, we have just emailed a withdrawal link to that address. It will be valid for 24 hours.',
+            'legal-note' => 'You have the statutory right under EU Directive 2011/83/EU (as amended) to withdraw from your contract within 14 days. Other means of withdrawal — including a written statement sent to our customer service — remain valid.',
         ],
 
         'form' => [
-            'page_title' => 'Confirm your withdrawal',
+            'page-title' => 'Confirm your withdrawal',
             'heading' => 'Confirm Withdrawal from Contract',
-            'legal_notice_title' => 'This is a legally binding declaration',
-            'legal_effect' => 'By submitting this form you exercise your statutory right of withdrawal for order #:order_id. The declaration is legally effective the moment you submit it.',
-            'order_summary' => 'Order',
-            'order_total' => 'Total',
-            'order_items' => 'Items',
-            'placed_on' => 'Placed on :date',
-            'reason_label' => 'Reason',
-            'reason_optional' => '(optional)',
-            'reason_help' => 'You are not required to provide a reason. Anything you write here will be recorded on the withdrawal evidence and sent to the merchant.',
-            'reason_placeholder' => 'For example: "Changed my mind", "Item not as described", or leave blank.',
+            'legal-notice-title' => 'This is a legally binding declaration',
+            'legal-effect' => 'By submitting this form you exercise your statutory right of withdrawal for order #:order_id. The declaration is legally effective the moment you submit it.',
+            'order-summary' => 'Order',
+            'order-total' => 'Total',
+            'order-items' => 'Items',
+            'placed-on' => 'Placed on :date',
+            'reason-label' => 'Reason',
+            'reason-optional' => '(optional)',
+            'reason-help' => 'You are not required to provide a reason. Anything you write here will be recorded on the withdrawal evidence and sent to the merchant.',
+            'reason-placeholder' => 'For example: "Changed my mind", "Item not as described", or leave blank.',
             'submit' => 'Submit withdrawal',
             'cancel' => 'Cancel and go back',
         ],
 
         'confirmation' => [
-            'page_title' => 'Withdrawal Receipt',
+            'page-title' => 'Withdrawal Receipt',
             'heading' => 'Your withdrawal has been received',
-            'heading_received' => 'Your withdrawal has been received',
-            'heading_refunded' => 'Your refund has been issued',
-            'heading_declined' => 'Your withdrawal was declined',
+            'heading-received' => 'Your withdrawal has been received',
+            'heading-refunded' => 'Your refund has been issued',
+            'heading-declined' => 'Your withdrawal was declined',
             'intro' => 'We have recorded your declaration. This page and the email we just sent you both serve as confirmation on a durable medium.',
-            'intro_received' => 'We have recorded your declaration. This page and the email we just sent you both serve as confirmation on a durable medium.',
-            'intro_refunded' => 'The merchant has processed your refund. The reimbursement should arrive in your original payment method shortly.',
-            'intro_declined' => 'The merchant has contested your entitlement to a refund under this declaration. See the details below for the reason given and your remaining options.',
-            'received_at' => 'Received at',
+            'intro-received' => 'We have recorded your declaration. This page and the email we just sent you both serve as confirmation on a durable medium.',
+            'intro-refunded' => 'The merchant has processed your refund. The reimbursement should arrive in your original payment method shortly.',
+            'intro-declined' => 'The merchant has contested your entitlement to a refund under this declaration. See the details below for the reason given and your remaining options.',
+            'received-at' => 'Received at',
             'reference' => 'Reference',
-            'copy_reference' => 'Copy reference',
-            'reference_copied' => 'Reference copied to clipboard.',
+            'copy-reference' => 'Copy reference',
+            'reference-copied' => 'Reference copied to clipboard.',
             'order' => 'Order',
             'email' => 'Email',
             'reason' => 'Reason',
             'status' => 'Status',
-            'status_received' => 'Received',
-            'status_refunded' => 'Refunded',
-            'status_declined' => 'Declined',
+            'status-received' => 'Received',
+            'status-refunded' => 'Refunded',
+            'status-declined' => 'Declined',
             'print' => 'Print',
-            'next_steps_title' => 'What happens next',
-            'step_received' => 'Your declaration has been received and recorded.',
-            'step_email' => 'Confirmation email sent to your inbox.',
-            'step_refund' => 'Refund issued within 14 days.',
-            'step_refund_done' => 'Refund has been issued.',
-            'step_declined' => 'Withdrawal declined by the merchant.',
-            'declined_reason_label' => 'Reason given by the merchant',
-            'declined_notice' => 'You retain all other legal remedies under EU consumer law. If you disagree with this decision, contact the merchant directly.',
-            'refund_notice' => 'We reimburse using the same means of payment you used for the original transaction, unless you have expressly agreed otherwise.',
-            'email_sent' => 'Confirmation email has been sent.',
-            'email_pending' => 'We could not send the confirmation email immediately; our team will follow up. Please save this page as your receipt.',
-            'durable_medium_notice' => 'This page is your receipt. You may save or print it.',
+            'next-steps-title' => 'What happens next',
+            'step-received' => 'Your declaration has been received and recorded.',
+            'step-email' => 'Confirmation email sent to your inbox.',
+            'step-refund' => 'Refund issued within 14 days.',
+            'step-refund-done' => 'Refund has been issued.',
+            'step-declined' => 'Withdrawal declined by the merchant.',
+            'declined-reason-label' => 'Reason given by the merchant',
+            'declined-notice' => 'You retain all other legal remedies under EU consumer law. If you disagree with this decision, contact the merchant directly.',
+            'refund-notice' => 'We reimburse using the same means of payment you used for the original transaction, unless you have expressly agreed otherwise.',
+            'email-sent' => 'Confirmation email has been sent.',
+            'email-pending' => 'We could not send the confirmation email immediately; our team will follow up. Please save this page as your receipt.',
+            'durable-medium-notice' => 'This page is your receipt. You may save or print it.',
         ],
 
         'emails' => [
             'confirmation' => [
                 'subject' => 'Confirmation of your withdrawal — Order :order_id',
                 'title' => 'Withdrawal received',
-                'title_received' => 'Withdrawal received',
-                'title_refunded' => 'Refund issued',
-                'title_declined' => 'Withdrawal declined',
+                'title-received' => 'Withdrawal received',
+                'title-refunded' => 'Refund issued',
+                'title-declined' => 'Withdrawal declined',
                 'greeting' => 'Hello,',
                 'intro' => 'We have received your declaration of withdrawal from the contract for order #:order_id. The legally effective receipt timestamp is recorded below.',
-                'intro_received' => 'We have received your declaration of withdrawal from the contract for order #:order_id. The legally effective receipt timestamp is recorded below.',
-                'intro_refunded' => 'Your refund for order #:order_id has been issued. The reimbursement should arrive in your original payment method shortly.',
-                'intro_declined' => 'The merchant has contested your entitlement to a refund for order #:order_id under this declaration. The reason given is below.',
+                'intro-received' => 'We have received your declaration of withdrawal from the contract for order #:order_id. The legally effective receipt timestamp is recorded below.',
+                'intro-refunded' => 'Your refund for order #:order_id has been issued. The reimbursement should arrive in your original payment method shortly.',
+                'intro-declined' => 'The merchant has contested your entitlement to a refund for order #:order_id under this declaration. The reason given is below.',
                 'summary' => 'Withdrawal summary',
-                'received_at' => 'Received at',
+                'received-at' => 'Received at',
                 'reference' => 'Reference',
                 'order' => 'Order',
                 'email' => 'Email',
                 'reason' => 'Reason given',
-                'declined_reason' => 'Reason for decline',
-                'refund_notice' => 'Where a refund is due, we reimburse using the same means of payment you used for the original transaction, within 14 days of the date above, unless you have expressly agreed otherwise.',
+                'declined-reason' => 'Reason for decline',
+                'refund-notice' => 'Where a refund is due, we reimburse using the same means of payment you used for the original transaction, within 14 days of the date above, unless you have expressly agreed otherwise.',
                 'footer' => 'This message is the confirmation on a durable medium required by Article 11a of Directive 2011/83/EU (as amended by Directive (EU) 2023/2673). Please retain it for your records.',
             ],
 
-            'guest_link' => [
+            'guest-link' => [
                 'subject' => 'Your withdrawal link',
                 'title' => 'Your withdrawal link',
                 'intro' => 'Use the link below to file your withdrawal for order :order_id. The link is valid for 24 hours.',

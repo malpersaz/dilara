@@ -7,6 +7,9 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
+use Webkul\Core\Enums\SupportedDatabaseEnum;
+use Webkul\Core\Helpers\SupportedCurrencies;
+use Webkul\Core\Helpers\SupportedLocales;
 use Webkul\Installer\Events\ComposerEvents;
 use Webkul\Installer\Helpers\DatabaseManager;
 use Webkul\Installer\Helpers\EnvironmentManager;
@@ -25,31 +28,15 @@ class Installer extends Command
      * @var string
      */
     protected $signature = 'bagisto:install
-        { --skip-env-check : Skip env check. (Deprecated: use --no-interaction) }
-        { --skip-admin-creation : Skip admin creation. (Deprecated: use --no-interaction) }
-        { --skip-cloud-promotion : Skip Bagisto Cloud hosting prompt. (Deprecated: use --no-interaction) }
-        { --skip-github-star : Skip Bagisto Cloud hosting prompt. (Deprecated: use --no-interaction) }
         { --demo-samples : Seed demo/sample product data (useful with --no-interaction). }
     ';
-
-    /**
-     * Options superseded by the global `--no-interaction` (`-n`) flag.
-     *
-     * @var array<int, string>
-     */
-    protected $deprecatedOptions = [
-        'skip-env-check',
-        'skip-admin-creation',
-        'skip-cloud-promotion',
-        'skip-github-star',
-    ];
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Bagisto installer. Use the global --no-interaction (-n) option for an unattended install that uses the existing `.env`, creates the default admin user and skips sample products (this supersedes the deprecated --skip-* options). Add --demo-samples to also seed demo/sample product data.';
+    protected $description = 'Bagisto installer. Use the global --no-interaction (-n) option for an unattended install that uses the existing `.env`, creates the default admin user and skips sample products. Add --demo-samples to also seed demo/sample product data.';
 
     /**
      * Environment details.
@@ -79,109 +66,6 @@ class Installer extends Command
     ];
 
     /**
-     * Locales list.
-     *
-     * @var array
-     */
-    protected $locales = [
-        'ar' => 'Arabic',
-        'bn' => 'Bengali',
-        'ca' => 'Catalan',
-        'de' => 'German',
-        'en' => 'English',
-        'es' => 'Spanish',
-        'fa' => 'Persian',
-        'fr' => 'French',
-        'he' => 'Hebrew',
-        'hi_IN' => 'Hindi',
-        'id' => 'Indonesian',
-        'it' => 'Italian',
-        'ja' => 'Japanese',
-        'nl' => 'Dutch',
-        'pl' => 'Polish',
-        'pt_BR' => 'Brazilian Portuguese',
-        'ro' => 'Romanian',
-        'ru' => 'Russian',
-        'sin' => 'Sinhala',
-        'tr' => 'Turkish',
-        'uk' => 'Ukrainian',
-        'zh_CN' => 'Chinese',
-    ];
-
-    /**
-     * Currencies list.
-     *
-     * @var array
-     */
-    protected $currencies = [
-        'AED' => 'United Arab Emirates Dirham',
-        'ARS' => 'Argentine Peso',
-        'AUD' => 'Australian Dollar',
-        'BDT' => 'Bangladeshi Taka',
-        'BHD' => 'Bahraini Dinar',
-        'BRL' => 'Brazilian Real',
-        'CAD' => 'Canadian Dollar',
-        'CHF' => 'Swiss Franc',
-        'CLP' => 'Chilean Peso',
-        'CNY' => 'Chinese Yuan',
-        'COP' => 'Colombian Peso',
-        'CZK' => 'Czech Koruna',
-        'DKK' => 'Danish Krone',
-        'DZD' => 'Algerian Dinar',
-        'EGP' => 'Egyptian Pound',
-        'EUR' => 'Euro',
-        'FJD' => 'Fijian Dollar',
-        'GBP' => 'British Pound Sterling',
-        'HKD' => 'Hong Kong Dollar',
-        'HUF' => 'Hungarian Forint',
-        'IDR' => 'Indonesian Rupiah',
-        'ILS' => 'Israeli New Shekel',
-        'INR' => 'Indian Rupee',
-        'JOD' => 'Jordanian Dinar',
-        'JPY' => 'Japanese Yen',
-        'KRW' => 'South Korean Won',
-        'KWD' => 'Kuwaiti Dinar',
-        'KZT' => 'Kazakhstani Tenge',
-        'LBP' => 'Lebanese Pound',
-        'LKR' => 'Sri Lankan Rupee',
-        'LYD' => 'Libyan Dinar',
-        'MAD' => 'Moroccan Dirham',
-        'MUR' => 'Mauritian Rupee',
-        'MXN' => 'Mexican Peso',
-        'MYR' => 'Malaysian Ringgit',
-        'NGN' => 'Nigerian Naira',
-        'NOK' => 'Norwegian Krone',
-        'NPR' => 'Nepalese Rupee',
-        'NZD' => 'New Zealand Dollar',
-        'OMR' => 'Omani Rial',
-        'PAB' => 'Panamanian Balboa',
-        'PEN' => 'Peruvian Nuevo Sol',
-        'PHP' => 'Philippine Peso',
-        'PKR' => 'Pakistani Rupee',
-        'PLN' => 'Polish Zloty',
-        'PYG' => 'Paraguayan Guarani',
-        'QAR' => 'Qatari Rial',
-        'RON' => 'Romanian Leu',
-        'RUB' => 'Russian Ruble',
-        'SAR' => 'Saudi Riyal',
-        'SEK' => 'Swedish Krona',
-        'SGD' => 'Singapore Dollar',
-        'THB' => 'Thai Baht',
-        'TND' => 'Tunisian Dinar',
-        'TRY' => 'Turkish Lira',
-        'TWD' => 'New Taiwan Dollar',
-        'UAH' => 'Ukrainian Hryvnia',
-        'USD' => 'United States Dollar',
-        'UZS' => 'Uzbekistani Som',
-        'VES' => 'Venezuelan Bolívar',
-        'VND' => 'Vietnamese Dong',
-        'XAF' => 'CFA Franc BEAC',
-        'XOF' => 'CFA Franc BCEAO',
-        'ZAR' => 'South African Rand',
-        'ZMW' => 'Zambian Kwacha',
-    ];
-
-    /**
      * Create a new command instance.
      */
     public function __construct(
@@ -204,8 +88,6 @@ class Installer extends Command
          */
         $noInteraction = (bool) $this->option('no-interaction');
 
-        $this->warnDeprecatedOptions();
-
         $hasExistingEnv = file_exists(base_path('.env'));
 
         if (! $hasExistingEnv) {
@@ -216,7 +98,7 @@ class Installer extends Command
             $this->components->info('Great! your environment configuration file already exists.');
         }
 
-        ! $this->option('skip-env-check') && ! $noInteraction
+        ! $noInteraction
             ? $this->askDetailsAndUpdateEnv()
             : $this->components->warn('Skipping environment check. This will assume that the `.env` file is already configured. If not, please create it manually.');
 
@@ -243,7 +125,7 @@ class Installer extends Command
         $this->warn('Step: Linking storage directory...');
         $this->call('storage:link');
 
-        if (! $this->option('skip-admin-creation') && ! $noInteraction) {
+        if (! $noInteraction) {
             $this->warn('Step: Create admin credentials...');
             $this->askForAdminDetails();
         } elseif ($this->databaseManager->createAdminUser()) {
@@ -260,35 +142,11 @@ class Installer extends Command
         $this->warn('Step: Clearing cached bootstrap files...');
         $this->call('optimize:clear');
 
-        if (
-            ! $this->option('skip-cloud-promotion')
-            && ! $this->option('skip-github-star')
-            && ! $noInteraction
-        ) {
+        if (! $noInteraction) {
             $this->askToExploreCloudHosting();
         }
 
         ComposerEvents::postCreateProject();
-    }
-
-    /**
-     * Warn about the use of deprecated `--skip-*` options, which are now
-     * superseded by the global `--no-interaction` (`-n`) flag.
-     */
-    protected function warnDeprecatedOptions(): void
-    {
-        $usedOptions = array_filter(
-            $this->deprecatedOptions,
-            fn ($option) => $this->option($option)
-        );
-
-        if (empty($usedOptions)) {
-            return;
-        }
-
-        $flags = implode(', ', array_map(fn ($option) => '--'.$option, $usedOptions));
-
-        $this->components->warn("The option(s) {$flags} are deprecated and will be removed in a future release. Use --no-interaction (-n) instead.");
     }
 
     /**
@@ -333,26 +191,26 @@ class Installer extends Command
         $this->updateChoiceTypeEnv(
             'APP_LOCALE',
             'Please select the default application locale',
-            $this->locales
+            SupportedLocales::options()
         );
 
         $this->updateChoiceTypeEnv(
             'APP_CURRENCY',
             'Please select the default currency',
-            $this->currencies
+            SupportedCurrencies::options()
         );
 
         $this->updateMultiSelectTypeEnv(
             'APP_ALLOWED_LOCALES',
             'Please choose the allowed locales for your channels',
-            $this->locales,
+            SupportedLocales::options(),
             $this->envDetails['APP_LOCALE']
         );
 
         $this->updateMultiSelectTypeEnv(
             'APP_ALLOWED_CURRENCIES',
             'Please choose the allowed currencies for your channels',
-            $this->currencies,
+            SupportedCurrencies::options(),
             $this->envDetails['APP_CURRENCY']
         );
     }
@@ -364,12 +222,16 @@ class Installer extends Command
      */
     protected function askForDatabaseDetails()
     {
+        $dbConnection = select(
+            label   : 'Please select the database connection',
+            options : SupportedDatabaseEnum::options(),
+            default : SupportedDatabaseEnum::MYSQL->value,
+        );
+
+        $defaultPort = SupportedDatabaseEnum::from($dbConnection)->defaultPort();
+
         $databaseDetails = [
-            'DB_CONNECTION' => select(
-                label   : 'Please select the database connection',
-                options : ['mysql'],
-                default : 'mysql',
-            ),
+            'DB_CONNECTION' => $dbConnection,
 
             'DB_HOST' => text(
                 label    : 'Please enter the database host',
@@ -379,7 +241,7 @@ class Installer extends Command
 
             'DB_PORT' => text(
                 label    : 'Please enter the database port',
-                default  : $this->getEnvVariable('DB_PORT', '3306'),
+                default  : $this->getEnvVariable('DB_PORT', $defaultPort),
                 required : true
             ),
 

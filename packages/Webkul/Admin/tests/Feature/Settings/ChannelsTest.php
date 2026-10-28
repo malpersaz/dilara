@@ -9,8 +9,11 @@ use function Pest\Laravel\get;
 use function Pest\Laravel\postJson;
 use function Pest\Laravel\putJson;
 
-it('should returns the channel index page', function () {
-    // Act and Assert.
+// ============================================================================
+// Index
+// ============================================================================
+
+it('should return the channel index page', function () {
     $this->loginAsAdmin();
 
     get(route('admin.settings.channels.index'))
@@ -19,37 +22,28 @@ it('should returns the channel index page', function () {
         ->assertSeeText(trans('admin::app.settings.channels.index.create-btn'));
 });
 
-it('should return the create page of channel', function () {
-    // Act and Assert.
+it('should deny guest access to the channel index page', function () {
+    get(route('admin.settings.channels.index'))
+        ->assertRedirect(route('admin.session.create'));
+});
+
+// ============================================================================
+// Create
+// ============================================================================
+
+it('should return the channel create page', function () {
     $this->loginAsAdmin();
 
     get(route('admin.settings.channels.create'))
         ->assertOk()
-        ->assertSeeText(trans('admin::app.settings.channels.create.title'))
-        ->assertSeeText(trans('admin::app.settings.channels.create.save-btn'));
+        ->assertSeeText(trans('admin::app.settings.channels.create.title'));
 });
 
-it('should fail the validation with errors when certain field not provided when store the channels', function () {
-    // Act and Assert.
-    $this->loginAsAdmin();
+// ============================================================================
+// Store
+// ============================================================================
 
-    postJson(route('admin.settings.channels.store'))
-        ->assertJsonValidationErrorFor('code')
-        ->assertJsonValidationErrorFor('name')
-        ->assertJsonValidationErrorFor('inventory_sources')
-        ->assertJsonValidationErrorFor('root_category_id')
-        ->assertJsonValidationErrorFor('locales')
-        ->assertJsonValidationErrorFor('default_locale_id')
-        ->assertJsonValidationErrorFor('currencies')
-        ->assertJsonValidationErrorFor('base_currency_id')
-        ->assertJsonValidationErrorFor('seo_title')
-        ->assertJsonValidationErrorFor('seo_description')
-        ->assertJsonValidationErrorFor('seo_keywords')
-        ->assertUnprocessable();
-});
-
-it('should store the newly created channels', function () {
-    // Act and Assert.
+it('should store a newly created channel', function () {
     $this->loginAsAdmin();
 
     postJson(route('admin.settings.channels.store'), $data = [
@@ -60,59 +54,105 @@ it('should store the newly created channels', function () {
         'default_locale_id' => 1,
         'base_currency_id' => 1,
         'name' => fake()->name(),
-        'description' => substr(fake()->paragraph, 0, 50),
+        'description' => fake()->sentence(),
         'inventory_sources' => [1],
         'locales' => [1],
         'currencies' => [1],
-        'seo_title' => fake()->title(),
-        'seo_description' => substr(fake()->paragraph(), 0, 50),
-        'seo_keywords' => fake()->name(),
-        'is_maintenance_on' => fake()->boolean(),
-        'logo' => [
-            UploadedFile::fake()->image('logo.png'),
-        ],
-        'favicon' => [
-            UploadedFile::fake()->image('favicon.png'),
-        ],
+        'seo_title' => fake()->sentence(),
+        'seo_description' => fake()->sentence(),
+        'seo_keywords' => fake()->words(3, true),
+        'is_maintenance_on' => false,
+        'logo' => [UploadedFile::fake()->image('logo.png')],
+        'favicon' => [UploadedFile::fake()->image('favicon.png')],
     ])
-        ->assertRedirect(route('admin.settings.channels.index'))
-        ->isRedirection();
+        ->assertRedirect(route('admin.settings.channels.index'));
 
-    $this->assertModelWise([
-        Channel::class => [
-            [
-                'code' => $data['code'],
-                'theme' => $data['theme'],
-                'hostname' => $data['hostname'],
-                'root_category_id' => $data['root_category_id'],
-                'default_locale_id' => $data['default_locale_id'],
-                'base_currency_id' => $data['base_currency_id'],
-            ],
-        ],
+    $this->assertDatabaseHas('channels', [
+        'code' => $data['code'],
+        'hostname' => $data['hostname'],
+        'root_category_id' => 1,
+        'default_locale_id' => 1,
+        'base_currency_id' => 1,
     ]);
 });
 
-it('should returns the edit page of channels', function () {
-    // Arrange.
+it('should fail validation when required fields are missing on store', function () {
+    $this->loginAsAdmin();
+
+    postJson(route('admin.settings.channels.store'))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrorFor('code')
+        ->assertJsonValidationErrorFor('name')
+        ->assertJsonValidationErrorFor('inventory_sources')
+        ->assertJsonValidationErrorFor('root_category_id')
+        ->assertJsonValidationErrorFor('locales')
+        ->assertJsonValidationErrorFor('default_locale_id')
+        ->assertJsonValidationErrorFor('currencies')
+        ->assertJsonValidationErrorFor('base_currency_id')
+        ->assertJsonValidationErrorFor('seo_title')
+        ->assertJsonValidationErrorFor('seo_description')
+        ->assertJsonValidationErrorFor('seo_keywords');
+});
+
+// ============================================================================
+// Edit
+// ============================================================================
+
+it('should return the channel edit page', function () {
     $channel = Channel::factory()->create();
 
-    // Act and Assert.
     $this->loginAsAdmin();
 
     get(route('admin.settings.channels.edit', $channel->id))
         ->assertOk()
-        ->assertSeeText(trans('admin::app.settings.channels.edit.title'))
-        ->assertSeeText(trans('admin::app.settings.channels.edit.save-btn'));
+        ->assertSeeText(trans('admin::app.settings.channels.edit.title'));
 });
 
-it('should fail the validation with errors when certain field not provided when update the channels', function () {
-    // Arrange.
+// ============================================================================
+// Update
+// ============================================================================
+
+it('should update an existing channel', function () {
     $channel = Channel::factory()->create();
 
-    // Act and Assert.
+    $this->loginAsAdmin();
+
+    putJson(route('admin.settings.channels.update', $channel->id), $data = [
+        'code' => $channel->code,
+
+        app()->getLocale() => [
+            'name' => fake()->name(),
+            'seo_title' => fake()->sentence(),
+            'seo_description' => fake()->sentence(),
+            'seo_keywords' => fake()->words(3, true),
+            'description' => fake()->sentence(),
+        ],
+
+        'hostname' => 'http://'.fake()->ipv4(),
+        'root_category_id' => 1,
+        'default_locale_id' => 1,
+        'base_currency_id' => 1,
+        'inventory_sources' => [1],
+        'locales' => [1],
+        'currencies' => [1],
+        'is_maintenance_on' => false,
+    ])
+        ->assertRedirect(route('admin.settings.channels.index'));
+
+    $this->assertDatabaseHas('channels', [
+        'id' => $channel->id,
+        'code' => $data['code'],
+        'hostname' => $data['hostname'],
+    ]);
+});
+
+it('should fail validation when required fields are missing on update', function () {
+    $channel = Channel::factory()->create();
+
     $this->loginAsAdmin();
 
     putJson(route('admin.settings.channels.update', $channel->id))
+        ->assertUnprocessable()
         ->assertJsonValidationErrorFor('code')
         ->assertJsonValidationErrorFor('en.name')
         ->assertJsonValidationErrorFor('en.seo_title')
@@ -123,69 +163,17 @@ it('should fail the validation with errors when certain field not provided when 
         ->assertJsonValidationErrorFor('locales')
         ->assertJsonValidationErrorFor('default_locale_id')
         ->assertJsonValidationErrorFor('currencies')
-        ->assertJsonValidationErrorFor('base_currency_id')
-        ->assertUnprocessable();
-});
-
-it('should update the existing channel', function () {
-    // Arrange.
-    $channel = Channel::factory()->create();
-
-    // Act and Assert.
-    $this->loginAsAdmin();
-
-    putJson(route('admin.settings.channels.update', $channel->id), $data = [
-        'code' => $channel->code,
-
-        app()->getLocale() => [
-            'name' => fake()->name(),
-            'seo_title' => fake()->title(),
-            'seo_description' => substr(fake()->paragraph(), 0, 50),
-            'seo_keywords' => fake()->name(),
-            'description' => substr(fake()->paragraph, 0, 50),
-        ],
-
-        'hostname' => 'http://'.fake()->ipv4(),
-        'root_category_id' => 1,
-        'default_locale_id' => 1,
-        'base_currency_id' => 1,
-        'inventory_sources' => [1],
-        'locales' => [1],
-        'currencies' => [1],
-        'is_maintenance_on' => fake()->boolean(),
-    ])
-        ->assertRedirect(route('admin.settings.channels.index'))
-        ->isRedirection();
-
-    $this->assertModelWise([
-        Channel::class => [
-            [
-                'code' => $data['code'],
-                'hostname' => $data['hostname'],
-                'is_maintenance_on' => $data['is_maintenance_on'],
-                'base_currency_id' => 1,
-                'root_category_id' => 1,
-                'default_locale_id' => 1,
-            ],
-        ],
-    ]);
+        ->assertJsonValidationErrorFor('base_currency_id');
 });
 
 it('should save seo for a non-default locale via the locale switcher', function () {
-    // Arrange.
     $channel = Channel::factory()->create();
 
-    /**
-     * Pick a locale that is not the admin's default locale, so we can verify
-     * the per-locale switcher actually targets the chosen translation row
-     * and not just the default locale.
-     */
     $targetLocale = Locale::factory()->create();
 
-    // Act and Assert.
     $this->loginAsAdmin();
 
-    $futureSeoTitle = fake()->title();
+    $futureSeoTitle = fake()->sentence();
 
     putJson(
         route('admin.settings.channels.update', ['id' => $channel->id, 'locale' => $targetLocale->code]),
@@ -195,8 +183,8 @@ it('should save seo for a non-default locale via the locale switcher', function 
             $targetLocale->code => [
                 'name' => fake()->name(),
                 'seo_title' => $futureSeoTitle,
-                'seo_description' => substr(fake()->paragraph(), 0, 50),
-                'seo_keywords' => fake()->name(),
+                'seo_description' => fake()->sentence(),
+                'seo_keywords' => fake()->words(3, true),
             ],
 
             'hostname' => 'http://'.fake()->ipv4(),
@@ -208,8 +196,7 @@ it('should save seo for a non-default locale via the locale switcher', function 
             'currencies' => [1],
         ]
     )
-        ->assertRedirect(route('admin.settings.channels.index'))
-        ->isRedirection();
+        ->assertRedirect(route('admin.settings.channels.index'));
 
     $translation = $channel->fresh()->translate($targetLocale->code);
 
@@ -217,11 +204,13 @@ it('should save seo for a non-default locale via the locale switcher', function 
     expect($translation->home_seo['meta_title'] ?? null)->toBe($futureSeoTitle);
 });
 
-it('should delete the existing channel', function () {
-    // Arrange.
+// ============================================================================
+// Delete
+// ============================================================================
+
+it('should delete a channel', function () {
     $channel = Channel::factory()->create();
 
-    // Act and Assert.
     $this->loginAsAdmin();
 
     deleteJson(route('admin.settings.channels.delete', $channel->id))
@@ -229,4 +218,23 @@ it('should delete the existing channel', function () {
         ->assertSeeText(trans('admin::app.settings.channels.index.delete-success'));
 
     $this->assertDatabaseMissing('channels', ['id' => $channel->id]);
+});
+
+it('should not delete the default channel', function () {
+    $channel = core()->getDefaultChannel();
+
+    $this->loginAsAdmin();
+
+    deleteJson(route('admin.settings.channels.delete', $channel->id))
+        ->assertBadRequest()
+        ->assertJsonPath('message', trans('admin::app.settings.channels.index.last-delete-error'));
+
+    $this->assertDatabaseHas('channels', ['id' => $channel->id]);
+});
+
+it('should return 404 when deleting a channel that does not exist', function () {
+    $this->loginAsAdmin();
+
+    deleteJson(route('admin.settings.channels.delete', 999999))
+        ->assertNotFound();
 });

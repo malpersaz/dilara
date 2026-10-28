@@ -2,9 +2,11 @@
 
 namespace Webkul\Product\Type;
 
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Webkul\Attribute\Contracts\Attribute;
 use Webkul\Attribute\Contracts\Group;
 use Webkul\Attribute\Repositories\AttributeRepository;
@@ -31,6 +33,30 @@ use Webkul\Tax\Models\TaxCategory;
 
 abstract class AbstractType
 {
+    /**
+     * The largest upload a customer may attach to a file option, in bytes.
+     */
+    public const MAX_CUSTOMIZABLE_FILE_SIZE = 10485760;
+
+    /**
+     * Extensions a customer's upload is never stored under, since a web server would run or render them as a page.
+     */
+    public const BLOCKED_UPLOAD_EXTENSIONS = [
+        'asp', 'aspx', 'cgi', 'hta', 'htaccess', 'htm', 'html', 'js', 'jsp', 'mht', 'mhtml', 'mjs', 'pgif', 'phar',
+        'php', 'php2', 'php3', 'php4', 'php5', 'php6', 'php7', 'php8', 'phps', 'pht', 'phtm', 'phtml', 'pl', 'py',
+        'rdf', 'sh', 'shtm', 'shtml', 'stm', 'svg', 'svgz', 'swf', 'xht', 'xhtml', 'xml', 'xsl', 'xslt', 'xul',
+    ];
+
+    /**
+     * Content types a customer's upload is never stored with, whatever its extension, since a browser would render them.
+     */
+    public const BLOCKED_UPLOAD_MIME_TYPES = [
+        'application/ecmascript', 'application/javascript', 'application/rdf+xml', 'application/vnd.adobe.flash.movie',
+        'application/vnd.mozilla.xul+xml', 'application/x-httpd-php', 'application/x-php', 'application/x-shockwave-flash',
+        'application/xhtml+xml', 'application/xml', 'application/xslt+xml', 'image/svg', 'image/svg+xml',
+        'text/ecmascript', 'text/html', 'text/javascript', 'text/x-php', 'text/xml', 'text/xsl',
+    ];
+
     /**
      * Product instance.
      *
@@ -165,9 +191,6 @@ abstract class AbstractType
 
         $product->update($data);
 
-        /**
-         * If attributes are provided then only save the provided attributes and return.
-         */
         if (! empty($attributes)) {
             $attributes = $this->attributeRepository->findWhereIn('code', $attributes);
 
@@ -208,6 +231,8 @@ abstract class AbstractType
     }
 
     /**
+     * Get an attribute by its code, loading each one only once.
+     *
      * @param  string  $code
      * @return Attribute
      */
@@ -244,145 +269,6 @@ abstract class AbstractType
         $this->copyRelationships($copiedProduct);
 
         return $copiedProduct;
-    }
-
-    /**
-     * Copy attribute values.
-     *
-     * @param  Product  $product
-     */
-    protected function copyAttributeValues($product): void
-    {
-        $attributesToSkip = config('products.copy.skip_attributes') ?? [];
-
-        $copyAttributes = [
-            'name' => trans('product::app.datagrid.copy-of', ['value' => $this->product->name]),
-            'url_key' => trans('product::app.datagrid.copy-of-slug', ['value' => $this->product->url_key]),
-            'sku' => $product->sku,
-            'product_number' => ! empty($this->product->product_number) ? trans('product::app.datagrid.copy-of-slug', ['value' => $this->product->product_number]) : null,
-            'status' => 0,
-        ];
-
-        foreach ($this->product->attribute_values as $attributeValue) {
-            $attribute = $attributeValue->attribute;
-
-            if (in_array($attribute->code, $attributesToSkip)) {
-                continue;
-            }
-
-            $value = $copyAttributes[$attribute->code] ?? null;
-
-            $newAttributeValue = $attributeValue->replicate()->fill([
-                'unique_id' => implode('|', array_filter([
-                    $attributeValue->channel,
-                    $attributeValue->locale,
-                    $product->id,
-                    $attribute->id,
-                ])),
-            ]);
-
-            if (! is_null($value)) {
-                $newAttributeValue->{$attribute->column_name} = $value;
-            }
-
-            $product->attribute_values()->save($newAttributeValue);
-        }
-    }
-
-    /**
-     * Copy relationships.
-     *
-     * @param  Product  $product
-     * @return void
-     */
-    protected function copyRelationships($product)
-    {
-        $attributesToSkip = config('products.copy.skip_attributes') ?? [];
-
-        if (! in_array('flat', $attributesToSkip)) {
-            foreach ($this->product->product_flats as $productFlat) {
-                $product->product_flats()->save($productFlat->replicate());
-            }
-        }
-
-        if (! in_array('channels', $attributesToSkip)) {
-            $product->channels()->sync($this->product->channels->pluck('id'));
-        }
-
-        if (! in_array('categories', $attributesToSkip)) {
-            $product->categories()->sync($this->product->categories->pluck('id'));
-        }
-
-        if (! in_array('inventories', $attributesToSkip)) {
-            foreach ($this->product->inventories as $inventory) {
-                $product->inventories()->save($inventory->replicate());
-            }
-        }
-
-        if (! in_array('customer_group_prices', $attributesToSkip)) {
-            foreach ($this->product->customer_group_prices as $customerGroupPrice) {
-                $product->customer_group_prices()->save($customerGroupPrice->replicate()->fill([
-                    'unique_id' => implode('|', array_filter([
-                        $customerGroupPrice->qty,
-                        $product->id,
-                        $customerGroupPrice->customer_group_id,
-                    ])),
-                ]));
-            }
-        }
-
-        if (! in_array('images', $attributesToSkip)) {
-            foreach ($this->product->images as $image) {
-                $copiedImage = $product->images()->save($image->replicate());
-
-                $this->copyMedia($product, $image, $copiedImage);
-            }
-        }
-
-        if (! in_array('videos', $attributesToSkip)) {
-            foreach ($this->product->videos as $video) {
-                $copiedVideo = $product->videos()->save($video->replicate());
-
-                $this->copyMedia($product, $video, $copiedVideo);
-            }
-        }
-
-        if (! in_array('product_relations', $attributesToSkip)) {
-            DB::table('product_relations')->insert([
-                'parent_id' => $this->product->id,
-                'child_id' => $product->id,
-            ]);
-        }
-
-        if (! in_array('customizable_options', $attributesToSkip)) {
-            foreach ($this->product->customizable_options as $customizableOption) {
-                $copiedCustomizableOption = $product->customizable_options()->save($customizableOption->replicate());
-
-                foreach ($customizableOption->translations as $translation) {
-                    $copiedCustomizableOption->translations()->save($translation->replicate());
-                }
-
-                foreach ($customizableOption->customizable_option_prices as $price) {
-                    $copiedCustomizableOption->customizable_option_prices()->save($price->replicate());
-                }
-            }
-        }
-    }
-
-    /**
-     * Copy product image video.
-     */
-    private function copyMedia($product, $media, $copiedMedia): void
-    {
-        $path = explode('/', $media->path);
-
-        $copiedMedia->path = 'product/'.$product->id.'/'.end($path);
-
-        $copiedMedia->save();
-
-        Storage::makeDirectory('product/'.$product->id);
-
-        Storage::copy($media->path, $copiedMedia->path);
     }
 
     /**
@@ -454,6 +340,15 @@ abstract class AbstractType
     public function isStockable()
     {
         return $this->isStockable;
+    }
+
+    /**
+     * Return true if a stock of this product can be kept and counted, unlike `isStockable()`, which
+     * answers whether an order has anything to ship.
+     */
+    public function isInventoryManageable(): bool
+    {
+        return ! in_array('manage_stock', $this->skipAttributes);
     }
 
     /**
@@ -835,11 +730,11 @@ abstract class AbstractType
     }
 
     /**
-     * Handle quantity.
+     * Get the quantity to add to the cart, which is never less than one.
      */
     public function handleQuantity(int $quantity): int
     {
-        return $quantity ?: 1;
+        return max($quantity, 1);
     }
 
     /**
@@ -968,6 +863,10 @@ abstract class AbstractType
             return true;
         }
 
+        if (! $item->product->isAvailableInChannel($item->cart?->channel_id)) {
+            return true;
+        }
+
         switch ($item->product->type) {
             case 'bundle':
                 foreach ($item->children as $child) {
@@ -1003,12 +902,14 @@ abstract class AbstractType
 
         $customerGroup = $this->customerRepository->getCurrentGroup();
 
-        $customerGroupPrices = $this->product->customer_group_prices()->where(function ($query) use ($customerGroup) {
-            $query->where('customer_group_id', $customerGroup->id)
-                ->orWhereNull('customer_group_id');
-        })
+        $customerGroupPrices = $this->product->customer_group_prices()
+            ->select('qty', 'value', 'value_type', 'customer_group_id')
+            ->where(function ($query) use ($customerGroup) {
+                $query->where('customer_group_id', $customerGroup->id)
+                    ->orWhereNull('customer_group_id');
+            })
             ->where('qty', '>', 1)
-            ->groupBy('qty')
+            ->groupBy('qty', 'value', 'value_type', 'customer_group_id')
             ->orderBy('qty')
             ->get();
 
@@ -1036,11 +937,16 @@ abstract class AbstractType
     {
         $price = $this->getCustomerGroupPrice($this->product, $customerGroupPrice->qty);
 
-        $discount = number_format((($this->product->price - $price) * 100) / ($this->product->price), 2);
+        $discount = number_format(
+            $this->product->price > 0
+                ? (($this->product->price - $price) * 100) / $this->product->price
+                : 0,
+            2
+        );
 
         $offerLines = trans('product::app.type.abstract.offers', [
             'qty' => $customerGroupPrice->qty,
-            'price' => core()->currency($price),
+            'price' => e(core()->currency($price)),
             'discount' => '<span>'.$discount.'%</span>',
         ]);
 
@@ -1115,5 +1021,173 @@ abstract class AbstractType
         }
 
         return $lastPrice;
+    }
+
+    /**
+     * Copy attribute values.
+     *
+     * @param  Product  $product
+     */
+    protected function copyAttributeValues($product): void
+    {
+        $attributesToSkip = config('products.copy.skip_attributes') ?? [];
+
+        $copyAttributes = [
+            'name' => trans('product::app.datagrid.copy-of', ['value' => $this->product->name]),
+            'url_key' => trans('product::app.datagrid.copy-of-slug', ['value' => $this->product->url_key]),
+            'sku' => $product->sku,
+            'product_number' => ! empty($this->product->product_number) ? trans('product::app.datagrid.copy-of-slug', ['value' => $this->product->product_number]) : null,
+            'status' => 0,
+        ];
+
+        foreach ($this->product->attribute_values as $attributeValue) {
+            $attribute = $attributeValue->attribute;
+
+            if (in_array($attribute->code, $attributesToSkip)) {
+                continue;
+            }
+
+            $value = $copyAttributes[$attribute->code] ?? null;
+
+            $newAttributeValue = $attributeValue->replicate()->fill([
+                'unique_id' => implode('|', array_filter([
+                    $attributeValue->channel,
+                    $attributeValue->locale,
+                    $product->id,
+                    $attribute->id,
+                ])),
+            ]);
+
+            if (! is_null($value)) {
+                $newAttributeValue->{$attribute->column_name} = $value;
+            }
+
+            $product->attribute_values()->save($newAttributeValue);
+        }
+    }
+
+    /**
+     * Copy relationships.
+     *
+     * @param  Product  $product
+     * @return void
+     */
+    protected function copyRelationships($product)
+    {
+        $attributesToSkip = config('products.copy.skip_attributes') ?? [];
+
+        if (! in_array('flat', $attributesToSkip)) {
+            foreach ($this->product->product_flats as $productFlat) {
+                $product->product_flats()->save($productFlat->replicate());
+            }
+        }
+
+        if (! in_array('channels', $attributesToSkip)) {
+            $product->channels()->sync($this->product->channels->pluck('id'));
+        }
+
+        if (! in_array('categories', $attributesToSkip)) {
+            $product->categories()->sync($this->product->categories->pluck('id'));
+        }
+
+        if (! in_array('inventories', $attributesToSkip)) {
+            foreach ($this->product->inventories as $inventory) {
+                $product->inventories()->save($inventory->replicate());
+            }
+        }
+
+        if (! in_array('customer_group_prices', $attributesToSkip)) {
+            foreach ($this->product->customer_group_prices as $customerGroupPrice) {
+                $product->customer_group_prices()->save($customerGroupPrice->replicate()->fill([
+                    'unique_id' => implode('|', array_filter([
+                        $customerGroupPrice->qty,
+                        $product->id,
+                        $customerGroupPrice->customer_group_id,
+                    ])),
+                ]));
+            }
+        }
+
+        if (! in_array('images', $attributesToSkip)) {
+            foreach ($this->product->images as $image) {
+                $copiedImage = $product->images()->save($image->replicateWithTranslations());
+
+                $this->copyMedia($product, $image, $copiedImage);
+            }
+        }
+
+        if (! in_array('videos', $attributesToSkip)) {
+            foreach ($this->product->videos as $video) {
+                $copiedVideo = $product->videos()->save($video->replicate());
+
+                $this->copyMedia($product, $video, $copiedVideo);
+            }
+        }
+
+        if (! in_array('product_relations', $attributesToSkip)) {
+            DB::table('product_relations')->insert([
+                'parent_id' => $this->product->id,
+                'child_id' => $product->id,
+            ]);
+        }
+
+        if (! in_array('customizable_options', $attributesToSkip)) {
+            foreach ($this->product->customizable_options as $customizableOption) {
+                $copiedCustomizableOption = $product->customizable_options()->save($customizableOption->replicate());
+
+                foreach ($customizableOption->translations as $translation) {
+                    $copiedCustomizableOption->translations()->save($translation->replicate());
+                }
+
+                foreach ($customizableOption->customizable_option_prices as $price) {
+                    $copiedCustomizableOption->customizable_option_prices()->save($price->replicate());
+                }
+            }
+        }
+    }
+
+    /**
+     * Whether a customer's upload for a file option carries an extension the option accepts, with neither that
+     * extension nor the file's contents ever served as active content.
+     */
+    protected function isCustomizableFileAllowed(UploadedFile $file, array $supportedExtensions): bool
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if (
+            ! preg_match('/^[a-z0-9]{1,10}$/', $extension)
+            || in_array($extension, self::BLOCKED_UPLOAD_EXTENSIONS)
+            || in_array(strtolower((string) $file->getMimeType()), self::BLOCKED_UPLOAD_MIME_TYPES)
+            || $file->getSize() > self::MAX_CUSTOMIZABLE_FILE_SIZE
+        ) {
+            return false;
+        }
+
+        return empty($supportedExtensions)
+            || in_array($extension, array_map(fn ($supported) => ltrim(strtolower($supported), '.'), $supportedExtensions));
+    }
+
+    /**
+     * Store a customer's upload for a file option in the cart's directory, under a random name and its own extension.
+     */
+    protected function storeCustomizableFile(UploadedFile $file, int $cartId): string
+    {
+        return $file->storeAs("carts/{$cartId}", Str::random(40).'.'.strtolower($file->getClientOriginalExtension()));
+    }
+
+    /**
+     * Copy product image video.
+     */
+    private function copyMedia($product, $media, $copiedMedia): void
+    {
+        $path = explode('/', $media->path);
+
+        $copiedMedia->path = 'products/'.$product->id.'/'.end($path);
+
+        $copiedMedia->save();
+
+        Storage::makeDirectory('products/'.$product->id);
+
+        Storage::copy($media->path, $copiedMedia->path);
     }
 }

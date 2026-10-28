@@ -5,6 +5,7 @@ namespace Webkul\Shop\DataGrids\RMA;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Webkul\DataGrid\DataGrid;
+use Webkul\RMA\Repositories\RMARepository;
 use Webkul\RMA\Repositories\RMAStatusRepository;
 
 class RMADataGrid extends DataGrid
@@ -15,6 +16,7 @@ class RMADataGrid extends DataGrid
      * @return void
      */
     public function __construct(
+        protected RMARepository $rmaRepository,
         protected RMAStatusRepository $rmaStatusRepository,
     ) {}
 
@@ -34,6 +36,7 @@ class RMADataGrid extends DataGrid
                 'rma.order_id',
                 'rma.rma_status_id',
                 'rma.created_at',
+                'orders.increment_id',
                 'orders.customer_email',
                 'orders.status as order_status',
                 'rma_statuses.title',
@@ -41,10 +44,20 @@ class RMADataGrid extends DataGrid
                 DB::raw('SUM('.$tablePrefix.'rma_items.quantity) as total_quantity'),
             )
             ->where('orders.customer_id', auth()->guard('customer')->user()->id)
-            ->groupBy('rma.id');
+            ->groupBy(
+                'rma.id',
+                'rma.order_id',
+                'rma.rma_status_id',
+                'rma.created_at',
+                'orders.increment_id',
+                'orders.customer_email',
+                'orders.status',
+                'rma_statuses.title',
+                'rma_statuses.color'
+            );
 
         $this->addFilter('id', 'rma.id');
-        $this->addFilter('order_id', 'rma.order_id');
+        $this->addFilter('order_id', 'orders.increment_id');
         $this->addFilter('rma_status_title', 'rma_statuses.title');
         $this->addFilter('customer_email', 'orders.customer_email');
         $this->addFilter('created_at', 'rma.created_at');
@@ -69,12 +82,12 @@ class RMADataGrid extends DataGrid
         $this->addColumn([
             'index' => 'order_id',
             'label' => trans('shop::app.customers.account.rma.index.datagrid.order-ref'),
-            'type' => 'integer',
+            'type' => 'string',
             'searchable' => true,
             'sortable' => true,
             'filterable' => true,
             'closure' => function ($row) {
-                return '<span class="text-sm text-blue-500"><a href="'.route('shop.customers.account.orders.view', ['id' => $row->order_id]).'">'.'#'.$row->order_id.'</a></span>';
+                return '<span class="text-sm text-blue-500"><a href="'.route('shop.customers.account.orders.view', ['id' => $row->order_id]).'">'.'#'.$row->increment_id.'</a></span>';
             },
         ]);
 
@@ -90,7 +103,7 @@ class RMADataGrid extends DataGrid
             'closure' => function ($row) {
                 $color = $row->rma_status_color ?? '';
 
-                return '<p class="label-active" style="background:'.$color.';">'.$row->title.'</p>';
+                return '<p class="label-active" style="background:'.e($color).';">'.e($row->title).'</p>';
             },
         ]);
 
@@ -132,6 +145,9 @@ class RMADataGrid extends DataGrid
             'title' => trans('shop::app.rma.customer-rma-index.cancel'),
             'icon' => 'icon-cancel',
             'method' => 'POST',
+            'condition' => function ($row) {
+                return $this->rmaRepository->canCancelRma($row);
+            },
             'url' => function ($row) {
                 return route('shop.customers.account.rma.cancel', $row->id);
             },

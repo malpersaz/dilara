@@ -27,8 +27,9 @@ return [
     | Storage Paths
     |--------------------------------------------------------------------------
     |
-    | The following paths will be searched for the image filename submitted
-    | by the URI.
+    | The configured filesystem disk is read first, so a store on object storage
+    | is served the same way a local one is. These paths are searched after it,
+    | which covers a file published beside the application.
     |
     | Define as many directories as you like.
     |
@@ -71,16 +72,4 @@ return [
     */
 
     'lifetime' => 43200,
-
-    /*
-    |--------------------------------------------------------------------------
-    | Cache Driver
-    |--------------------------------------------------------------------------
-    |
-    | Optionally specify a custom cache driver to use for image caching.
-    | Set to null to use the default Laravel cache driver.
-    |
-    */
-
-    'cache_driver' => null,
 ];

@@ -33,7 +33,7 @@ class RMADataGrid extends DataGrid
                 'rma.id',
                 'rma.order_id',
                 'orders.is_guest as is_guest',
-                DB::raw('CONCAT('.$table_prefix.'orders.customer_first_name, " ", '.$table_prefix.'orders.customer_last_name) as customer_name'),
+                DB::raw(db_grammar()->concat($table_prefix.'orders.customer_first_name', "' '", $table_prefix.'orders.customer_last_name').' as customer_name'),
                 'rma_statuses.title',
                 'rma.created_at',
                 'orders.status as order_status',
@@ -45,7 +45,7 @@ class RMADataGrid extends DataGrid
         $this->addFilter('order_id', 'rma.order_id');
         $this->addFilter('title', 'rma_statuses.title');
         $this->addFilter('created_at', 'rma.created_at');
-        $this->addFilter('customer_name', DB::raw('CONCAT('.$table_prefix.'orders.customer_first_name, " ", '.$table_prefix.'orders.customer_last_name)'));
+        $this->addFilter('customer_name', DB::raw(db_grammar()->concat($table_prefix.'orders.customer_first_name', "' '", $table_prefix.'orders.customer_last_name')));
 
         return $queryBuilder;
     }
@@ -111,7 +111,7 @@ class RMADataGrid extends DataGrid
 
                 $color = $row->rma_status_color ?? '';
 
-                return '<p class="label-active" style="background:'.$color.';">'.$row->title.'</p>';
+                return '<p class="label-active" style="background:'.e($color).';">'.e($row->title).'</p>';
             },
         ]);
 

@@ -69,7 +69,7 @@ class StatusDataGrid extends DataGrid
             'filterable_options' => $this->rmaStatusRepository->all(['color as label', 'color as value'])->toArray(),
             'closure' => function ($row) {
                 if ($row->color) {
-                    return '<p class="label-active" style="background: '.$row->color.';">'.$row->color.'</p>';
+                    return '<p class="label-active" style="background: '.e($row->color).';">'.e($row->color).'</p>';
                 }
             },
         ]);
@@ -140,7 +140,7 @@ class StatusDataGrid extends DataGrid
             $this->addMassAction([
                 'title' => trans('admin::app.sales.rma.rma-status.index.datagrid.update'),
                 'method' => 'POST',
-                'url' => route('admin.sales.rma.statuses.mass-update'),
+                'url' => route('admin.sales.rma.statuses.mass_update'),
                 'options' => [
                     [
                         'label' => trans('admin::app.sales.rma.rma-status.index.datagrid.enabled'),
@@ -157,7 +157,7 @@ class StatusDataGrid extends DataGrid
             $this->addMassAction([
                 'title' => trans('admin::app.sales.rma.rma-status.index.datagrid.delete'),
                 'method' => 'POST',
-                'url' => route('admin.sales.rma.statuses.mass-delete'),
+                'url' => route('admin.sales.rma.statuses.mass_delete'),
             ]);
         }
     }

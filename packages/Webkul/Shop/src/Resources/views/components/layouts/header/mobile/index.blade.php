@@ -8,7 +8,7 @@
     $showWishlist = (bool) core()->getConfigData('customer.settings.wishlist.wishlist_option');
 @endphp
 
-<div class="flex flex-wrap gap-4 px-4 pt-6 pb-4 shadow-sm lg:hidden">
+<div class="flex flex-wrap gap-4 px-4 pt-6 pb-4 shadow-xs lg:hidden">
     <div class="flex items-center justify-between w-full">
         <!-- Left Navigation -->
         <div class="flex items-center gap-x-1.5">
@@ -23,13 +23,13 @@
 
             <a
                 href="{{ route('shop.home.index') }}"
-                class="flex max-h-[30px] items-center"
+                class="flex max-h-7.5 items-center"
                 aria-label="@lang('shop::app.components.layouts.header.mobile.bagisto')"
             >
                 <img
                     class="block"
                     src="{{ core()->getCurrentChannel()->logo_url ?? bagisto_asset('images/logo.svg') }}"
-                    alt="{{ config('app.name') }}"
+                    alt="{{ core()->getCurrentChannel()->logo_alt ?: config('app.name') }}"
                     width="131"
                     height="29"
                 >
@@ -66,8 +66,12 @@
                 <div class="max-md:hidden">
                     <x-shop::dropdown position="bottom-{{ core()->getCurrentLocale()->direction === 'ltr' ? 'right' : 'left' }}">
                         <x-slot:toggle>
-                            <span class="text-2xl cursor-pointer icon-users"></span>
-                            </x-slot>
+                            <button
+                                type="button"
+                                class="inline-block text-2xl cursor-pointer icon-users"
+                                aria-label="@lang('shop::app.components.layouts.header.mobile.account')"
+                            ></button>
+                        </x-slot>
 
                             <!-- Guest Dropdown -->
                             @guest('customer')
@@ -112,7 +116,7 @@
 
                                 <!-- Customers Dropdown -->
                                 @auth('customer')
-                                    <x-slot:content class="!p-0">
+                                    <x-slot:content class="p-0!">
                                         <div class="grid gap-2.5 p-5 pb-0">
                                             <p class="text-xl font-dmserif" v-pre>
                                         @lang('shop::app.components.layouts.header.mobile.welcome')’
@@ -206,7 +210,7 @@
     <!-- Serach Catalog Form -->
     <form action="{{ route('shop.search.index') }}" class="flex items-center w-full">
         <label
-            for="organic-search"
+            for="mobile-organic-search"
             class="sr-only"
         >
             @lang('shop::app.components.layouts.header.mobile.search')
@@ -215,12 +219,24 @@
         <div class="relative w-full">
             <div class="icon-search pointer-events-none absolute top-3 flex items-center text-2xl max-md:text-xl max-sm:top-2.5 ltr:left-3 rtl:right-3"></div>
 
+            @php
+                $maxQueryLength = ((int) core()->getConfigData('search_engines.elastic.settings.max_query_length')) ?: 1000;
+
+                $minQueryLength = (int) core()->getConfigData('search_engines.elastic.settings.min_query_length');
+
+                $minQueryLength = $minQueryLength > 0 && $minQueryLength <= $maxQueryLength ? $minQueryLength : 0;
+            @endphp
+
             <input
                 type="text"
+                id="mobile-organic-search"
                 class="block w-full rounded-xl border border-['#E3E3E3'] px-11 py-3.5 text-sm font-medium text-gray-900 max-md:rounded-lg max-md:px-10 max-md:py-3 max-md:font-normal max-sm:text-xs"
                 name="query"
                 value="{{ request('query') }}"
+                minlength="{{ $minQueryLength }}"
+                maxlength="{{ $maxQueryLength }}"
                 placeholder="@lang('shop::app.components.layouts.header.mobile.search-text')"
+                pattern="[^\\]+"
                 required
             >
 
@@ -241,7 +257,11 @@
                 @close="onDrawerClose"
             >
                 <x-slot:toggle>
-                    <span class="text-2xl cursor-pointer icon-hamburger"></span>
+                    <button
+                        type="button"
+                        class="text-2xl cursor-pointer icon-hamburger"
+                        aria-label="Menu"
+                    ></button>
                 </x-slot>
 
                 <x-slot:header>
@@ -249,7 +269,7 @@
                         <a href="{{ route('shop.home.index') }}">
                             <img
                                 src="{{ core()->getCurrentChannel()->logo_url ?? bagisto_asset('images/logo.svg') }}"
-                                alt="{{ config('app.name') }}"
+                                alt="{{ core()->getCurrentChannel()->logo_alt ?: config('app.name') }}"
                                 width="131"
                                 height="29"
                             >
@@ -257,14 +277,14 @@
                     </div>
                 </x-slot>
 
-                <x-slot:content class="!p-0">
+                <x-slot:content class="p-0!">
                     <!-- Account Profile Hero Section -->
                     <div class="p-4 border-b border-zinc-200">
                         <div class="grid grid-cols-[auto_1fr] items-center gap-4 rounded-xl border border-zinc-200 p-2.5">
                             <div>
                                 <img
                                 src="{{ auth()->user()?->image_url ??  bagisto_asset('images/user-placeholder.png') }}"
-                                    class="h-[60px] w-[60px] rounded-full max-md:rounded-full"
+                                    class="h-15 w-15 rounded-full max-md:rounded-full"
                                 >
                             </div>
 
@@ -284,7 +304,7 @@
                                     class="flex flex-col justify-between gap-2.5 max-md:gap-0"
                                     v-pre
                                 >
-                                    <p class="text-2xl break-all font-mediums max-md:text-xl">Hello! {{ auth()->user()?->first_name }}</p>
+                                    <p class="text-2xl break-all font-medium max-md:text-xl">{{ trans('shop::app.components.layouts.account.greeting', ['name' => auth()->user()?->first_name]) }}</p>
 
                                     <p class="no-underline text-zinc-500 max-md:text-sm">{{ auth()->user()?->email }}</p>
                                 </div>
@@ -302,94 +322,97 @@
 
                 <x-slot:footer>
                     <!-- Localization & Currency Section -->
-                @if(core()->getCurrentChannel()->locales()->count() > 1 || core()->getCurrentChannel()->currencies()->count() > 1 )
-                                    <div class="fixed bottom-0 z-10 grid w-full max-w-full grid-cols-[1fr_auto_1fr] items-center justify-items-center border-t border-zinc-200 bg-white px-5 ltr:left-0 rtl:right-0">
-                                        <!-- Filter Drawer -->
-                                        <x-shop::drawer
-                                            position="bottom"
-                                            width="100%"
-                                        >
-                                            <!-- Drawer Toggler -->
-                                            <x-slot:toggle>
-                                                <div
-                                                    class="flex cursor-pointer items-center gap-x-2.5 px-2.5 py-3.5 text-lg font-medium uppercase max-md:py-3 max-sm:text-base"
-                                                    role="button"
-                                                    v-pre
-                                                >
-                                                    {{ core()->getCurrentCurrency()->symbol . ' ' . core()->getCurrentCurrencyCode() }}
-                                                </div>
-                                            </x-slot>
+                    @if (
+                        core()->getCurrentChannel()->locales()->count() > 1
+                        || core()->getCurrentChannel()->currencies()->count() > 1
+                    )
+                        <div class="fixed bottom-0 z-10 grid w-full max-w-full grid-cols-[1fr_auto_1fr] items-center justify-items-center border-t border-zinc-200 bg-white px-5 ltr:left-0 rtl:right-0">
+                            <!-- Filter Drawer -->
+                            <x-shop::drawer
+                                position="bottom"
+                                width="100%"
+                            >
+                                <!-- Drawer Toggler -->
+                                <x-slot:toggle>
+                                    <button
+                                        type="button"
+                                        class="flex cursor-pointer items-center gap-x-2.5 px-2.5 py-3.5 text-lg font-medium uppercase max-md:py-3 max-sm:text-base"
+                                        v-pre
+                                    >
+                                        {{ core()->getCurrentCurrency()->symbol . ' ' . core()->getCurrentCurrencyCode() }}
+                                    </button>
+                                </x-slot>
 
-                                            <!-- Drawer Header -->
-                                            <x-slot:header>
-                                                <div class="flex items-center justify-between">
-                                                    <p class="text-lg font-semibold">
-                                                        @lang('shop::app.components.layouts.header.mobile.currencies')
-                                                    </p>
-                                                </div>
-                                            </x-slot>
-
-                                            <!-- Drawer Content -->
-                                            <x-slot:content class="!px-0">
-                                                <div
-                                                    class="overflow-auto"
-                                                    :style="{ height: getCurrentScreenHeight }"
-                                                >
-                                                    <v-currency-switcher></v-currency-switcher>
-                                                </div>
-                                            </x-slot>
-                                        </x-shop::drawer>
-
-                                        <!-- Seperator -->
-                                        <span class="h-5 w-0.5 bg-zinc-200"></span>
-
-                                        <!-- Sort Drawer -->
-                                        <x-shop::drawer
-                                            position="bottom"
-                                            width="100%"
-                                        >
-                                            <!-- Drawer Toggler -->
-                                            <x-slot:toggle>
-                                                <div
-                                                    class="flex cursor-pointer items-center gap-x-2.5 px-2.5 py-3.5 text-lg font-medium uppercase max-md:py-3 max-sm:text-base"
-                                                    role="button"
-                                                    v-pre
-                                                >
-                                                    <img
-                                        src="{{ ! empty(core()->getCurrentLocale()->logo_url)
-                        ? core()->getCurrentLocale()->logo_url
-                        : bagisto_asset('images/default-language.svg')
-                                                            }}"
-                                                        class="h-full"
-                                                        alt="Default locale"
-                                                        width="24"
-                                                        height="16"
-                                                    />
-
-                                                    {{ core()->getCurrentChannel()->locales()->orderBy('name')->where('code', app()->getLocale())->value('name') }}
-                                                </div>
-                                            </x-slot>
-
-                                            <!-- Drawer Header -->
-                                            <x-slot:header>
-                                                <div class="flex items-center justify-between">
-                                                    <p class="text-lg font-semibold">
-                                                        @lang('shop::app.components.layouts.header.mobile.locales')
-                                                    </p>
-                                                </div>
-                                            </x-slot>
-
-                                            <!-- Drawer Content -->
-                                            <x-slot:content class="!px-0">
-                                                <div
-                                                    class="overflow-auto"
-                                                    :style="{ height: getCurrentScreenHeight }"
-                                                >
-                                                    <v-locale-switcher></v-locale-switcher>
-                                                </div>
-                                            </x-slot>
-                                        </x-shop::drawer>
+                                <!-- Drawer Header -->
+                                <x-slot:header>
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-lg font-semibold">
+                                            @lang('shop::app.components.layouts.header.mobile.currencies')
+                                        </p>
                                     </div>
+                                </x-slot>
+
+                                <!-- Drawer Content -->
+                                <x-slot:content class="px-0!">
+                                    <div
+                                        class="overflow-auto"
+                                        :style="{ height: getCurrentScreenHeight }"
+                                    >
+                                        <v-currency-switcher></v-currency-switcher>
+                                    </div>
+                                </x-slot>
+                            </x-shop::drawer>
+
+                            <!-- Seperator -->
+                            <span class="h-5 w-0.5 bg-zinc-200"></span>
+
+                            <!-- Sort Drawer -->
+                            <x-shop::drawer
+                                position="bottom"
+                                width="100%"
+                            >
+                                <!-- Drawer Toggler -->
+                                <x-slot:toggle>
+                                    <button
+                                        type="button"
+                                        class="flex cursor-pointer items-center gap-x-2.5 px-2.5 py-3.5 text-lg font-medium uppercase max-md:py-3 max-sm:text-base"
+                                        v-pre
+                                    >
+                                        <img
+                                            src="{{ ! empty(core()->getCurrentLocale()->logo_url)
+                                                ? core()->getCurrentLocale()->logo_url
+                                                : bagisto_asset('images/default-language.svg')
+                                            }}"
+                                            class="h-full"
+                                            alt="Default locale"
+                                            width="24"
+                                            height="16"
+                                        />
+
+                                        {{ core()->getCurrentChannel()->locales()->orderBy('name')->where('code', app()->getLocale())->value('name') }}
+                                    </button>
+                                </x-slot>
+
+                                <!-- Drawer Header -->
+                                <x-slot:header>
+                                    <div class="flex items-center justify-between">
+                                        <p class="text-lg font-semibold">
+                                            @lang('shop::app.components.layouts.header.mobile.locales')
+                                        </p>
+                                    </div>
+                                </x-slot>
+
+                                <!-- Drawer Content -->
+                                <x-slot:content class="px-0!">
+                                    <div
+                                        class="overflow-auto"
+                                        :style="{ height: getCurrentScreenHeight }"
+                                    >
+                                        <v-locale-switcher></v-locale-switcher>
+                                    </div>
+                                </x-slot>
+                            </x-shop::drawer>
+                        </div>
                     @endif
                 </x-slot>
             </x-shop::drawer>
@@ -410,7 +433,7 @@
                 }"
             >
             <!-- First level view -->
-            <div class="flex-shrink-0 w-full h-full px-6 overflow-auto">
+            <div class="shrink-0 w-full h-full px-6 overflow-auto">
                 <div class="py-4">
                         <div
                             v-for="category in categories"
@@ -450,13 +473,13 @@
 
             <!-- Third level view -->
                 <div
-                    class="flex-shrink-0 w-full h-full"
+                    class="shrink-0 w-full h-full"
                     v-if="currentViewLevel === 'third'"
                 >
                 <div class="px-6 py-4 border-b border-gray-200">
                         <button
                             @click="goBackToMainView"
-                            class="flex items-center justify-center gap-2 focus:outline-none"
+                            class="flex items-center justify-center gap-2 focus:outline-hidden"
                             aria-label="Go back"
                         >
                         <span class="text-lg icon-arrow-left rtl:icon-arrow-right"></span>
@@ -515,9 +538,13 @@
                         const stored = localStorage.getItem('categories');
 
                         if (stored) {
-                            this.categories = JSON.parse(stored);
-                            this.isLoading = false;
-                            return;
+                            const parsed = JSON.parse(stored);
+
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                this.categories = parsed;
+                                this.isLoading = false;
+                                return;
+                            }
                         }
 
                     } catch (e) {}

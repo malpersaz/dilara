@@ -1,85 +1,55 @@
 <?php
 
+use Illuminate\Testing\TestResponse;
 use Webkul\Checkout\Facades\Cart;
 use Webkul\Checkout\Models\Cart as CartModel;
-use Webkul\Core\Models\CoreConfig;
 use Webkul\Customer\Models\Customer;
-use Webkul\Faker\Helpers\Product as ProductFaker;
 use Webkul\PayU\Payment\PayU as PayUPayment;
 use Webkul\Sales\Models\Invoice;
 use Webkul\Sales\Models\Order;
 use Webkul\Sales\Models\OrderTransaction;
 
 beforeEach(function () {
-    CoreConfig::factory()->create([
-        'code' => 'sales.payment_methods.payu.active',
-        'value' => '1',
-        'channel_code' => 'default',
-    ]);
-
-    CoreConfig::factory()->create([
-        'code' => 'sales.payment_methods.payu.sandbox',
-        'value' => '1',
-        'channel_code' => 'default',
-    ]);
-
-    CoreConfig::factory()->create([
-        'code' => 'sales.payment_methods.payu.merchant_key',
-        'value' => 'test_merchant_key',
-        'channel_code' => 'default',
-    ]);
-
-    CoreConfig::factory()->create([
-        'code' => 'sales.payment_methods.payu.merchant_salt',
-        'value' => 'test_merchant_salt',
-        'channel_code' => 'default',
+    $this->setConfig([
+        'sales.payment_methods.payu.active' => '1',
+        'sales.payment_methods.payu.sandbox' => '1',
+        'sales.payment_methods.payu.merchant_key' => 'test_merchant_key',
+        'sales.payment_methods.payu.merchant_salt' => 'test_merchant_salt',
     ]);
 });
 
-it('redirects back when payu credentials are invalid', function () {
-    // Arrange
-    CoreConfig::factory()->create([
-        'code' => 'sales.payment_methods.payu.merchant_key',
-        'value' => '',
-        'channel_code' => 'default',
+// ============================================================================
+// Redirect
+// ============================================================================
+
+it('should redirect back when the PayU credentials are invalid', function () {
+    $this->setConfig([
+        'sales.payment_methods.payu.merchant_key' => '',
+        'sales.payment_methods.payu.merchant_salt' => '',
     ]);
 
-    CoreConfig::factory()->create([
-        'code' => 'sales.payment_methods.payu.merchant_salt',
-        'value' => '',
-        'channel_code' => 'default',
-    ]);
-
-    // Act
     $response = $this->get(route('payu.redirect'));
 
-    // Assert
     $response->assertRedirect();
 
     $response->assertSessionHas('error');
 });
 
-it('redirects back when cart is not found', function () {
-    // Arrange
+it('should redirect back when the cart is not found', function () {
     Cart::shouldReceive('getCart')->andReturn(null);
 
-    // Act
     $response = $this->get(route('payu.redirect'));
 
-    // Assert
     $response->assertRedirect();
 
     $response->assertSessionHas('error');
 });
 
-it('creates payu payment data and returns redirect view', function () {
-    // Arrange
-    $cart = $this->createCartWithItems('payu');
+it('should create the PayU payment data and return the redirect view', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
 
-    // Act
     $response = $this->get(route('payu.redirect'));
 
-    // Assert
     $response->assertOk();
 
     $response->assertViewIs('payu::checkout.redirect');
@@ -88,27 +58,37 @@ it('creates payu payment data and returns redirect view', function () {
 
     $response->assertViewHas('paymentData');
 
-    // Verify payment data includes cart_id in udf1
     $paymentData = $response->viewData('paymentData');
 
     expect($paymentData)->toHaveKey('udf1')
         ->and($paymentData['udf1'])->toBe($cart->id);
 });
 
-it('successfully processes payu payment and creates order with invoice', function () {
-    // Arrange
-    $cart = $this->createCartWithItems('payu');
+it('should refuse a cart in a currency PayU does not settle', function () {
+    $this->createCartWithItems('payu', ['base_currency_code' => 'JPY']);
+
+    $response = $this->get(route('payu.redirect'));
+
+    $response->assertRedirect(route('shop.checkout.cart.index'));
+
+    $response->assertSessionHas('error');
+});
+
+// ============================================================================
+// Payment Callbacks
+// ============================================================================
+
+it('should process the PayU payment and create the order with an invoice', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
 
     $txnid = 'PAYU_TEST123';
 
-    // Mock the PayU payment method
     $mockPayU = $this->mock(PayUPayment::class)->makePartial();
 
     $mockPayU->shouldReceive('verifyHash')->andReturn(true);
 
     $this->app->instance(PayUPayment::class, $mockPayU);
 
-    // Prepare success response data
     $paymentData = [
         'txnid' => $txnid,
         'mihpayid' => 'MIHPAY_TEST_456',
@@ -123,27 +103,22 @@ it('successfully processes payu payment and creates order with invoice', functio
         'udf1' => $cart->id,
     ];
 
-    // Act
     $response = $this->post(route('payu.success'), $paymentData);
 
-    // Assert
     $response->assertRedirect(route('shop.checkout.onepage.success'));
 
-    // Verify order was created
-    $order = Order::where('cart_id', $cart->id)->first();
+    $order = Order::query()->where('cart_id', $cart->id)->first();
 
     expect($order)->not->toBeNull()
         ->and($order->status)->toBe('processing')
         ->and($order->customer_id)->toBe($cart->customer_id);
 
-    // Verify invoice was created
-    $invoice = Invoice::where('order_id', $order->id)->first();
+    $invoice = Invoice::query()->where('order_id', $order->id)->first();
 
     expect($invoice)->not->toBeNull()
         ->and($invoice->state)->toBe('paid');
 
-    // Verify order transaction was created
-    $orderTransaction = OrderTransaction::where('order_id', $order->id)->first();
+    $orderTransaction = OrderTransaction::query()->where('order_id', $order->id)->first();
 
     expect($orderTransaction)->not->toBeNull()
         ->and($orderTransaction->transaction_id)->toBe($txnid)
@@ -151,10 +126,7 @@ it('successfully processes payu payment and creates order with invoice', functio
         ->and($orderTransaction->type)->toBe('payu');
 });
 
-it('handles payment failure gracefully', function () {
-    // Arrange
-    $product = (new ProductFaker)->getSimpleProductFactory()->create();
-
+it('should handle a payment failure gracefully', function () {
     $customer = Customer::factory()->create();
 
     $cart = CartModel::factory()->create([
@@ -162,13 +134,12 @@ it('handles payment failure gracefully', function () {
         'customer_first_name' => $customer->first_name,
         'customer_last_name' => $customer->last_name,
         'customer_email' => $customer->email,
-        'is_guest' => 0,
+        'is_guest' => false,
         'base_grand_total' => 100.00,
     ]);
 
     $txnid = 'PAYU_FAIL_789';
 
-    // Act
     $response = $this->post(route('payu.failure'), [
         'txnid' => $txnid,
         'status' => 'failure',
@@ -176,33 +147,28 @@ it('handles payment failure gracefully', function () {
         'udf1' => $cart->id,
     ]);
 
-    // Assert
     $response->assertRedirect(route('shop.checkout.cart.index'));
 
     $response->assertSessionHas('error');
 
-    // Verify no order was created
-    $order = Order::where('cart_id', $cart->id)->first();
+    $order = Order::query()->where('cart_id', $cart->id)->first();
 
     expect($order)->toBeNull();
 });
 
-it('redirects to cart when hash verification fails', function () {
-    // Arrange
+it('should redirect to the cart when the hash verification fails', function () {
     $cart = CartModel::factory()->create([
         'base_grand_total' => 100.00,
     ]);
 
     $txnid = 'PAYU_INVALID_HASH';
 
-    // Mock invalid hash verification
     $mockPayU = $this->mock(PayUPayment::class)->makePartial();
 
     $mockPayU->shouldReceive('verifyHash')->andReturn(false);
 
     $this->app->instance(PayUPayment::class, $mockPayU);
 
-    // Act
     $response = $this->post(route('payu.success'), [
         'txnid' => $txnid,
         'status' => 'success',
@@ -210,34 +176,182 @@ it('redirects to cart when hash verification fails', function () {
         'udf1' => $cart->id,
     ]);
 
-    // Assert
     $response->assertRedirect(route('shop.checkout.cart.index'));
 
     $response->assertSessionHas('error');
 });
 
-it('handles payment cancellation', function () {
-    // Arrange
+it('should handle a payment cancellation', function () {
     $cart = CartModel::factory()->create([
         'base_grand_total' => 100.00,
     ]);
 
     $txnid = 'PAYU_CANCEL_101';
 
-    // Act
     $response = $this->post(route('payu.cancel'), [
         'txnid' => $txnid,
         'status' => 'userCancelled',
         'udf1' => $cart->id,
     ]);
 
-    // Assert
     $response->assertRedirect(route('shop.checkout.cart.index'));
 
     $response->assertSessionHas('warning');
 
-    // Verify no order was created
-    $order = Order::where('cart_id', $cart->id)->first();
+    $order = Order::query()->where('cart_id', $cart->id)->first();
 
     expect($order)->toBeNull();
+});
+
+// ============================================================================
+// Payment Verification
+// ============================================================================
+
+/**
+ * The response PayU posts back for a cart paid in full.
+ */
+function payuResponseFor(object $cart, array $overrides = []): array
+{
+    return array_merge([
+        'txnid' => 'PAYU_TEST_'.$cart->id,
+        'mihpayid' => 'MIHPAY_TEST_456',
+        'mode' => 'CC',
+        'status' => 'success',
+        'key' => 'test_merchant_key',
+        'amount' => round($cart->base_grand_total, 2),
+        'productinfo' => 'Order #'.$cart->id,
+        'firstname' => $cart->customer_first_name,
+        'email' => $cart->customer_email,
+        'hash' => 'valid_hash_value',
+        'udf1' => $cart->id,
+    ], $overrides);
+}
+
+/**
+ * Post a PayU response whose hash the gateway accepts.
+ */
+function payuSuccess(array $response): TestResponse
+{
+    $mockPayU = test()->mock(PayUPayment::class)->makePartial();
+
+    $mockPayU->shouldReceive('verifyHash')->andReturn(true);
+
+    app()->instance(PayUPayment::class, $mockPayU);
+
+    return test()->post(route('payu.success'), $response);
+}
+
+it('should refuse a response PayU did not mark successful', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    payuSuccess(payuResponseFor($cart, ['status' => 'failure']))
+        ->assertRedirect(route('shop.checkout.cart.index'));
+
+    expect(Order::query()->where('cart_id', $cart->id)->exists())->toBeFalse();
+});
+
+it('should refuse a response paying less than the cart total', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    payuSuccess(payuResponseFor($cart, ['amount' => 1.00]))
+        ->assertRedirect(route('shop.checkout.cart.index'));
+
+    expect(Order::query()->where('cart_id', $cart->id)->exists())->toBeFalse();
+});
+
+it('should refuse a response whose transaction already paid for an order', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    payuSuccess(payuResponseFor($cart))->assertRedirect(route('shop.checkout.onepage.success'));
+
+    $replayCart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    payuSuccess(payuResponseFor($replayCart, [
+        'txnid' => 'PAYU_TEST_'.$cart->id,
+        'udf1' => $replayCart->id,
+    ]))->assertRedirect(route('shop.checkout.cart.index'));
+
+    expect(Order::query()->where('cart_id', $replayCart->id)->exists())->toBeFalse();
+});
+
+it('should place one order however many times PayU reports the same payment', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    payuSuccess(payuResponseFor($cart))->assertRedirect(route('shop.checkout.onepage.success'));
+
+    $cart->update(['is_active' => 1]);
+
+    payuSuccess(payuResponseFor($cart))->assertRedirect(route('shop.checkout.onepage.success'));
+
+    expect(Order::query()->where('cart_id', $cart->id)->count())->toBe(1);
+});
+
+// ============================================================================
+// Server To Server Notification
+// ============================================================================
+
+/**
+ * Post a PayU notification whose hash the gateway accepts or rejects.
+ */
+function payuWebhook(array $response, bool $hashVerifies = true): TestResponse
+{
+    $mockPayU = test()->mock(PayUPayment::class)->makePartial();
+
+    $mockPayU->shouldReceive('verifyHash')->andReturn($hashVerifies);
+
+    app()->instance(PayUPayment::class, $mockPayU);
+
+    return test()->post(route('payu.webhook'), $response);
+}
+
+it('should place the order from the notification when the customer never returns to the store', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    payuWebhook(payuResponseFor($cart))
+        ->assertOk()
+        ->assertJson(['status' => 'order_placed']);
+
+    $order = Order::query()->where('cart_id', $cart->id)->first();
+
+    expect($order)->not->toBeNull()
+        ->and($order->status)->toBe('processing');
+
+    expect(Invoice::query()->where('order_id', $order->id)->exists())->toBeTrue();
+
+    expect(OrderTransaction::query()->where('order_id', $order->id)->value('transaction_id'))
+        ->toBe('PAYU_TEST_'.$cart->id);
+});
+
+it('should refuse a notification whose hash does not verify', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    payuWebhook(payuResponseFor($cart), false)
+        ->assertStatus(400)
+        ->assertJson(['status' => 'invalid_hash']);
+
+    expect(Order::query()->where('cart_id', $cart->id)->exists())->toBeFalse();
+});
+
+it('should refuse a notification PayU did not mark successful', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    payuWebhook(payuResponseFor($cart, ['status' => 'failure']))
+        ->assertOk()
+        ->assertJson(['status' => 'order_not_placed']);
+
+    expect(Order::query()->where('cart_id', $cart->id)->exists())->toBeFalse();
+});
+
+it('should place no second order when the notification follows the customer back to the store', function () {
+    $cart = $this->createCartWithItems('payu', ['base_currency_code' => 'INR']);
+
+    $response = payuResponseFor($cart);
+
+    payuSuccess($response)->assertRedirect(route('shop.checkout.onepage.success'));
+
+    payuWebhook($response)
+        ->assertOk()
+        ->assertJson(['status' => 'order_placed']);
+
+    expect(Order::query()->where('cart_id', $cart->id)->count())->toBe(1);
 });

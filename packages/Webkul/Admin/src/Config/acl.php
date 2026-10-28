@@ -155,12 +155,14 @@ return [
         'route' => [
             'admin.sales.rma.requests.index',
             'admin.sales.rma.requests.view',
-            'admin.sales.rma.requests.get-messages',
-            'admin.sales.rma.requests.get-order-items',
-            'admin.sales.rma.requests.get-resolution-reasons',
-            'admin.sales.rma.requests.send-message',
-            'admin.sales.rma.requests.update-status',
-            'admin.sales.rma.requests.re-open',
+            'admin.sales.rma.requests.get_messages',
+            'admin.sales.rma.requests.attachment',
+            'admin.sales.rma.requests.image',
+            'admin.sales.rma.requests.get_order_items',
+            'admin.sales.rma.requests.get_resolution_reasons',
+            'admin.sales.rma.requests.send_message',
+            'admin.sales.rma.requests.update_status',
+            'admin.sales.rma.requests.re_open',
         ],
         'sort' => 1,
     ], [
@@ -187,7 +189,7 @@ return [
         'route' => [
             'admin.sales.rma.reasons.edit',
             'admin.sales.rma.reasons.update',
-            'admin.sales.rma.reasons.mass-update',
+            'admin.sales.rma.reasons.mass_update',
         ],
         'sort' => 2,
     ], [
@@ -195,7 +197,7 @@ return [
         'name' => 'admin::app.acl.rma.reasons.delete',
         'route' => [
             'admin.sales.rma.reasons.delete',
-            'admin.sales.rma.reasons.mass-delete',
+            'admin.sales.rma.reasons.mass_delete',
         ],
         'sort' => 3,
     ], [
@@ -214,7 +216,7 @@ return [
         'route' => [
             'admin.sales.rma.rules.edit',
             'admin.sales.rma.rules.update',
-            'admin.sales.rma.rules.mass-update',
+            'admin.sales.rma.rules.mass_update',
         ],
         'sort' => 2,
     ], [
@@ -222,7 +224,7 @@ return [
         'name' => 'admin::app.acl.rma.rules.delete',
         'route' => [
             'admin.sales.rma.rules.delete',
-            'admin.sales.rma.rules.mass-delete',
+            'admin.sales.rma.rules.mass_delete',
         ],
         'sort' => 3,
     ], [
@@ -241,7 +243,7 @@ return [
         'route' => [
             'admin.sales.rma.statuses.edit',
             'admin.sales.rma.statuses.update',
-            'admin.sales.rma.statuses.mass-update',
+            'admin.sales.rma.statuses.mass_update',
         ],
         'sort' => 2,
     ], [
@@ -249,63 +251,63 @@ return [
         'name' => 'admin::app.acl.rma.statuses.delete',
         'route' => [
             'admin.sales.rma.statuses.delete',
-            'admin.sales.rma.statuses.mass-delete',
+            'admin.sales.rma.statuses.mass_delete',
         ],
         'sort' => 3,
     ], [
         'key' => 'sales.rma.custom-fields',
         'name' => 'admin::app.acl.rma.custom-fields.title',
-        'route' => 'admin.sales.rma.custom-fields.index',
+        'route' => 'admin.sales.rma.custom_fields.index',
         'sort' => 5,
     ], [
         'key' => 'sales.rma.custom-fields.create',
         'name' => 'admin::app.acl.rma.custom-fields.create',
         'route' => [
-            'admin.sales.rma.custom-fields.create',
-            'admin.sales.rma.custom-fields.store',
+            'admin.sales.rma.custom_fields.create',
+            'admin.sales.rma.custom_fields.store',
         ],
         'sort' => 1,
     ], [
         'key' => 'sales.rma.custom-fields.edit',
         'name' => 'admin::app.acl.rma.custom-fields.edit',
         'route' => [
-            'admin.sales.rma.custom-fields.edit',
-            'admin.sales.rma.custom-fields.update',
-            'admin.sales.rma.custom-fields.mass-update',
+            'admin.sales.rma.custom_fields.edit',
+            'admin.sales.rma.custom_fields.update',
+            'admin.sales.rma.custom_fields.mass_update',
         ],
         'sort' => 2,
     ], [
         'key' => 'sales.rma.custom-fields.delete',
         'name' => 'admin::app.acl.rma.custom-fields.delete',
         'route' => [
-            'admin.sales.rma.custom-fields.delete',
-            'admin.sales.rma.custom-fields.mass-delete',
+            'admin.sales.rma.custom_fields.delete',
+            'admin.sales.rma.custom_fields.mass_delete',
         ],
         'sort' => 3,
     ], [
         'key' => 'sales.eu_withdrawals',
-        'name' => 'admin::app.eu_withdrawal.acl.title',
-        'route' => 'admin.sales.eu-withdrawals.index',
+        'name' => 'admin::app.eu-withdrawal.acl.title',
+        'route' => 'admin.sales.eu_withdrawals.index',
         'sort' => 10,
     ], [
         'key' => 'sales.eu_withdrawals.view',
-        'name' => 'admin::app.eu_withdrawal.acl.view',
-        'route' => 'admin.sales.eu-withdrawals.view',
+        'name' => 'admin::app.eu-withdrawal.acl.view',
+        'route' => 'admin.sales.eu_withdrawals.view',
         'sort' => 1,
     ], [
         'key' => 'sales.eu_withdrawals.decline',
-        'name' => 'admin::app.eu_withdrawal.acl.decline',
-        'route' => 'admin.sales.eu-withdrawals.decline',
+        'name' => 'admin::app.eu-withdrawal.acl.decline',
+        'route' => 'admin.sales.eu_withdrawals.decline',
         'sort' => 2,
     ], [
         'key' => 'sales.eu_withdrawals.mark_refunded',
-        'name' => 'admin::app.eu_withdrawal.acl.mark_refunded',
-        'route' => 'admin.sales.eu-withdrawals.mark_refunded',
+        'name' => 'admin::app.eu-withdrawal.acl.mark-refunded',
+        'route' => 'admin.sales.eu_withdrawals.mark_refunded',
         'sort' => 3,
     ], [
         'key' => 'sales.eu_withdrawals.resend_confirmation',
-        'name' => 'admin::app.eu_withdrawal.acl.resend_confirmation',
-        'route' => 'admin.sales.eu-withdrawals.resend_confirmation',
+        'name' => 'admin::app.eu-withdrawal.acl.resend-confirmation',
+        'route' => 'admin.sales.eu_withdrawals.resend_confirmation',
         'sort' => 4,
     ], [
         'key' => 'sales.bookings',
@@ -340,11 +342,13 @@ return [
             'admin.catalog.products.bundle.options',
             'admin.catalog.products.configurable.options',
             'admin.catalog.products.downloadable.options',
+            'admin.catalog.products.downloadable.link_file',
+            'admin.catalog.products.downloadable.sample_file',
             'admin.catalog.products.grouped.options',
-            'admin.catalog.products.simple.customizable-options',
-            'admin.catalog.products.virtual.customizable-options',
-            'admin.sales.booking-product.config',
-            'admin.sales.booking-product.slots',
+            'admin.catalog.products.simple.customizable_options',
+            'admin.catalog.products.virtual.customizable_options',
+            'admin.sales.booking_product.config',
+            'admin.sales.booking_product.slots',
         ],
         'sort' => 1,
     ], [
@@ -534,16 +538,12 @@ return [
     ], [
         'key' => 'customers.addresses.create',
         'name' => 'admin::app.acl.create',
-        'route' => [
-            'admin.customers.customers.addresses.create',
-            'admin.customers.customers.addresses.store',
-        ],
+        'route' => 'admin.customers.customers.addresses.store',
         'sort' => 1,
     ], [
         'key' => 'customers.addresses.edit',
         'name' => 'admin::app.acl.edit',
         'route' => [
-            'admin.customers.customers.addresses.edit',
             'admin.customers.customers.addresses.update',
             'admin.customers.customers.addresses.set_default',
         ],
@@ -1173,33 +1173,6 @@ return [
         'route' => 'admin.settings.roles.delete',
         'sort' => 3,
     ], [
-        'key' => 'settings.themes',
-        'name' => 'admin::app.acl.themes',
-        'route' => 'admin.settings.themes.index',
-        'sort' => 8,
-    ], [
-        'key' => 'settings.themes.create',
-        'name' => 'admin::app.acl.create',
-        'route' => 'admin.settings.themes.store',
-        'sort' => 1,
-    ], [
-        'key' => 'settings.themes.edit',
-        'name' => 'admin::app.acl.edit',
-        'route' => [
-            'admin.settings.themes.edit',
-            'admin.settings.themes.update',
-            'admin.settings.themes.mass_update',
-        ],
-        'sort' => 2,
-    ], [
-        'key' => 'settings.themes.delete',
-        'name' => 'admin::app.acl.delete',
-        'route' => [
-            'admin.settings.themes.delete',
-            'admin.settings.themes.mass_delete',
-        ],
-        'sort' => 3,
-    ], [
         'key' => 'settings.taxes',
         'name' => 'admin::app.acl.taxes',
         'route' => 'admin.settings.taxes.categories.index',
@@ -1324,8 +1297,68 @@ return [
             'admin.configuration.store',
             'admin.configuration.search',
             'admin.configuration.download',
-            'admin.configuration.cache-management.execute',
+            'admin.configuration.cache_management.execute',
+            'admin.configuration.search_engines.test_connection',
         ],
         'sort' => 9,
+    ],
+
+    /**
+     * Appearance.
+     */
+    [
+        'key' => 'appearance',
+        'name' => 'admin::app.acl.appearance',
+        'route' => 'admin.appearance.themes.index',
+        'sort' => 9,
+    ], [
+        'key' => 'appearance.themes',
+        'name' => 'admin::app.acl.themes',
+        'route' => 'admin.appearance.themes.index',
+        'sort' => 1,
+    ], [
+        'key' => 'appearance.themes.activate',
+        'name' => 'admin::app.acl.activate',
+        'route' => [
+            'admin.appearance.themes.impact',
+            'admin.appearance.themes.activate',
+        ],
+        'sort' => 1,
+    ], [
+        'key' => 'appearance.sections',
+        'name' => 'admin::app.acl.sections',
+        'route' => [
+            'admin.appearance.sections.index',
+        ],
+        'sort' => 2,
+    ], [
+        'key' => 'appearance.sections.create',
+        'name' => 'admin::app.acl.create',
+        'route' => [
+            'admin.appearance.sections.store',
+            'admin.appearance.sections.duplicate',
+        ],
+        'sort' => 1,
+    ], [
+        'key' => 'appearance.sections.edit',
+        'name' => 'admin::app.acl.edit',
+        'route' => [
+            'admin.appearance.sections.update',
+            'admin.appearance.sections.status',
+            'admin.appearance.sections.draft',
+            'admin.appearance.sections.publish',
+            'admin.appearance.sections.discard',
+            'admin.appearance.sections.reorder',
+            'admin.appearance.sections.media',
+            'admin.appearance.sections.fields',
+        ],
+        'sort' => 2,
+    ], [
+        'key' => 'appearance.sections.delete',
+        'name' => 'admin::app.acl.delete',
+        'route' => [
+            'admin.appearance.sections.delete',
+        ],
+        'sort' => 3,
     ],
 ];

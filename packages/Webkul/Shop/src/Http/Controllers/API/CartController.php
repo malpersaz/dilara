@@ -4,6 +4,7 @@ namespace Webkul\Shop\Http\Controllers\API;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Webkul\CartRule\Repositories\CartRuleCouponRepository;
 use Webkul\Checkout\Facades\Cart;
 use Webkul\Checkout\Models\CartAddress;
@@ -60,6 +61,10 @@ class CartController extends APIController
             'product_id' => 'required|integer|exists:products,id',
             'is_buy_now' => 'integer|in:0,1',
             'quantity' => 'integer|min:1',
+            'qty' => 'array',
+            'qty.*' => 'integer|min:0',
+            'bundle_option_qty' => 'array',
+            'bundle_option_qty.*' => 'integer|min:1',
         ]);
 
         $product = $this->productRepository->with('parent')->findOrFail(request()->input('product_id'));
@@ -71,7 +76,7 @@ class CartController extends APIController
 
             $response = [];
 
-            if (request()->get('is_buy_now')) {
+            if (request()->input('is_buy_now')) {
                 Cart::deActivateCart();
 
                 $response['redirect'] = route('shop.checkout.onepage.index');
@@ -136,6 +141,17 @@ class CartController extends APIController
      */
     public function moveToWishlist(): JsonResource
     {
+        if (! core()->getConfigData('customer.settings.wishlist.wishlist_option')) {
+            abort(403, trans('shop::app.errors.403.title'));
+        }
+
+        $this->validate(request(), [
+            'ids' => 'required|array',
+            'ids.*' => 'integer',
+            'qty' => 'required|array',
+            'qty.*' => 'integer|min:1',
+        ]);
+
         foreach (request()->input('ids') as $index => $id) {
             $qty = request()->input('qty')[$index];
 
@@ -155,6 +171,11 @@ class CartController extends APIController
      */
     public function update(): JsonResource
     {
+        $this->validate(request(), [
+            'qty' => 'present|array',
+            'qty.*' => 'required|integer|min:0',
+        ]);
+
         try {
             Cart::updateItems(request()->input());
 
@@ -254,7 +275,7 @@ class CartController extends APIController
 
                 return (new JsonResource([
                     'data' => new CartResource(Cart::getCart()),
-                    'message' => trans('Coupon not found.'),
+                    'message' => trans('shop::app.checkout.coupon.apply-issue'),
                 ]))->response()->setStatusCode(Response::HTTP_UNPROCESSABLE_ENTITY);
             }
         } catch (\Exception $e) {
@@ -295,12 +316,14 @@ class CartController extends APIController
 
         $productIds = $cart->items->pluck('product_id')->toArray();
 
+        $crossSellIds = DB::table('product_cross_sells')
+            ->whereIn('parent_id', $productIds)
+            ->whereNotIn('child_id', $productIds)
+            ->distinct()
+            ->pluck('child_id');
+
         $products = $this->productRepository
-            ->select('products.*', 'product_cross_sells.child_id')
-            ->join('product_cross_sells', 'products.id', '=', 'product_cross_sells.child_id')
-            ->whereIn('product_cross_sells.parent_id', $productIds)
-            ->whereNotIn('product_cross_sells.child_id', $productIds)
-            ->groupBy('product_cross_sells.child_id')
+            ->whereIn('products.id', $crossSellIds)
             ->take(core()->getConfigData('catalog.products.cart_view_page.no_of_cross_sells_products'))
             ->get();
 

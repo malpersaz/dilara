@@ -41,9 +41,46 @@ export class CustomerGDPRPage extends BasePage {
         await this.saveButton.click();
         const requestRow = this.page
             .locator("#main .row")
-            .filter({ hasText: message })
-            .first();
+            .filter({ hasText: message });
+
+        await expect(requestRow).toHaveCount(1);
         await expect(requestRow).toContainText("Pending");
+    }
+
+    async updateRequestStatus(
+        message: string,
+        status: "processing" | "completed" | "declined",
+    ): Promise<void> {
+        await this.openAdminPage();
+        const requestRow = this.page
+            .locator(".row")
+            .filter({ hasText: message });
+
+        await expect(requestRow).toHaveCount(1);
+
+        await requestRow.locator("span.icon-edit").click();
+
+        await expect(this.page.locator("#status")).toBeVisible();
+
+        await this.page.selectOption("#status", status);
+        await this.saveButton.click();
+        await expect(
+            this.page.getByText("Data Request updated successfully").first(),
+        ).toBeVisible();
+    }
+
+    async deleteRequest(message: string): Promise<void> {
+        await this.openAdminPage();
+        const requestRow = this.page
+            .locator(".row")
+            .filter({ hasText: message });
+
+        await expect(requestRow).toHaveCount(1);
+
+        await requestRow.locator("span.icon-delete").click();
+        await this.page
+            .getByRole("button", { name: "Agree", exact: true })
+            .click();
     }
 
     async expectRequestState(
@@ -54,46 +91,18 @@ export class CustomerGDPRPage extends BasePage {
         await this.openCustomerPage();
         const requestRow = this.page
             .locator("#main .row")
-            .filter({ hasText: message })
-            .first();
+            .filter({ hasText: message });
+
+        await expect(requestRow).toHaveCount(1);
         await expect(requestRow).toContainText(expectedStatus);
         await expect(requestRow).toContainText(expectedType);
     }
 
-    async updateRequestStatus(
-        message: string,
-        status: "processing" | "completed" | "declined",
-    ): Promise<void> {
-        await this.openAdminPage();
-        const requestRow = this.page
-            .locator(".row")
-            .filter({ hasText: message })
-            .first();
-        await expect(requestRow).toBeVisible({ timeout: 20000 });
-        await requestRow.locator(".flex > a").first().click();
-        await this.page.waitForSelector("#status", { state: "visible" });
-        await this.page.selectOption("#status", status);
-        await this.saveButton.click();
-    }
-
-    async deleteRequest(message: string): Promise<void> {
-        await this.openAdminPage();
-        const requestRow = this.page
-            .locator(".row")
-            .filter({ hasText: message })
-            .first();
-        await expect(requestRow).toBeVisible({ timeout: 20000 });
-        await requestRow.locator(".flex > a").nth(1).click();
-        await this.page
-            .getByRole("button", { name: "Agree", exact: true })
-            .click();
-    }
-
-    async getRequestCount(message: string): Promise<number> {
+    async expectRequestAbsent(message: string): Promise<void> {
         await this.openCustomerPage();
-        return this.page
-            .locator("#main .row")
-            .filter({ hasText: message })
-            .count();
+
+        await expect(
+            this.page.locator("#main .row").filter({ hasText: message }),
+        ).toHaveCount(0);
     }
 }

@@ -44,7 +44,7 @@
                     <!-- Left sub Component -->
                     <div class="flex flex-1 flex-col gap-2">
                         <!-- General -->
-                        <div class="box-shadow rounded bg-white p-4 dark:bg-gray-900">
+                        <div class="box-shadow rounded-sm bg-white p-4 dark:bg-gray-900">
                             <p class="mb-4 text-base font-semibold text-gray-800 dark:text-white">
                                 @lang('admin::app.account.edit.general')
                             </p>
@@ -53,7 +53,13 @@
                             <x-admin::form.control-group>
                                 <x-admin::media.images
                                     name="image"
-                                    :uploaded-images="$user->image ? [['id' => 'image', 'url' => $user->image_url]] : []"
+                                    meta-name="image_meta"
+                                    enable-seo="true"
+                                    :uploaded-images="$user->image ? [[
+                                        'id'        => 'image',
+                                        'url'       => $user->image_url,
+                                        'file_name' => pathinfo($user->image, PATHINFO_FILENAME),
+                                    ]] : []"
                                 />
                             </x-admin::form.control-group>
 
@@ -80,7 +86,7 @@
                             </x-admin::form.control-group>
 
                             <!-- Email -->
-                            <x-admin::form.control-group class="!mb-0">
+                            <x-admin::form.control-group class="mb-0!">
                                 <x-admin::form.control-group.label class="required">
                                     @lang('admin::app.account.edit.email')
                                 </x-admin::form.control-group.label>
@@ -100,7 +106,7 @@
                     </div>
 
                     <!-- Right sub-component -->
-                    <div class="flex w-[360px] max-w-full flex-col gap-2 max-md:w-full">
+                    <div class="flex w-90 max-w-full flex-col gap-2 max-md:w-full">
                         <x-admin::accordion>
                             <x-slot:header>
                                 <p class="p-2.5 text-base font-semibold text-gray-800 dark:text-white">
@@ -145,7 +151,7 @@
                                 </x-admin::form.control-group>
 
                                 <!-- Confirm Password -->
-                                <x-admin::form.control-group class="!mb-0">
+                                <x-admin::form.control-group class="mb-0!">
                                     <x-admin::form.control-group.label>
                                         @lang('admin::app.account.edit.confirm-password')
                                     </x-admin::form.control-group.label>
@@ -164,7 +170,7 @@
                             </x-slot>
                         </x-admin::accordion>
                         
-                        <div class="flex w-[360px] max-w-full flex-col gap-2 max-md:w-full">
+                        <div class="flex w-90 max-w-full flex-col gap-2 max-md:w-full">
                             <x-admin::accordion>
                                 <x-slot:header>
                                     <p class="p-2.5 text-base font-semibold text-gray-800 dark:text-white">

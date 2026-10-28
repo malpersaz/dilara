@@ -28,6 +28,41 @@ class RMAMessage extends Model implements RMAMessageContract
     ];
 
     /**
+     * The attributes that should be cast.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'is_admin' => 'boolean',
+    ];
+
+    /**
+     * The attributes appended to the model's array form.
+     *
+     * @var array
+     */
+    protected $appends = [
+        'attachment_url',
+    ];
+
+    /**
+     * The url the attachment is served from.
+     *
+     * A message records the path the file was stored at, so the disk it is
+     * configured on decides the url rather than the application's own address.
+     */
+    public function getAttachmentUrlAttribute(): ?string
+    {
+        if (empty($this->attachment_path)) {
+            return null;
+        }
+
+        return auth()->guard('admin')->check()
+            ? route('admin.sales.rma.requests.attachment', $this->id)
+            : route('shop.customers.account.rma.attachment', $this->id);
+    }
+
+    /**
      * Get the RMA that owns the message.
      */
     public function rma()

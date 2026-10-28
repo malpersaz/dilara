@@ -49,7 +49,7 @@ class CartController extends Controller
     }
 
     /**
-     * Create cart
+     * Create cart.
      */
     public function store(): JsonResource
     {
@@ -58,6 +58,7 @@ class CartController extends Controller
         try {
             $cart = Cart::createCart([
                 'customer' => $customer,
+                'channel_id' => $customer->channel_id ?? core()->getDefaultChannel()->id,
                 'is_active' => false,
             ]);
 
@@ -79,6 +80,11 @@ class CartController extends Controller
     {
         $this->validate(request(), [
             'product_id' => 'required|integer|exists:products,id',
+            'quantity' => 'integer|min:1',
+            'qty' => 'array',
+            'qty.*' => 'integer|min:0',
+            'bundle_option_qty' => 'array',
+            'bundle_option_qty.*' => 'integer|min:1',
         ]);
 
         $cart = $this->cartRepository->findOrFail($cartId);

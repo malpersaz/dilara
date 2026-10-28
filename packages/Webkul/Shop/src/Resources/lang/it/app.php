@@ -11,7 +11,8 @@ return [
             'footer' => '© Copyright 2010 - :current_year, Webkul Software (Registrato in India). Tutti i diritti riservati.',
             'forgot-password-text' => 'Se hai dimenticato la tua password, recuperala inserendo il tuo indirizzo email.',
             'page-title' => 'Hai dimenticato la tua password ?',
-            'reset-link-sent' => 'Abbiamo inviato il link per il ripristino della password al tuo indirizzo email.',
+            'reset-link-sent' => 'Se questo indirizzo email è registrato, è stato inviato un link per reimpostare la password.',
+            'reset-link-failed' => 'Impossibile inviare il link per reimpostare la password. Riprova più tardi.',
             'sign-in-button' => 'Accedi',
             'submit' => 'Reimposta la Password',
             'title' => 'Recupera la Password',
@@ -42,7 +43,7 @@ return [
             'page-title' => 'Accesso Cliente',
             'password' => 'Password',
             'resend-verification' => 'Reinvia email di verifica',
-            'show-password' => 'Mostra Password',
+            'social-account-exists' => 'Esiste già un account con questa email. Accedi con la tua email e la tua password.',
             'title' => 'Accedi',
             'verify-first' => 'Verifica prima il tuo account email.',
         ],
@@ -323,8 +324,6 @@ return [
                 'invoice-pdf' => [
                     'bank-details' => 'Dettagli Bancari',
                     'bill-to' => 'Fatturato a',
-                    'contact-number' => 'Numero di Contatto',
-                    'contact' => 'Contatto',
                     'date' => 'Data Fattura',
                     'discount' => 'Sconto',
                     'excl-tax' => 'Escl. Tasse:',
@@ -338,6 +337,7 @@ return [
                     'price' => 'Prezzo',
                     'product-name' => 'Nome Prodotto',
                     'qty' => 'Quantità',
+                    'phone' => 'Telefono',
                     'ship-to' => 'Spedisci a',
                     'shipping-handling-excl-tax' => 'Spedizione e Gestione (Escl. Tasse)',
                     'shipping-handling-incl-tax' => 'Spedizione e Gestione (Incl. Tasse)',
@@ -373,6 +373,7 @@ return [
                 'remaining-downloads' => 'Download Rimasti',
                 'status' => 'Stato',
                 'title' => 'Titolo',
+                'unlimited' => 'Illimitato',
             ],
 
             'wishlist' => [
@@ -541,8 +542,22 @@ return [
             'default-header' => 'Intestazione predefinita',
         ],
 
+        'image-zoomer' => [
+            'close' => 'Chiudi galleria',
+            'view-image' => 'Visualizza immagine',
+            'view-video' => 'Visualizza video',
+        ],
+
         'drawer' => [
             'default-toggle' => 'Attivazione predefinita',
+        ],
+
+        'form' => [
+            'control-group' => [
+                'control' => [
+                    'show-password' => 'Mostra Password',
+                ],
+            ],
         ],
 
         'media' => [
@@ -554,6 +569,11 @@ return [
         ],
 
         'layouts' => [
+            'account' => [
+                'greeting' => 'Ciao! :name',
+                'profile-image' => 'Immagine del profilo',
+            ],
+
             'header' => [
                 'desktop' => [
                     'top' => [
@@ -690,6 +710,17 @@ return [
                     'custom-filters' => [
                         'clear-all' => 'Cancella Tutto',
                     ],
+
+                    'number-options' => [
+                        'between' => 'Between',
+                        'equals' => 'Equals',
+                        'from' => 'From',
+                        'greater-than' => 'Greater Than',
+                        'greater-than-or-equal' => 'Greater Than Or Equal',
+                        'less-than' => 'Less Than',
+                        'less-than-or-equal' => 'Less Than Or Equal',
+                        'to' => 'To',
+                    ],
                 ],
             ],
 
@@ -761,6 +792,10 @@ return [
     ],
 
     'products' => [
+        'omnibus' => [
+            'price-info' => 'Prezzo più basso 30 giorni prima dello sconto:',
+        ],
+
         'prices' => [
             'grouped' => [
                 'starting-at' => 'A partire da',
@@ -910,6 +945,7 @@ return [
                 'translate' => 'Traduci',
                 'translating' => 'Traduzione in corso...',
                 'write-a-review' => 'Scrivi una recensione',
+                'stars' => 'Stelle',
             ],
 
             'contact-us' => [
@@ -963,16 +999,16 @@ return [
                 'integrity' => [
                     'event' => [
                         'expired' => 'Questo evento è scaduto.',
-                        'exceeds_available' => 'Sono disponibili solo :qty biglietti per questo evento.',
-                        'sold_out' => 'I biglietti per questo evento sono esauriti.',
-                        'ticket_exceeds_available' => 'Sono disponibili solo :qty biglietti ":ticket".',
-                        'ticket_sold_out' => 'I biglietti ":ticket" sono esauriti.',
+                        'exceeds-available' => 'Sono disponibili solo :qty biglietti per questo evento.',
+                        'sold-out' => 'I biglietti per questo evento sono esauriti.',
+                        'ticket-exceeds-available' => 'Sono disponibili solo :qty biglietti ":ticket".',
+                        'ticket-sold-out' => 'I biglietti ":ticket" sono esauriti.',
                     ],
 
-                    'missing_options' => 'Mancano opzioni per questo prodotto.',
-                    'inventory_warning' => 'La quantità richiesta non è disponibile, riprova più tardi.',
-                    'rental_unavailable' => 'Questo prodotto a noleggio non è disponibile per le date selezionate.',
-                    'select_hourly_duration' => 'Seleziona una durata di slot di un\'ora.',
+                    'missing-options' => 'Mancano opzioni per questo prodotto.',
+                    'inventory-warning' => 'La quantità richiesta non è disponibile, riprova più tardi.',
+                    'rental-unavailable' => 'Questo prodotto a noleggio non è disponibile per le date selezionate.',
+                    'select-hourly-duration' => 'Seleziona una durata di slot di un\'ora.',
                 ],
 
                 'per-guest' => 'Per ospite',
@@ -980,7 +1016,7 @@ return [
                 'rent-from' => 'Noleggio Da',
                 'rent-till' => 'Noleggio Fino',
                 'rent-type' => 'Tipo di Noleggio',
-                'renting_type' => 'Tipo di Noleggio',
+                'renting-type' => 'Tipo di Noleggio',
                 'special-note' => 'Richiesta/Note Speciali',
             ],
 
@@ -1152,6 +1188,9 @@ return [
             'address' => [
                 'add-new' => 'Aggiungi nuovo indirizzo',
                 'add-new-address' => 'Aggiungi nuovo indirizzo',
+                'address-updated-payment-info' => 'I metodi di pagamento e i totali dell\'ordine verranno aggiornati per il tuo nuovo indirizzo. Clicca su Procedi per vedere le opzioni più recenti.',
+                'address-updated-shipping-info' => 'I metodi di spedizione e le tariffe verranno ricalcolati per il tuo nuovo indirizzo. Clicca su Procedi per vedere le opzioni più recenti.',
+                'address-updated-title' => 'Il tuo indirizzo è stato aggiornato',
                 'back' => 'Indietro',
                 'billing-address' => 'Indirizzo di fatturazione',
                 'check-billing-address' => 'Indirizzo di fatturazione mancante.',
@@ -1163,6 +1202,7 @@ return [
                 'email' => 'Email',
                 'first-name' => 'Nome',
                 'last-name' => 'Cognome',
+                'phone' => 'Telefono',
                 'postcode' => 'CAP',
                 'proceed' => 'Procedi',
                 'same-as-billing' => 'Usare lo stesso indirizzo per la spedizione?',
@@ -1173,7 +1213,6 @@ return [
                 'shipping-address' => 'Indirizzo di spedizione',
                 'state' => 'Regione',
                 'street-address' => 'Indirizzo',
-                'telephone' => 'Telefono',
                 'title' => 'Indirizzo',
                 'vat-id' => 'Partita IVA',
             ],
@@ -1204,7 +1243,7 @@ return [
                 'items-discount' => 'Sconto articoli',
                 'shipping-discount' => 'Sconto spedizione',
                 'place-order' => 'Effettua Ordine',
-                'price_and_qty' => ':price × :qty',
+                'price-and-qty' => ':price × :qty',
                 'processing' => 'Elaborazione',
                 'sub-total' => 'Subtotale',
                 'sub-total-excl-tax' => 'Subtotale (Escl. IVA)',
@@ -1255,6 +1294,7 @@ return [
             'categories-carousel' => 'Carosello delle categorie',
             'image-carousel' => 'Carosello delle immagini',
             'offer' => 'Ottieni fino al 40% di sconto sul tuo primo ordine, ACQUISTA ORA',
+            'preview-banner' => 'Anteprima del tema :theme sul canale :channel. I link sono disattivati nell\'anteprima.',
             'product-carousel' => 'Carosello dei prodotti',
             'resend-verify-email' => 'Reinvia l\'email di verifica',
             'verify-email' => 'Verifica il tuo account email',
@@ -1760,7 +1800,9 @@ return [
 
         'response' => [
             'already-cancel' => 'Lo stato RMA è già stato annullato.',
+            'cancel-not-allowed' => 'Non è consentito annullare questa richiesta RMA.',
             'cancel-success' => 'Lo stato RMA è stato annullato con successo.',
+            'close-not-allowed' => 'Non è consentito chiudere questa richiesta RMA.',
             'create-success' => 'Richiesta creata con successo.',
             'creation-error' => 'Lo stato RMA non può essere aggiornato perché la fattura per questo ordine non è stata creata.',
             'invalid-item' => "L'articolo dell'ordine selezionato non è valido.",
@@ -1773,104 +1815,104 @@ return [
         ],
     ],
 
-    'eu_withdrawal' => [
+    'eu-withdrawal' => [
         'button' => [
             'withdraw' => 'Recedere dal contratto',
-            'view_existing' => 'Visualizza il suo recesso',
+            'view-existing' => 'Visualizza il suo recesso',
         ],
 
-        'guest_dropdown' => [
+        'guest-dropdown' => [
             'link' => 'Recedere da un contratto',
         ],
 
         'lookup' => [
-            'page_title' => 'Recedere da un contratto',
+            'page-title' => 'Recedere da un contratto',
             'heading' => 'Recedere dal suo contratto',
             'intro' => 'Inserisca il numero d’ordine e l’indirizzo e-mail utilizzato al momento del pagamento. Le invieremo un link per presentare il recesso.',
-            'order_number' => 'Numero d’ordine',
+            'order-number' => 'Numero d’ordine',
             'email' => 'Indirizzo e-mail',
             'submit' => 'Inviami il link di recesso',
-            'sent_notice' => 'Se esiste un ordine corrispondente, abbiamo appena inviato per e-mail un link di recesso a tale indirizzo. Sarà valido per 24 ore.',
-            'legal_note' => 'Ha il diritto legale, ai sensi della Direttiva (UE) 2011/83 (come modificata), di recedere dal contratto entro 14 giorni. Restano validi altri mezzi di recesso, inclusa una dichiarazione scritta inviata al nostro servizio clienti.',
+            'sent-notice' => 'Se esiste un ordine corrispondente, abbiamo appena inviato per e-mail un link di recesso a tale indirizzo. Sarà valido per 24 ore.',
+            'legal-note' => 'Ha il diritto legale, ai sensi della Direttiva (UE) 2011/83 (come modificata), di recedere dal contratto entro 14 giorni. Restano validi altri mezzi di recesso, inclusa una dichiarazione scritta inviata al nostro servizio clienti.',
         ],
 
         'form' => [
-            'page_title' => 'Confermi il suo recesso',
+            'page-title' => 'Confermi il suo recesso',
             'heading' => 'Confermare il recesso dal contratto',
-            'legal_notice_title' => 'Questa è una dichiarazione giuridicamente vincolante',
-            'legal_effect' => 'Inviando questo modulo esercita il suo diritto legale di recesso per l’ordine n. :order_id. La dichiarazione produce effetti giuridici nel momento in cui la invia.',
-            'order_summary' => 'Ordine',
-            'order_total' => 'Totale',
-            'order_items' => 'Articoli',
-            'placed_on' => 'Effettuato il :date',
-            'reason_label' => 'Motivazione',
-            'reason_optional' => '(facoltativa)',
-            'reason_help' => 'Non è obbligato a fornire una motivazione. Quanto scriverà qui sarà registrato nella prova di recesso e inviato al commerciante.',
-            'reason_placeholder' => 'Ad esempio: «Ho cambiato idea», «Articolo non conforme alla descrizione», oppure lasci vuoto.',
+            'legal-notice-title' => 'Questa è una dichiarazione giuridicamente vincolante',
+            'legal-effect' => 'Inviando questo modulo esercita il suo diritto legale di recesso per l’ordine n. :order_id. La dichiarazione produce effetti giuridici nel momento in cui la invia.',
+            'order-summary' => 'Ordine',
+            'order-total' => 'Totale',
+            'order-items' => 'Articoli',
+            'placed-on' => 'Effettuato il :date',
+            'reason-label' => 'Motivazione',
+            'reason-optional' => '(facoltativa)',
+            'reason-help' => 'Non è obbligato a fornire una motivazione. Quanto scriverà qui sarà registrato nella prova di recesso e inviato al commerciante.',
+            'reason-placeholder' => 'Ad esempio: «Ho cambiato idea», «Articolo non conforme alla descrizione», oppure lasci vuoto.',
             'submit' => 'Invia recesso',
             'cancel' => 'Annulla e torna indietro',
         ],
 
         'confirmation' => [
-            'page_title' => 'Ricevuta di recesso',
+            'page-title' => 'Ricevuta di recesso',
             'heading' => 'Il suo recesso è stato ricevuto',
-            'heading_received' => 'Il suo recesso è stato ricevuto',
-            'heading_refunded' => 'Il suo rimborso è stato emesso',
-            'heading_declined' => 'Il suo recesso è stato rifiutato',
+            'heading-received' => 'Il suo recesso è stato ricevuto',
+            'heading-refunded' => 'Il suo rimborso è stato emesso',
+            'heading-declined' => 'Il suo recesso è stato rifiutato',
             'intro' => 'Abbiamo registrato la sua dichiarazione. Questa pagina e l’e-mail che le abbiamo appena inviato fungono entrambe da conferma su un supporto durevole.',
-            'intro_received' => 'Abbiamo registrato la sua dichiarazione. Questa pagina e l’e-mail che le abbiamo appena inviato fungono entrambe da conferma su un supporto durevole.',
-            'intro_refunded' => 'Il commerciante ha elaborato il suo rimborso. L’importo dovrebbe arrivare a breve sul suo metodo di pagamento originario.',
-            'intro_declined' => 'Il commerciante ha contestato il suo diritto al rimborso in base a questa dichiarazione. Consulti i dettagli qui sotto per conoscere la motivazione indicata e le opzioni a sua disposizione.',
-            'received_at' => 'Ricevuto il',
+            'intro-received' => 'Abbiamo registrato la sua dichiarazione. Questa pagina e l’e-mail che le abbiamo appena inviato fungono entrambe da conferma su un supporto durevole.',
+            'intro-refunded' => 'Il commerciante ha elaborato il suo rimborso. L’importo dovrebbe arrivare a breve sul suo metodo di pagamento originario.',
+            'intro-declined' => 'Il commerciante ha contestato il suo diritto al rimborso in base a questa dichiarazione. Consulti i dettagli qui sotto per conoscere la motivazione indicata e le opzioni a sua disposizione.',
+            'received-at' => 'Ricevuto il',
             'reference' => 'Riferimento',
-            'copy_reference' => 'Copia riferimento',
-            'reference_copied' => 'Riferimento copiato negli appunti.',
+            'copy-reference' => 'Copia riferimento',
+            'reference-copied' => 'Riferimento copiato negli appunti.',
             'order' => 'Ordine',
             'email' => 'E-mail',
             'reason' => 'Motivazione',
             'status' => 'Stato',
-            'status_received' => 'Ricevuto',
-            'status_refunded' => 'Rimborsato',
-            'status_declined' => 'Rifiutato',
+            'status-received' => 'Ricevuto',
+            'status-refunded' => 'Rimborsato',
+            'status-declined' => 'Rifiutato',
             'print' => 'Stampa',
-            'next_steps_title' => 'Cosa succederà ora',
-            'step_received' => 'La sua dichiarazione è stata ricevuta e registrata.',
-            'step_email' => 'E-mail di conferma inviata alla sua casella di posta.',
-            'step_refund' => 'Rimborso emesso entro 14 giorni.',
-            'step_refund_done' => 'Il rimborso è stato emesso.',
-            'step_declined' => 'Recesso rifiutato dal commerciante.',
-            'declined_reason_label' => 'Motivazione indicata dal commerciante',
-            'declined_notice' => 'Conserva tutti gli altri mezzi di tutela previsti dal diritto dei consumatori dell’UE. Se non condivide questa decisione, contatti direttamente il commerciante.',
-            'refund_notice' => 'Procediamo al rimborso utilizzando lo stesso mezzo di pagamento da lei usato per la transazione originaria, salvo che lei abbia espressamente convenuto altrimenti.',
-            'email_sent' => 'L’e-mail di conferma è stata inviata.',
-            'email_pending' => 'Non siamo riusciti a inviare subito l’e-mail di conferma; il nostro team darà seguito. Conservi questa pagina come ricevuta.',
-            'durable_medium_notice' => 'Questa pagina costituisce la sua ricevuta. Può salvarla o stamparla.',
+            'next-steps-title' => 'Cosa succederà ora',
+            'step-received' => 'La sua dichiarazione è stata ricevuta e registrata.',
+            'step-email' => 'E-mail di conferma inviata alla sua casella di posta.',
+            'step-refund' => 'Rimborso emesso entro 14 giorni.',
+            'step-refund-done' => 'Il rimborso è stato emesso.',
+            'step-declined' => 'Recesso rifiutato dal commerciante.',
+            'declined-reason-label' => 'Motivazione indicata dal commerciante',
+            'declined-notice' => 'Conserva tutti gli altri mezzi di tutela previsti dal diritto dei consumatori dell’UE. Se non condivide questa decisione, contatti direttamente il commerciante.',
+            'refund-notice' => 'Procediamo al rimborso utilizzando lo stesso mezzo di pagamento da lei usato per la transazione originaria, salvo che lei abbia espressamente convenuto altrimenti.',
+            'email-sent' => 'L’e-mail di conferma è stata inviata.',
+            'email-pending' => 'Non siamo riusciti a inviare subito l’e-mail di conferma; il nostro team darà seguito. Conservi questa pagina come ricevuta.',
+            'durable-medium-notice' => 'Questa pagina costituisce la sua ricevuta. Può salvarla o stamparla.',
         ],
 
         'emails' => [
             'confirmation' => [
                 'subject' => 'Conferma del suo recesso — Ordine :order_id',
                 'title' => 'Recesso ricevuto',
-                'title_received' => 'Recesso ricevuto',
-                'title_refunded' => 'Rimborso emesso',
-                'title_declined' => 'Recesso rifiutato',
+                'title-received' => 'Recesso ricevuto',
+                'title-refunded' => 'Rimborso emesso',
+                'title-declined' => 'Recesso rifiutato',
                 'greeting' => 'Salve,',
                 'intro' => 'Abbiamo ricevuto la sua dichiarazione di recesso dal contratto relativo all’ordine n. :order_id. Di seguito è riportato l’orario di ricezione giuridicamente efficace.',
-                'intro_received' => 'Abbiamo ricevuto la sua dichiarazione di recesso dal contratto relativo all’ordine n. :order_id. Di seguito è riportato l’orario di ricezione giuridicamente efficace.',
-                'intro_refunded' => 'Il rimborso per l’ordine n. :order_id è stato emesso. L’importo dovrebbe arrivare a breve sul suo metodo di pagamento originario.',
-                'intro_declined' => 'Il commerciante ha contestato il suo diritto al rimborso per l’ordine n. :order_id in base a questa dichiarazione. La motivazione indicata è riportata qui sotto.',
+                'intro-received' => 'Abbiamo ricevuto la sua dichiarazione di recesso dal contratto relativo all’ordine n. :order_id. Di seguito è riportato l’orario di ricezione giuridicamente efficace.',
+                'intro-refunded' => 'Il rimborso per l’ordine n. :order_id è stato emesso. L’importo dovrebbe arrivare a breve sul suo metodo di pagamento originario.',
+                'intro-declined' => 'Il commerciante ha contestato il suo diritto al rimborso per l’ordine n. :order_id in base a questa dichiarazione. La motivazione indicata è riportata qui sotto.',
                 'summary' => 'Riepilogo del recesso',
-                'received_at' => 'Ricevuto il',
+                'received-at' => 'Ricevuto il',
                 'reference' => 'Riferimento',
                 'order' => 'Ordine',
                 'email' => 'E-mail',
                 'reason' => 'Motivazione indicata',
-                'declined_reason' => 'Motivazione del rifiuto',
-                'refund_notice' => 'Quando è dovuto un rimborso, procediamo utilizzando lo stesso mezzo di pagamento da lei usato per la transazione originaria, entro 14 giorni dalla data sopra indicata, salvo che lei abbia espressamente convenuto altrimenti.',
+                'declined-reason' => 'Motivazione del rifiuto',
+                'refund-notice' => 'Quando è dovuto un rimborso, procediamo utilizzando lo stesso mezzo di pagamento da lei usato per la transazione originaria, entro 14 giorni dalla data sopra indicata, salvo che lei abbia espressamente convenuto altrimenti.',
                 'footer' => 'Questo messaggio costituisce la conferma su un supporto durevole prevista dall’articolo 11 bis della Direttiva 2011/83/UE (come modificata dalla Direttiva (UE) 2023/2673). La conservi per i suoi registri.',
             ],
 
-            'guest_link' => [
+            'guest-link' => [
                 'subject' => 'Il suo link di recesso',
                 'title' => 'Il suo link di recesso',
                 'intro' => 'Utilizzi il link qui sotto per presentare il recesso per l’ordine :order_id. Il link è valido per 24 ore.',

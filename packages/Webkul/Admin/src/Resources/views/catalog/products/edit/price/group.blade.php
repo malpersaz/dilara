@@ -5,7 +5,7 @@
     <x-admin::shimmer.catalog.products.edit.group-price />
 </v-product-customer-group-price>
 
-@inject('customerGroupRepository', 'Webkul\Customer\Repositories\CustomerGroupRepository')
+@inject('customerGroupRepository', \Webkul\Customer\Repositories\CustomerGroupRepository::class)
 
 @pushOnce('scripts')
     <script
@@ -94,7 +94,7 @@
                 >
                     <img
                         src="{{ bagisto_asset('images/icon-discount.svg') }}"
-                        class="h-20 w-20 rounded border border-dashed border-gray-300 dark:border-gray-800 dark:mix-blend-exclusion dark:invert"
+                        class="h-20 w-20 rounded-sm border border-dashed border-gray-300 dark:border-gray-800 dark:mix-blend-exclusion dark:invert"
                     />
 
                     <div class="flex flex-col gap-1.5">

@@ -5,6 +5,7 @@ namespace Webkul\Admin\DataGrids\Settings\DataTransfer;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 use Webkul\DataGrid\DataGrid;
+use Webkul\DataTransfer\Helpers\Import;
 
 class ImportDataGrid extends DataGrid
 {
@@ -55,7 +56,7 @@ class ImportDataGrid extends DataGrid
             'label' => trans('admin::app.settings.data-transfer.imports.index.datagrid.uploaded-file'),
             'type' => 'string',
             'closure' => function ($row) {
-                return '<a href="'.route('admin.settings.data_transfer.imports.download', $row->id).'" class="cursor-pointer text-blue-600 hover:underline">'.$row->file_path.'<a>';
+                return '<a href="'.route('admin.settings.data_transfer.imports.download', $row->id).'" class="cursor-pointer text-blue-600 hover:underline">'.e($row->file_path).'</a>';
             },
         ]);
 
@@ -68,7 +69,7 @@ class ImportDataGrid extends DataGrid
                     return '';
                 }
 
-                return '<a href="'.route('admin.settings.data_transfer.imports.download_error_report', $row->id).'" class="cursor-pointer text-blue-600 hover:underline">'.$row->error_file_path.'<a>';
+                return '<a href="'.route('admin.settings.data_transfer.imports.download_error_report', $row->id).'" class="cursor-pointer text-blue-600 hover:underline">'.e($row->error_file_path).'</a>';
             },
         ]);
 
@@ -122,8 +123,14 @@ class ImportDataGrid extends DataGrid
         if (bouncer()->hasPermission('settings.data_transfer.imports.import')) {
             $this->addAction([
                 'index' => 'import',
-                'icon' => 'icon-import',
-                'title' => trans('admin::app.settings.data-transfer.imports.index.datagrid.import'),
+                'icon' => function ($row) {
+                    return Import::isInProgress($row->state) ? 'icon-repeat' : 'icon-view';
+                },
+                'title' => function ($row) {
+                    return Import::isInProgress($row->state)
+                        ? trans('admin::app.settings.data-transfer.imports.index.datagrid.view-progress')
+                        : trans('admin::app.settings.data-transfer.imports.index.datagrid.import');
+                },
                 'method' => 'GET',
                 'url' => function ($row) {
                     return route('admin.settings.data_transfer.imports.import', $row->id);

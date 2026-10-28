@@ -33,14 +33,14 @@
 
             <div class="flex gap-4">
                 <a 
-                    href="{{ route('shop.customers.account.gdpr.pdf-view') }}"
+                    href="{{ route('shop.customers.account.gdpr.pdf_view') }}"
                     class="secondary-button border-zinc-200 px-5 py-3 font-normal max-md:rounded-lg max-md:py-2 max-sm:py-1.5 max-sm:text-sm"
                 >
                     @lang('shop::app.customers.account.gdpr.index.pdf') 
                 </a>
 
                 <a
-                    href="{{ route('shop.customers.account.gdpr.html-view') }}"
+                    href="{{ route('shop.customers.account.gdpr.html_view') }}"
                     target="_blank"
                     class="secondary-button border-zinc-200 px-5 py-3 font-normal max-md:rounded-lg max-md:py-2 max-sm:py-1.5 max-sm:text-sm"
                 >
@@ -88,7 +88,7 @@
                     performAction
                 }">
                     <template v-if="isLoading">
-                        <x-shop::shimmer.datagrid.table.body />
+                        <x-shop::shimmer.customers.account.gdpr />
                     </template>
     
                     <template v-else>
@@ -214,7 +214,7 @@
                             </x-shop::form.control-group>
 
                             <!-- Message -->
-                            <x-shop::form.control-group class="!mb-0">
+                            <x-shop::form.control-group class="mb-0!">
                                 <x-shop::form.control-group.label class="required">
                                     @lang('shop::app.customers.account.gdpr.index.modal.message')
                                 </x-shop::form.control-group.label>

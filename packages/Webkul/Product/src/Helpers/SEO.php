@@ -9,7 +9,7 @@ use Webkul\Product\Contracts\Product;
 class SEO
 {
     /**
-     * Returns product json ld data for product
+     * Get the json-ld data of a product.
      *
      * @param  Product  $product
      * @return string
@@ -52,11 +52,11 @@ class SEO
             $data['offers'] = $this->getProductOffers($product);
         }
 
-        return json_encode($data);
+        return json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 
     /**
-     * Returns product categories
+     * Get the names of a product's categories, comma separated.
      *
      * @param  Product  $product
      * @return string
@@ -75,28 +75,22 @@ class SEO
     }
 
     /**
-     * Returns product images
+     * Get the full size url of each stored image of a product, through the product image helper.
      *
      * @param  Product  $product
      * @return array
      */
     public function getProductImages($product)
     {
-        $images = [];
-
-        foreach ($product->images as $image) {
-            if (! Storage::has($image->path)) {
-                continue;
-            }
-
-            $images[] = $image->url;
+        if (! $product->images->contains(fn ($image) => Storage::has($image->path))) {
+            return [];
         }
 
-        return $images;
+        return array_column(product_image()->getGalleryImages($product), 'original_image_url');
     }
 
     /**
-     * Returns product reviews
+     * Get the approved reviews of a product.
      *
      * @param  Product  $product
      * @return array
@@ -124,14 +118,14 @@ class SEO
     }
 
     /**
-     * Returns product average ratings
+     * Get the average rating of a product.
      *
      * @param  Product  $product
      * @return array
      */
     public function getProductAggregateRating($product)
     {
-        $reviewHelper = app('Webkul\Product\Helpers\Review');
+        $reviewHelper = app(Review::class);
 
         return [
             '@type' => 'AggregateRating',
@@ -141,7 +135,7 @@ class SEO
     }
 
     /**
-     * Returns product average ratings
+     * Get the offer of a product.
      *
      * @param  Product  $product
      * @return array
@@ -157,10 +151,10 @@ class SEO
     }
 
     /**
-     * Returns product json ld data for category
+     * Get the json-ld data of a category page.
      *
      * @param  Category  $category
-     * @return array
+     * @return string
      */
     public function getCategoryJsonLd($category)
     {
@@ -173,11 +167,11 @@ class SEO
         if (core()->getConfigData('catalog.rich_snippets.categories.show_search_input_field')) {
             $data['potentialAction'] = [
                 '@type' => 'SearchAction',
-                'target' => config('app.url').'/search/?term={search_term_string}',
+                'target' => route('shop.search.index').'?query={search_term_string}',
                 'query-input' => 'required name=search_term_string',
             ];
         }
 
-        return json_encode($data);
+        return json_encode($data, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
     }
 }

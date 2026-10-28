@@ -4,6 +4,7 @@ namespace Webkul\Installer\Helpers;
 
 use Exception;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class EnvironmentManager
@@ -83,17 +84,26 @@ class EnvironmentManager
 
     /**
      * Update a single environment variable in `.env` file.
+     *
+     * A carriage return or newline in the value would let it write further `.env` lines of its own,
+     * so they are stripped before the value is placed. The key is quoted into the pattern and the
+     * value is substituted through a callback, so neither can be read as a regular expression.
      */
     public function updateEnvVariable(string $key, string $value, bool $addQuotes = false): void
     {
         $data = file_get_contents(base_path('.env'));
 
-        // Check if $value contains spaces, and if so, add double quotes, or if $addQuotes is true.
+        $value = str_replace(["\r", "\n"], '', $value);
+
         if ($addQuotes || preg_match('/\s/', $value)) {
             $value = '"'.$value.'"';
         }
 
-        $data = preg_replace("/$key=(.*)/", "$key=$value", $data);
+        $data = preg_replace_callback(
+            '/^'.preg_quote($key, '/').'=.*/m',
+            fn () => $key.'='.$value,
+            $data
+        );
 
         file_put_contents(base_path('.env'), $data);
     }
@@ -166,6 +176,7 @@ class EnvironmentManager
         DB::purge();
 
         config([
+            'database.default' => $databaseConnection,
             "database.connections.{$databaseConnection}.host" => $this->getEnvVariable('DB_HOST'),
             "database.connections.{$databaseConnection}.port" => $this->getEnvVariable('DB_PORT'),
             "database.connections.{$databaseConnection}.database" => $this->getEnvVariable('DB_DATABASE'),
@@ -174,7 +185,27 @@ class EnvironmentManager
             "database.connections.{$databaseConnection}.prefix" => $this->getEnvVariable('DB_PREFIX'),
         ]);
 
-        DB::reconnect();
+        DB::reconnect($databaseConnection);
+
+        $this->forgetResolvedCacheStores();
+    }
+
+    /**
+     * Drop the cache stores resolved before the database was chosen, so they bind to the
+     * connection just configured.
+     *
+     * The default cache store is the database one, and it keeps the connection it resolved on
+     * first use — which is `mysql`, the configuration default, whatever the installer goes on to
+     * select. Left alone, every cache write during installation is sent to a connection the
+     * installer never configures, and installing on anything but MySQL fails.
+     */
+    protected function forgetResolvedCacheStores(): void
+    {
+        app()->forgetInstance('cache');
+
+        app()->forgetInstance('cache.store');
+
+        Cache::clearResolvedInstances();
     }
 
     /**

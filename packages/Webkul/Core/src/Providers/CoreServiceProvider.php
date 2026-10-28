@@ -14,8 +14,13 @@ use Webkul\Core\Console\Commands\BagistoVersion;
 use Webkul\Core\Console\Commands\ExchangeRateUpdate;
 use Webkul\Core\Console\Commands\InvoiceOverdueCron;
 use Webkul\Core\Console\Commands\TranslationsChecker;
+use Webkul\Core\Contracts\DatabaseGrammar;
+use Webkul\Core\Enums\SupportedDatabaseEnum;
 use Webkul\Core\Exceptions\Handler;
 use Webkul\Core\Facades\ElasticSearch;
+use Webkul\Core\Filesystem\StorageConfigurator;
+use Webkul\Core\Helpers\Database\Grammar\MySqlGrammar;
+use Webkul\Core\Helpers\Database\Grammar\PgSqlGrammar;
 use Webkul\Core\View\Compilers\BladeCompiler;
 use Webkul\Theme\ViewRenderEventManager;
 
@@ -31,6 +36,8 @@ class CoreServiceProvider extends ServiceProvider
         $this->registerCommands();
 
         $this->registerOverrides();
+
+        $this->registerDatabaseGrammar();
     }
 
     /**
@@ -38,6 +45,8 @@ class CoreServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureStorage();
+
         $this->loadMigrationsFrom(__DIR__.'/../Database/Migrations');
 
         $this->loadTranslationsFrom(__DIR__.'/../Resources/lang', 'core');
@@ -59,26 +68,24 @@ class CoreServiceProvider extends ServiceProvider
         });
 
         $this->app->register(EventServiceProvider::class);
-        $this->app->register(DynamicSmtpServiceProvider::class);
+        $this->app->register(DynamicMailServiceProvider::class);
     }
 
     /**
-     * Register the console commands of this package.
+     * Point the application at the disk chosen in Configure -> File Management.
+     *
+     * This runs before anything resolves storage, so a store keeps serving from the
+     * disk it was told to use rather than the one the environment happens to name.
      */
-    protected function registerCommands(): void
+    protected function configureStorage(): void
     {
-        if ($this->app->runningInConsole()) {
-            $this->commands([
-                BagistoVersion::class,
-                ExchangeRateUpdate::class,
-                InvoiceOverdueCron::class,
-                TranslationsChecker::class,
-            ]);
-        }
+        app(StorageConfigurator::class)->configure();
     }
 
     /**
      * Register the exchange rate update schedule based on core configuration.
+     *
+     * Skipped when the database is not yet available, as during installation.
      */
     protected function registerExchangeRateSchedule(Schedule $schedule): void
     {
@@ -99,7 +106,21 @@ class CoreServiceProvider extends ServiceProvider
                 default => $command->dailyAt($time),
             };
         } catch (\Exception) {
-            // Silently skip when database is not yet available (e.g., during installation).
+        }
+    }
+
+    /**
+     * Register the console commands of this package.
+     */
+    protected function registerCommands(): void
+    {
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                BagistoVersion::class,
+                ExchangeRateUpdate::class,
+                InvoiceOverdueCron::class,
+                TranslationsChecker::class,
+            ]);
         }
     }
 
@@ -136,6 +157,22 @@ class CoreServiceProvider extends ServiceProvider
         $this->app->singleton(
             'blade.compiler',
             fn ($app) => new BladeCompiler($app['files'], $app['config']['view.compiled'])
+        );
+    }
+
+    /**
+     * Register the database grammar abstraction based on the active driver.
+     */
+    protected function registerDatabaseGrammar(): void
+    {
+        $this->app->singleton(
+            DatabaseGrammar::class,
+            fn ($app) => match ($app['db']->getDriverName()) {
+                SupportedDatabaseEnum::PGSQL->value => new PgSqlGrammar,
+                SupportedDatabaseEnum::MYSQL->value,
+                SupportedDatabaseEnum::MARIADB->value => new MySqlGrammar,
+                default => new MySqlGrammar,
+            }
         );
     }
 }

@@ -2,6 +2,7 @@
 
 namespace Webkul\Category\Repositories;
 
+use Illuminate\Container\Container;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -9,9 +10,22 @@ use Illuminate\Support\Str;
 use Webkul\Category\Contracts\Category;
 use Webkul\Category\Models\CategoryTranslationProxy;
 use Webkul\Core\Eloquent\Repository;
+use Webkul\Core\Helpers\MediaFileName;
 
 class CategoryRepository extends Repository
 {
+    /**
+     * Create a new repository instance.
+     *
+     * @return void
+     */
+    public function __construct(
+        protected MediaFileName $mediaFileName,
+        Container $container
+    ) {
+        parent::__construct($container);
+    }
+
     /**
      * Specify model class name.
      */
@@ -34,11 +48,11 @@ class CategoryRepository extends Repository
         foreach ($params as $key => $value) {
             switch ($key) {
                 case 'name':
-                    $queryBuilder->where('category_translations.name', 'like', '%'.urldecode($value).'%');
+                    $queryBuilder->where('category_translations.name', db_grammar()->caseInsensitiveLike(), '%'.urldecode($value).'%');
 
                     break;
                 case 'description':
-                    $queryBuilder->where('category_translations.description', 'like', '%'.urldecode($value).'%');
+                    $queryBuilder->where('category_translations.description', db_grammar()->caseInsensitiveLike(), '%'.urldecode($value).'%');
 
                     break;
                 case 'status':
@@ -250,6 +264,31 @@ class CategoryRepository extends Repository
     }
 
     /**
+     * Every category under the roots, read as the chain of ancestors leading down to it.
+     *
+     * The root each chain hangs from is left out, so a category reads as `Mens › Footwear`
+     * rather than by a name several of its siblings elsewhere in the tree may share.
+     *
+     * @param  string|null  $locale  The locale the names are read in, the current one when null.
+     * @return array<int, string>
+     */
+    public function getCategoryPaths(?string $locale = null): array
+    {
+        $levels = [];
+
+        $categories = $this->model::query()
+            ->orderBy('position')
+            ->orderBy('id')
+            ->get(['id', 'parent_id', 'position']);
+
+        foreach ($categories as $category) {
+            $levels[$category->parent_id ?? 0][] = $category;
+        }
+
+        return $this->readPathsUnder($levels, 0, [], $locale);
+    }
+
+    /**
      * Checks slug is unique or not based on locale.
      *
      * @param  int  $id
@@ -277,25 +316,11 @@ class CategoryRepository extends Repository
      */
     public function uploadImages($data, $category, $type = 'logo_path')
     {
-        if (isset($data[$type])) {
-            foreach ($data[$type] as $imageId => $image) {
-                $file = $type.'.'.$imageId;
+        $prefix = Str::before($type, '_path');
 
-                if (request()->hasFile($file)) {
-                    if ($category->{$type}) {
-                        Storage::delete($category->{$type});
-                    }
+        $meta = collect($data[$prefix.'_meta'] ?? [])->first() ?? [];
 
-                    $encoded = image_manager()->read(request()->file($file))->encodeByExtension('webp');
-
-                    $category->{$type} = 'category/'.$category->id.'/'.Str::random(40).'.webp';
-
-                    Storage::put($category->{$type}, (string) $encoded);
-
-                    $category->save();
-                }
-            }
-        } else {
+        if (! isset($data[$type])) {
             if ($category->{$type}) {
                 Storage::delete($category->{$type});
             }
@@ -303,6 +328,112 @@ class CategoryRepository extends Repository
             $category->{$type} = null;
 
             $category->save();
+
+            $this->clearMediaAltText($category, $prefix.'_alt');
+
+            return;
+        }
+
+        foreach ($data[$type] as $imageId => $image) {
+            $file = $type.'.'.$imageId;
+
+            if (request()->hasFile($file)) {
+                if ($category->{$type}) {
+                    Storage::delete($category->{$type});
+                }
+
+                $encoded = image_manager()->fromUpload(request()->file($file))->toWebp()->toBytes();
+
+                $category->{$type} = $this->mediaFileName->resolve(
+                    'categories/'.$category->id,
+                    $meta['file_name'] ?? null,
+                    'webp'
+                );
+
+                Storage::put($category->{$type}, (string) $encoded);
+
+                $category->save();
+            } elseif ($category->{$type}) {
+                $renamed = $this->mediaFileName->rename($category->{$type}, $meta['file_name'] ?? null);
+
+                if ($renamed !== $category->{$type}) {
+                    $category->{$type} = $renamed;
+
+                    $category->save();
+                }
+            }
+        }
+
+        if (array_key_exists('alt_text', $meta)) {
+            $this->saveMediaAltText($category, $prefix.'_alt', $meta['alt_text']);
+        }
+    }
+
+    /**
+     * Read one level of the tree, carrying the chain read so far down onto each of its entries.
+     *
+     * @param  array<int, Category[]>  $levels
+     * @param  string[]  $trail
+     * @return array<int, string>
+     */
+    protected function readPathsUnder(array $levels, int $parentId, array $trail, ?string $locale = null): array
+    {
+        $paths = [];
+
+        foreach ($levels[$parentId] ?? [] as $category) {
+            $branch = $trail;
+
+            if ($parentId) {
+                $branch[] = $locale
+                    ? ($category->translate($locale)?->name ?? $category->name)
+                    : $category->name;
+
+                $paths[$category->id] = implode($this->model::PATH_SEPARATOR, $branch);
+            }
+
+            $paths += $this->readPathsUnder($levels, $category->id, $branch, $locale);
+        }
+
+        return $paths;
+    }
+
+    /**
+     * Save the alt text of a category image, for the requested locale.
+     *
+     * @param  Category  $category
+     */
+    protected function saveMediaAltText($category, string $attribute, ?string $altText): void
+    {
+        foreach (core()->getRequestedLocaleCodes() as $localeCode) {
+            if (! $translation = $category->translate($localeCode)) {
+                continue;
+            }
+
+            $translation->{$attribute} = $altText;
+        }
+
+        $category->save();
+    }
+
+    /**
+     * Drop the alt text of a category image across every locale, used when the image
+     * itself is removed.
+     *
+     * @param  Category  $category
+     */
+    protected function clearMediaAltText($category, string $attribute): void
+    {
+        foreach ($category->translations as $translation) {
+            $translation->{$attribute} = null;
+
+            /**
+             * A translation that has not been persisted yet is written by the
+             * parent save, which sets the foreign key. Saving it here would
+             * insert a row with a null owner.
+             */
+            if ($translation->exists) {
+                $translation->save();
+            }
         }
     }
 

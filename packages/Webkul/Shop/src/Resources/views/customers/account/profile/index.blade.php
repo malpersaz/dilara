@@ -101,7 +101,7 @@
                     class="text-sm font-medium text-zinc-500"
                     v-pre
                 >
-                    {{ $customer->date_of_birth ?? '-' }}
+                    {{ $customer->date_of_birth?->format('Y-m-d') ?? '-' }}
                 </p>
             </div>
 
@@ -146,7 +146,7 @@
                     </x-slot>
 
                     <x-slot:content>
-                        <x-shop::form.control-group class="!mb-0">
+                        <x-shop::form.control-group class="mb-0!">
                             <x-shop::form.control-group.control
                                 type="password"
                                 name="password"

@@ -92,7 +92,7 @@ class Cart extends AbstractReporting
     }
 
     /**
-     * Retrieves total carts
+     * Retrieves total carts.
      *
      * @param  Carbon  $startDate
      * @param  Carbon  $endDate
@@ -107,7 +107,7 @@ class Cart extends AbstractReporting
     }
 
     /**
-     * Retrieves total abandoned carts
+     * Retrieves total abandoned carts.
      *
      * @param  Carbon  $startDate
      * @param  Carbon  $endDate
@@ -118,12 +118,12 @@ class Cart extends AbstractReporting
             ->resetModel()
             ->where('is_active', 1)
             ->whereIn('channel_id', $this->channelIds)
-            ->whereBetween('created_at', [$startDate, $endDate->subDays(2)])
+            ->whereBetween('created_at', [$startDate, $endDate->copy()->subDays(2)])
             ->count();
     }
 
     /**
-     * Retrieves total abandoned cart rate
+     * Retrieves total abandoned cart rate.
      *
      * @param  Carbon  $startDate
      * @param  Carbon  $endDate
@@ -140,7 +140,7 @@ class Cart extends AbstractReporting
     }
 
     /**
-     * Retrieves total abandoned sales
+     * Retrieves total abandoned sales.
      *
      * @param  Carbon  $startDate
      * @param  Carbon  $endDate
@@ -151,12 +151,12 @@ class Cart extends AbstractReporting
             ->resetModel()
             ->where('is_active', 1)
             ->whereIn('channel_id', $this->channelIds)
-            ->whereBetween('created_at', [$startDate, $endDate->subDays(2)])
+            ->whereBetween('created_at', [$startDate, $endDate->copy()->subDays(2)])
             ->sum('base_grand_total');
     }
 
     /**
-     * Retrieves abandoned cart products
+     * Retrieves abandoned cart products.
      *
      * @param  int  $limit
      */
@@ -169,15 +169,15 @@ class Cart extends AbstractReporting
             ->addSelect(DB::raw('COUNT(*) as count'))
             ->where('is_active', 1)
             ->whereIn('cart.channel_id', $this->channelIds)
-            ->whereBetween('cart.created_at', [$this->startDate, $this->endDate->subDays(2)])
-            ->groupBy('product_id')
+            ->whereBetween('cart.created_at', [$this->startDate, $this->endDate->copy()->subDays(2)])
+            ->groupBy('product_id', 'name')
             ->limit($limit)
             ->orderByDesc('count')
             ->get();
     }
 
     /**
-     * Retrieves total abandoned cart products
+     * Retrieves total abandoned cart products.
      */
     public function getTotalAbandonedCartProducts(): int
     {
@@ -187,12 +187,12 @@ class Cart extends AbstractReporting
             ->leftJoin('cart', 'cart_items.cart_id', '=', 'cart.id')
             ->where('is_active', 1)
             ->whereIn('cart.channel_id', $this->channelIds)
-            ->whereBetween('cart.created_at', [$this->startDate, $this->endDate->subDays(2)])
+            ->whereBetween('cart.created_at', [$this->startDate, $this->endDate->copy()->subDays(2)])
             ->count();
     }
 
     /**
-     * Retrieves total unique cart users
+     * Retrieves total unique cart users.
      *
      * @param  Carbon  $startDate
      * @param  Carbon  $endDate
@@ -202,9 +202,10 @@ class Cart extends AbstractReporting
     {
         return $this->cartRepository
             ->resetModel()
-            ->groupBy(DB::raw('CONCAT(customer_email, "-", customer_id)'))
+            ->select('customer_email', 'customer_id')
             ->whereIn('cart.channel_id', $this->channelIds)
             ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('customer_email', 'customer_id')
             ->get()
             ->count();
     }

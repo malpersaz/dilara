@@ -15,7 +15,7 @@
     label="{{ $label }}"
     {{ $attributes }}
 >
-    <div class="shimmer h-[42px] w-full rounded-md"></div>
+    <div class="shimmer h-10.5 w-full rounded-md"></div>
 </v-multiselect>
 
 @pushOnce('scripts')
@@ -32,16 +32,16 @@
                 v-slot="{ errors }"
             >
                 <div
-                    class="flex min-h-[42px] w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border bg-white px-2 py-1.5 text-sm text-gray-600 transition-all hover:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400"
+                    class="flex min-h-10.5 w-full cursor-pointer flex-wrap items-center gap-1.5 rounded-md border bg-white px-2 py-1.5 text-sm text-gray-600 transition-all hover:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400"
                     :class="[
-                        errors.length ? 'border !border-red-600 hover:!border-red-600' : '',
+                        errors.length ? 'border border-red-600! hover:border-red-600!' : '',
                         isOpen ? 'border-gray-400 dark:border-gray-400' : '',
                     ]"
                     :name="name"
                     @click="toggleDropdown"
                 >
                     <span
-                        class="inline-flex max-w-full items-center gap-1 rounded bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300"
+                        class="inline-flex max-w-full items-center gap-1 rounded-sm bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300"
                         v-for="option in selectedOptions"
                         :key="option.id"
                     >
@@ -128,6 +128,8 @@
         app.component('v-multiselect', {
             template: '#v-multiselect-template',
 
+            emits: ['update:modelValue'],
+
             props: {
                 name: {
                     type: String,
@@ -172,6 +174,24 @@
                 };
             },
 
+            watch: {
+                value(newValue, oldValue) {
+                    const incoming = (newValue ?? []).map((id) => String(id));
+
+                    const previous = (oldValue ?? []).map((id) => String(id));
+
+                    if (incoming.join(',') === previous.join(',')) {
+                        return;
+                    }
+
+                    this.selectedIds = incoming;
+                },
+
+                selectedIds(ids) {
+                    this.$emit('update:modelValue', ids);
+                },
+            },
+
             computed: {
                 selectedOptions() {
                     return this.selectedIds
@@ -203,11 +223,6 @@
                     return this.selectedIds.includes(String(id));
                 },
 
-                /**
-                 * Always reassign `selectedIds` with a fresh array reference so the
-                 * `v-model` bound VeeValidate field detects the change and revalidates
-                 * (mutating the array in place would not clear the required error).
-                 */
                 toggle(id) {
                     if (this.isSelected(id)) {
                         this.deselect(id);

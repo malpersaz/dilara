@@ -40,6 +40,11 @@
                     type: String,
                     default: '',
                 },
+
+                fallback: {
+                    type: String,
+                    default: '',
+                },
             },
 
             data() {
@@ -47,6 +52,7 @@
                     isLoading: true,
                     currentSrc: '',
                     currentSrcset: '',
+                    hasFallenBack: false,
                 };
             },
 
@@ -100,9 +106,18 @@
                     this.isLoading = false;
                 },
 
-                onError() {
+                onError(event) {
+                    if (this.fallback && ! this.hasFallenBack) {
+                        this.hasFallenBack = true;
+
+                        this.currentSrc = this.fallback;
+                        event.target.src = this.fallback;
+
+                        return;
+                    }
+
                     this.isLoading = false;
-                }
+                },
             },
         });
     </script>

@@ -1,5 +1,5 @@
 @php
-    $customAttributes = app('Webkul\RMA\Repositories\RMACustomFieldRepository')->with('options')->where('status', 1)->get();
+    $customAttributes = app(\Webkul\RMA\Repositories\RMACustomFieldRepository::class)->with('options')->where('status', 1)->get();
 @endphp
 
 <x-shop::layouts.account>
@@ -100,7 +100,7 @@
 
                                             <i
                                                 class="align-text-bottom text-base text-gray-800 ltr:ml-1.5 rtl:mr-1.5"
-                                                :class="[applied.sort.order === 'asc' ? 'icon-down-stat': 'icon-up-stat']"
+                                                :class="[applied.sort.order === 'asc' ? 'icon-arrow-down': 'icon-arrow-up']"
                                                 v-if="columnGroup.includes(applied.sort.column)"
                                             ></i>
                                         </p>
@@ -217,7 +217,7 @@
 
                                             <i
                                                 class="align-text-bottom text-base text-gray-800 ltr:ml-1.5 rtl:mr-1.5"
-                                                :class="[applied.sort.order === 'asc' ? 'icon-down-stat': 'icon-up-stat']"
+                                                :class="[applied.sort.order === 'asc' ? 'icon-arrow-down': 'icon-arrow-up']"
                                                 v-if="columnGroup.includes(applied.sort.column)"
                                             ></i>
                                         </p>
@@ -303,7 +303,7 @@
                     >
                         <x-shop::modal
                             ref="rmaModel"
-                            panel-class="max-w-[768px]"
+                            panel-class="max-w-192"
                         >
                             <!-- Modal Header -->
                             <x-slot:header>
@@ -353,7 +353,7 @@
                 />
 
                 <div v-for="product in products">
-                    <div class="mb-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:border-zinc-300">
+                    <div class="mb-3 rounded-lg border border-zinc-200 bg-white p-4 shadow-xs transition-all hover:border-zinc-300">
                         <div class="flex gap-4">
                             <!-- Checkbox -->
                             <p>
@@ -383,19 +383,19 @@
 
                             <!-- Image -->
                             <p>
-                                <template v-if="product.base_image">
+                                <template v-if="product.base_image_url">
                                     <img
                                         class="h-20 w-20 shrink-0 rounded-lg border border-zinc-200 object-cover"
-                                        :src="`${baseImageUrl}${product.base_image}`"
-                                        :alt="`${product.base_image}`"
+                                        :src="product.base_image_url"
+                                        :alt="product.name"
                                     />
                                 </template>
 
                                 <template v-else>
                                     <img
                                         class="h-20 w-20 shrink-0 rounded-lg border border-zinc-200 object-cover"
-                                        src="{{ bagisto_asset('images/medium-product-placeholder.webp') }}"
-                                        alt="medium-product-placeholder.webp"
+                                        src="{{ product_image()->getPlaceholderUrl('medium') }}"
+                                        :alt="product.name"
                                     >
                                 </template>
                             </p>
@@ -789,7 +789,7 @@
                                         type="multiselect"
                                         id="{{ $attribute->id }}"
                                         class="cursor-pointer"
-                                        name="{{ $attribute->id }}[]"
+                                        name="customAttributes[{{ $attribute->id }}][]"
                                         rules="{{ $attribute->is_required }}"
                                         :value="old($attribute->id)"
                                         label="{{ $attribute->label }}"
@@ -920,7 +920,7 @@
 
                         <x-shop::form.control-group.control
                             type="image"
-                            class="!p-0 rounded-xl text-gray-700 mb-0"
+                            class="p-0! rounded-xl text-gray-700 mb-0"
                             name="images[]"
                             :label="trans('shop::app.customers.account.rma.create.images')"
                             :is-multiple="true"
@@ -938,7 +938,7 @@
                 <!-- Loading Shimmer -->
                 <div>
                     <div class="flex gap-5 mt-2">
-                        <x-shop::media.images.lazy class="h-[95px] max-h-[95px] w-28 min-w-32 max-w-24 rounded-xl max-md:w-18 max-md:min-w-18" />
+                        <x-shop::media.images.lazy class="h-23.75 max-h-23.75 w-28 min-w-32 max-w-24 rounded-xl max-md:w-18 max-md:min-w-18" />
 
                         <div>
                             <div class="shimmer w-32 min-w-32 h-4 mt-1"></div>
@@ -951,7 +951,7 @@
 
                 <div>
                     <div class="flex gap-5 mt-2">
-                        <x-shop::media.images.lazy class="h-[95px] max-h-[95px] w-28 min-w-32 max-w-24 rounded-xl max-md:w-18 max-md:min-w-18" />
+                        <x-shop::media.images.lazy class="h-23.75 max-h-23.75 w-28 min-w-32 max-w-24 rounded-xl max-md:w-18 max-md:min-w-18" />
 
                         <div>
                             <div class="shimmer w-32 min-w-32 h-4 mt-1"></div>
@@ -1009,11 +1009,7 @@
                         try {
                             const response = await this.$axios.post("{{ route('shop.customers.account.rma.store') }}", formData);
 
-                            this.$emitter.emit('add-flash', { type: 'success', message: response.data.messages });
-
-                            setTimeout(() => {
-                                window.location.href = response.data.redirect;
-                            }, 1000);
+                            window.location.href = response.data.redirect;
                         } catch (error) {
                             this.rmaFormSubmit = true;
 
@@ -1042,7 +1038,6 @@
                         products: '',
                         resolutionType: [],
                         notAllowed: false,
-                        baseImageUrl: '{{ Storage::url('') }}',
                         returnWindowDays: parseInt('{{ core()->getConfigData('sales.rma.setting.default_allow_days') }}'),
                     }
                 },
@@ -1099,7 +1094,7 @@
 
                     getOrderItems(orderId) {
                         if (this.orderId) {
-                            this.$axios.get('{{ route("shop.customers.account.rma.get-order-items", ":id") }}'.replace(':id', this.orderId))
+                            this.$axios.get('{{ route("shop.customers.account.rma.get_order_items", ":id") }}'.replace(':id', this.orderId))
                                 .then(response => {
                                     this.isLoading = false;
 
@@ -1151,7 +1146,7 @@
 
                         this.rma_qty[product_id] = null;
 
-                        let url = '{{ route("shop.customers.account.rma.get-resolution-reasons", ":resolutionType") }}';
+                        let url = '{{ route("shop.customers.account.rma.get_resolution_reasons", ":resolutionType") }}';
 
                         url = url.replace(':resolutionType', resolutionType);
 

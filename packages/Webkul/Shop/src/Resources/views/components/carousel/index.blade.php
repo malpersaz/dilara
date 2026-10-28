@@ -1,9 +1,33 @@
 @props(['options'])
 
 @php
-    $carouselImages = $options['images'] ?? [];
+    $carouselImages = collect($options['images'] ?? [])
+        ->map(function ($image) {
+            $resolved = bagisto_theme_storage()->imageUrls($image['image'] ?? null);
 
-    $firstImage = data_get($carouselImages, '0.image');
+            if (is_null($resolved)) {
+                return null;
+            }
+
+            return array_merge($image, [
+                'link'   => filled($image['link'] ?? null) ? url($image['link']) : null,
+                'url'    => $resolved['url'],
+                'srcset' => $resolved['url'].' 1920w, '
+                    .$resolved['srcset']['large'].' 1280w, '
+                    .$resolved['srcset']['medium'].' 1024w, '
+                    .$resolved['srcset']['small'].' 768w',
+                'preload' => $resolved['srcset']['small'],
+            ]);
+        })
+        ->filter()
+        ->values()
+        ->all();
+
+    $firstImage = data_get($carouselImages, '0.url');
+
+    $firstImageSrcset = data_get($carouselImages, '0.srcset');
+
+    $firstImagePreload = data_get($carouselImages, '0.preload');
 
     $firstImageTitle = data_get($carouselImages, '0.title');
 @endphp
@@ -19,8 +43,8 @@
         <link
             rel="preload"
             as="image"
-            href="{{ str_replace('storage', 'cache/small', $firstImage) }}"
-            imagesrcset="{{ $firstImage }} 1920w, {{ str_replace('storage', 'cache/large', $firstImage) }} 1280w, {{ str_replace('storage', 'cache/medium', $firstImage) }} 1024w, {{ str_replace('storage', 'cache/small', $firstImage) }} 768w"
+            href="{{ $firstImagePreload }}"
+            imagesrcset="{{ $firstImageSrcset }}"
             imagesizes="100vw"
             fetchpriority="high"
         >
@@ -43,7 +67,7 @@
             --}}
             <img
                 src="{{ $firstImage }}"
-                srcset="{{ $firstImage }} 1920w, {{ str_replace('storage', 'cache/large', $firstImage) }} 1280w, {{ str_replace('storage', 'cache/medium', $firstImage) }} 1024w, {{ str_replace('storage', 'cache/small', $firstImage) }} 768w"
+                srcset="{{ $firstImageSrcset }}"
                 sizes="100vw"
                 class="aspect-[2.743/1] max-h-screen w-screen select-none object-cover"
                 style="width:100vw;aspect-ratio:2.743/1;max-height:100vh;object-fit:cover;display:block"
@@ -78,8 +102,8 @@
                     <x-shop::media.images.lazy
                         class="aspect-[2.743/1] max-h-full w-full max-w-full select-none transition-transform duration-300 ease-in-out will-change-transform"
                         ::lazy="index === 0 ? false : true"
-                        ::src="image.image"
-                        ::srcset="image.image + ' 1920w, ' + image.image.replace('storage', 'cache/large') + ' 1280w,' + image.image.replace('storage', 'cache/medium') + ' 1024w, ' + image.image.replace('storage', 'cache/small') + ' 768w'"
+                        ::src="image.url"
+                        ::srcset="image.srcset"
                         sizes="100vw"
                         ::alt="image?.title || 'Carousel Image ' + (index + 1)"
                         tabindex="0"
@@ -90,50 +114,44 @@
             </div>
 
             <!-- Navigation -->
-            <span
-                class="icon-arrow-left absolute left-2.5 top-1/2 -mt-[22px] hidden w-auto rounded-full bg-black/80 p-3 text-2xl font-bold text-white opacity-30 transition-all md:inline-block"
+            <button
+                type="button"
+                class="icon-arrow-left absolute left-2.5 top-1/2 -mt-5.5 hidden w-auto rounded-full bg-black/80 p-3 text-2xl font-bold text-white opacity-30 transition-all md:inline-block"
                 :class="{
                     'cursor-not-allowed': direction == 'ltr' && currentIndex == 0,
                     'cursor-pointer hover:opacity-100': direction == 'ltr' ? currentIndex > 0 : currentIndex <= 0
                 }"
-                role="button"
-                aria-label="@lang('shop::components.carousel.previous')"
-                tabindex="0"
+                aria-label="@lang('shop::app.components.carousel.previous')"
                 v-if="images?.length >= 2"
                 @click="navigate('prev')"
             >
-            </span>
+            </button>
 
-            <span
-                class="icon-arrow-right absolute right-2.5 top-1/2 -mt-[22px] hidden w-auto rounded-full bg-black/80 p-3 text-2xl font-bold text-white opacity-30 transition-all md:inline-block"
+            <button
+                type="button"
+                class="icon-arrow-right absolute right-2.5 top-1/2 -mt-5.5 hidden w-auto rounded-full bg-black/80 p-3 text-2xl font-bold text-white opacity-30 transition-all md:inline-block"
                 :class="{
                     'cursor-not-allowed': direction == 'rtl' && currentIndex == 0,
                     'cursor-pointer hover:opacity-100': direction == 'rtl' ? currentIndex < 0 : currentIndex >= 0
                 }"
-                role="button"
-                aria-label="@lang('shop::components.carousel.next')"
-                tabindex="0"
+                aria-label="@lang('shop::app.components.carousel.next')"
                 v-if="images?.length >= 2"
                 @click="navigate('next')"
             >
-            </span>
+            </button>
 
             <!-- Pagination -->
             <div class="absolute bottom-5 left-0 flex w-full justify-center max-md:bottom-3.5 max-sm:bottom-2.5">
-                <div
+                <button
+                    type="button"
                     v-for="(image, index) in images"
                     :key="index"
-                    class="sm:p-2.5 mx-1 h-3 w-3 cursor-pointer rounded-full max-md:h-2 max-md:w-2 max-sm:h-1.5 max-sm:w-1.5
-                    p-2 focus:outline-none"
+                    class="sm:p-2.5 mx-1 h-3 w-3 cursor-pointer rounded-full max-md:h-2 max-md:w-2 max-sm:h-1.5 max-sm:w-1.5 p-2 transition-all duration-300 focus-visible:ring-2 focus-visible:ring-navyBlue focus-visible:ring-offset-2 focus-visible:outline-hidden"
                     :class="{ 'bg-navyBlue': index === Math.abs(currentIndex), 'opacity-30 bg-gray-500': index !== Math.abs(currentIndex) }"
-                    role="button"
-                    tabindex="0"
                     :aria-label="'Go to slide ' + (index + 1)"
                     @click="navigateByPagination(index)"
-                    @keydown.enter="navigateByPagination(index)"
-                    @keydown.space.prevent="navigateByPagination(index)"
                 >
-                </div>
+                </button>
             </div>
         </div>
     </script>

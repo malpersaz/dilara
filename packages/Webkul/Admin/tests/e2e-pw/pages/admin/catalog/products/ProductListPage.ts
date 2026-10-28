@@ -1,106 +1,174 @@
-import { expect, Page } from "@playwright/test";
-import { BasePage } from "../../../BasePage";
+import { expect, type Locator, Page } from "@playwright/test";
+import { DatagridPage } from "../../DatagridPage";
+import { escapeRegExp } from "@shared/regex";
 
-export class ProductListPage extends BasePage {
+export class ProductListPage extends DatagridPage {
     constructor(page: Page) {
         super(page);
+    }
+
+    protected get gridPath(): string {
+        return "admin/catalog/products";
     }
 
     private get createProductButton() {
         return this.page.getByRole("button", { name: "Create Product" });
     }
 
-    private get productExpandButtons() {
-        return this.page.locator(".cursor-pointer.icon-sort-right");
+    private productEditLink(name: string) {
+        return this.rowWithCell(name)
+            .locator("span.icon-sort-right")
+            .filter({ visible: true });
     }
 
-    private get rowCheckboxes() {
-        return this.page.locator(".icon-uncheckbox:visible");
+    private productCopyLink(name: string) {
+        return this.rowWithCell(name)
+            .locator("span.icon-copy")
+            .filter({ visible: true });
     }
 
-    private get rowsPerPageButton() {
-        return this.page.getByRole("button", { name: "" });
+    private visibleCell(row: Locator, text: string) {
+        return row
+            .locator("p", { hasText: new RegExp(`^\\s*${escapeRegExp(text)}\\s*$`) })
+            .filter({ visible: true });
     }
 
-    private get rowsPerPageOption() {
-        return this.page.getByText("50", { exact: true }).first();
+    private statusLabel(row: Locator) {
+        return row.locator("p.label-active, p.label-info").filter({ visible: true });
     }
 
-    private get selectActionButton() {
-        return this.page.locator('button:has-text("Select Action")');
+    private rowsWithSku(sku: string) {
+        return this.gridRows.filter({
+            has: this.page.locator("p", {
+                hasText: new RegExp(`^\\s*SKU - ${escapeRegExp(sku)}\\s*$`),
+            }),
+        });
     }
 
-    private get agreeButton() {
-        return this.page.locator('button.primary-button:has-text("Agree")');
-    }
+    async open(): Promise<void> {
+        await this.openGrid();
 
-    private get searchInput() {
-        return this.page.locator('input[name="search"]');
-    }
-
-    async visit() {
-        await super.visit("admin/catalog/products");
         await expect(this.createProductButton).toBeVisible();
     }
 
-    async searchByName(name: string): Promise<number> {
-        await this.visit();
+    async copyProduct(name: string): Promise<string> {
+        await this.open();
+        await this.searchFor(name);
+        await this.productCopyLink(name).click();
+        await this.agreeButton.click();
 
-        await this.searchInput.fill(name);
+        await expect(
+            this.flashMessage("Product copied successfully"),
+        ).toBeVisible();
 
-        const [response] = await Promise.all([
-            this.page.waitForResponse((response) =>
-                response.url().includes("filters%5Ball%5D"),
-            ),
-            this.searchInput.press("Enter"),
-        ]);
-
-        const body = await response.json();
-
-        return body.meta?.total ?? 0;
+        return `Copy Of ${name}`;
     }
 
-    async isListedByName(name: string): Promise<boolean> {
-        return (await this.searchByName(name)) > 0;
+    async openProduct(name: string): Promise<void> {
+        await this.open();
+        await this.searchFor(name);
+        await this.productEditLink(name).click();
+        await this.waitForVueMount();
+
+        await expect(this.page).toHaveURL(/catalog\/products\/edit\/\d+/);
     }
 
-    async openProductForEdit() {
-        await this.visit();
-        await this.productExpandButtons.nth(1).click();
+    async massUpdateStatus(
+        names: string[],
+        status: "Active" | "Disable",
+    ): Promise<void> {
+        await this.open();
+        await this.selectRowsWithCell(names);
+        await this.applyMassAction("Update Status", status);
+
+        await expect(
+            this.flashMessage("Selected Products Updated Successfully"),
+        ).toBeVisible();
     }
 
-    async openFirstProductForEdit() {
-        await this.openProductForEdit();
+    async massDeleteProducts(names: string[]): Promise<void> {
+        await this.open();
+        await this.selectRowsWithCell(names);
+        await this.applyMassAction("Delete");
+
+        await expect(
+            this.flashMessage("Selected Products Deleted Successfully"),
+        ).toBeVisible();
     }
 
-    async setRowsPerPageTo50() {
-        await this.visit();
-        await this.rowsPerPageButton.click();
-        await this.rowsPerPageOption.click();
-        await expect(this.rowCheckboxes.first()).toBeVisible();
-    }
+    async deleteProductsIfPresent(names: string[]): Promise<void> {
+        const failures: string[] = [];
 
-    async selectProductCheckbox() {
-        // await this.rowCheckboxes.first().click();   // Only if you want all lisiting product update
-        await this.rowCheckboxes.nth(1).click();
-        await this.rowCheckboxes.nth(2).click();
-    }
+        for (const name of names) {
+            try {
+                await this.open();
+                await this.searchFor(name);
 
-    async massUpdateStatus(status: "Active" | "Disable" = "Active") {
-        await this.visit();
-        await this.selectProductCheckbox();
+                if (await this.rowWithCell(name).count()) {
+                    await this.selectRowsWithCell([name]);
+                    await this.applyMassAction("Delete");
 
-        await this.selectActionButton.click();
-        await this.page.hover('a:has-text("Update Status")');
-        await this.page.waitForSelector(
-            'a:has-text("Active"), a:has-text("Disable")',
-            { state: "visible" },
-        );
-        await this.page.click(`a:has-text("${status}")`);
-
-        if (await this.agreeButton.isVisible()) {
-            await this.page.waitForTimeout(1000);
-            await this.agreeButton.click();
+                    await expect(
+                        this.flashMessage("Selected Products Deleted Successfully"),
+                    ).toBeVisible();
+                }
+            } catch (error) {
+                failures.push(`${name}: ${error}`);
+            }
         }
+
+        if (failures.length) {
+            throw new Error(`Cleanup failed for:\n${failures.join("\n")}`);
+        }
+    }
+
+    async expectProductListed(name: string): Promise<void> {
+        await this.open();
+        await this.searchFor(name);
+        await this.waitForGridRerender();
+
+        await expect(this.rowWithCell(name)).toHaveCount(1);
+    }
+
+    async expectProductAbsent(name: string): Promise<void> {
+        await this.open();
+        await this.searchFor(name);
+        await this.waitForGridRerender();
+
+        await expect(this.rowWithCell(name)).toHaveCount(0);
+    }
+
+    async expectProductDetails(
+        name: string,
+        details: { sku?: string; price?: string; status?: "Active" | "Disable" },
+    ): Promise<void> {
+        await this.open();
+        await this.searchFor(name);
+        await this.waitForGridRerender();
+
+        const row = this.rowWithCell(name);
+
+        await expect(row).toHaveCount(1);
+
+        if (details.sku !== undefined) {
+            await expect(this.visibleCell(row, `SKU - ${details.sku}`)).toHaveCount(1);
+        }
+
+        if (details.price !== undefined) {
+            await expect(
+                row.locator("p", { hasText: details.price }).filter({ visible: true }),
+            ).toHaveCount(1);
+        }
+
+        if (details.status !== undefined) {
+            await expect(this.statusLabel(row)).toHaveText(details.status);
+        }
+    }
+
+    async expectProductCountForSku(sku: string, count: number): Promise<void> {
+        await this.open();
+        await this.applyTextFilter("SKU", sku);
+
+        await expect(this.rowsWithSku(sku)).toHaveCount(count);
     }
 }

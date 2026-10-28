@@ -6,7 +6,6 @@ use Illuminate\Container\Container;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Webkul\Attribute\Enums\AttributeTypeEnum;
 use Webkul\Attribute\Repositories\AttributeRepository;
@@ -14,13 +13,16 @@ use Webkul\Core\Eloquent\Repository;
 use Webkul\Customer\Repositories\CustomerRepository;
 use Webkul\Marketing\Repositories\SearchSynonymRepository;
 use Webkul\Product\Contracts\Product;
+use Webkul\Product\Enums\SearchContextEnum;
+use Webkul\Product\Enums\SearchEngineEnum;
+use Webkul\Product\Services\Search\SearchEngineManager;
 
 class ProductRepository extends Repository
 {
     /**
-     * Search engine.
+     * Search context (storefront or admin).
      */
-    protected $searchEngine = 'database';
+    protected SearchContextEnum $searchContext = SearchContextEnum::STOREFRONT;
 
     /**
      * Create a new repository instance.
@@ -31,8 +33,8 @@ class ProductRepository extends Repository
         protected CustomerRepository $customerRepository,
         protected AttributeRepository $attributeRepository,
         protected ProductAttributeValueRepository $productAttributeValueRepository,
-        protected ElasticSearchRepository $elasticSearchRepository,
         protected SearchSynonymRepository $searchSynonymRepository,
+        protected SearchEngineManager $searchEngineManager,
         Container $container
     ) {
         parent::__construct($container);
@@ -83,14 +85,13 @@ class ProductRepository extends Repository
      */
     public function getSuggestions(?string $query): ?string
     {
-        if (
-            $this->searchEngine == 'elastic'
-            && ! empty($query)
-        ) {
-            return $this->elasticSearchRepository->getSuggestions($query);
+        if (empty($query)) {
+            return null;
         }
 
-        return null;
+        return $this->searchEngineManager
+            ->engine($this->searchContext)
+            ->getSuggestions($query);
     }
 
     /**
@@ -121,11 +122,11 @@ class ProductRepository extends Repository
     }
 
     /**
-     * Copy product.
+     * Set the search context (storefront or admin).
      */
-    public function setSearchEngine(string $searchEngine): self
+    public function setSearchContext(SearchContextEnum $context): self
     {
-        $this->searchEngine = $searchEngine;
+        $this->searchContext = $context;
 
         return $this;
     }
@@ -191,18 +192,12 @@ class ProductRepository extends Repository
      */
     public function findBySlug(string $slug): ?Product
     {
-        if ($this->searchEngine == 'elastic') {
-            $indices = $this->elasticSearchRepository->search([
-                'url_key' => $slug,
-            ], [
-                'type' => '',
-                'from' => 0,
-                'limit' => 1,
-                'sort' => 'id',
-                'order' => 'desc',
-            ]);
+        $engine = $this->searchEngineManager->engine($this->searchContext);
 
-            return $this->find(current($indices['ids']));
+        $productId = $engine->findBySlug($slug);
+
+        if ($productId) {
+            return $this->find($productId);
         }
 
         return $this->findByAttributeCode('url_key', $slug);
@@ -227,12 +222,14 @@ class ProductRepository extends Repository
     /**
      * Get all products.
      *
-     * @return Collection
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function getAll(array $params = [])
     {
-        if ($this->searchEngine == 'elastic') {
-            return $this->searchFromElastic($params);
+        $driver = $this->searchEngineManager->resolveDriver($this->searchContext);
+
+        if ($driver !== SearchEngineEnum::DATABASE) {
+            return $this->searchFromExternalEngine($params);
         }
 
         return $this->searchFromDatabase($params);
@@ -241,7 +238,7 @@ class ProductRepository extends Repository
     /**
      * Search product from database.
      *
-     * @return Collection
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
     public function searchFromDatabase(array $params = [])
     {
@@ -267,7 +264,7 @@ class ProductRepository extends Repository
         ])->scopeQuery(function ($query) use ($params) {
             $prefix = DB::getTablePrefix();
 
-            $qb = $query->distinct()
+            $qb = $query
                 ->select('products.*')
                 ->leftJoin('products as variants', DB::raw('COALESCE('.$prefix.'variants.parent_id, '.$prefix.'variants.id)'), '=', 'products.id')
                 ->leftJoin('product_price_indices', function ($join) {
@@ -299,9 +296,6 @@ class ProductRepository extends Repository
                 }
             }
 
-            /**
-             * Filter query by price.
-             */
             if (! empty($params['price'])) {
                 $priceRange = explode(',', $params['price']);
 
@@ -311,15 +305,8 @@ class ProductRepository extends Repository
                 ]);
             }
 
-            /**
-             * Retrieve all the filterable attributes.
-             */
             $filterableAttributes = $this->attributeRepository->getProductDefaultAttributes(array_keys($params));
 
-            /**
-             * Range filter for price-type attributes other than the base `price`
-             * (e.g. special_price, cost, or user-defined price attributes).
-             */
             foreach ($filterableAttributes as $priceAttribute) {
                 if (
                     $priceAttribute->type !== AttributeTypeEnum::PRICE->value
@@ -341,9 +328,6 @@ class ProductRepository extends Repository
                 ]);
             }
 
-            /**
-             * Filter the required attributes.
-             */
             $attributes = $filterableAttributes->whereIn('code', [
                 'name',
                 'status',
@@ -351,9 +335,6 @@ class ProductRepository extends Repository
                 'url_key',
             ]);
 
-            /**
-             * Filter collection by required attributes.
-             */
             foreach ($attributes as $attribute) {
                 $alias = $attribute->code.'_product_attribute_values';
 
@@ -365,14 +346,14 @@ class ProductRepository extends Repository
 
                     $qb->where(function ($subQuery) use ($alias, $synonyms) {
                         foreach ($synonyms as $synonym) {
-                            $subQuery->orWhere($alias.'.text_value', 'like', '%'.$synonym.'%');
+                            $subQuery->orWhere($alias.'.text_value', db_grammar()->caseInsensitiveLike(), '%'.$synonym.'%');
                         }
                     });
                 } elseif ($attribute->code == 'url_key') {
                     if (empty($params['url_key'])) {
                         $qb->whereNotNull($alias.'.text_value');
                     } else {
-                        $qb->where($alias.'.text_value', 'like', '%'.urldecode($params['url_key']).'%');
+                        $qb->where($alias.'.text_value', db_grammar()->caseInsensitiveLike(), '%'.urldecode($params['url_key']).'%');
                     }
                 } else {
                     if (is_null($params[$attribute->code])) {
@@ -383,9 +364,6 @@ class ProductRepository extends Repository
                 }
             }
 
-            /**
-             * Filter the filterable attributes.
-             */
             $attributes = $filterableAttributes->whereNotIn('code', [
                 'name',
                 'status',
@@ -395,9 +373,6 @@ class ProductRepository extends Repository
                 return $attribute->type !== AttributeTypeEnum::PRICE->value;
             });
 
-            /**
-             * Filter query by attributes.
-             */
             if ($attributes->isNotEmpty()) {
                 $qb->where(function ($filterQuery) use ($qb, $params, $attributes, $prefix) {
                     $aliases = [
@@ -424,7 +399,7 @@ class ProductRepository extends Repository
 
                                     $subFilterQuery->where(function ($query) use ($paramValues, $alias, $attribute, $prefix) {
                                         foreach ($paramValues as $value) {
-                                            $query->orWhereRaw("FIND_IN_SET(?, {$prefix}{$alias}.{$attribute->column_name})", [$value]);
+                                            $query->orWhereRaw(db_grammar()->findInSet('?', "{$prefix}{$alias}.{$attribute->column_name}"), [$value]);
                                         }
                                     });
                                 } else {
@@ -438,9 +413,6 @@ class ProductRepository extends Repository
                 $qb->groupBy('products.id');
             }
 
-            /**
-             * Sort collection.
-             */
             $sortOptions = $this->getSortOptions($params);
 
             if ($sortOptions['order'] != 'rand') {
@@ -448,7 +420,7 @@ class ProductRepository extends Repository
 
                 if ($attribute) {
                     if ($attribute->code === 'price') {
-                        $qb->orderBy('product_price_indices.min_price', $sortOptions['order']);
+                        $qb->orderByRaw('MIN('.$prefix.'product_price_indices.min_price) '.$sortOptions['order']);
                     } else {
                         $alias = 'sort_product_attribute_values';
 
@@ -469,10 +441,9 @@ class ProductRepository extends Repository
                                 }
                             }
                         })
-                            ->orderBy($alias.'.'.$attribute->column_name, $sortOptions['order']);
+                            ->orderByRaw('MIN('.$prefix.$alias.'.'.$attribute->column_name.') '.$sortOptions['order']);
                     }
                 } else {
-                    /* `created_at` is not an attribute so it will be in else case */
                     $qb->orderBy('products.created_at', $sortOptions['order']);
                 }
             } else {
@@ -488,11 +459,11 @@ class ProductRepository extends Repository
     }
 
     /**
-     * Search product from elastic search.
+     * Search products via external search engine (Elasticsearch, Algolia, etc).
      *
-     * @return Collection
+     * @return \Illuminate\Contracts\Pagination\LengthAwarePaginator
      */
-    public function searchFromElastic(array $params = [])
+    public function searchFromExternalEngine(array $params = [])
     {
         $currentPage = Paginator::resolveCurrentPage('page');
 
@@ -500,7 +471,9 @@ class ProductRepository extends Repository
 
         $sortOptions = $this->getSortOptions($params);
 
-        $indices = $this->elasticSearchRepository->search($params, [
+        $engine = $this->searchEngineManager->engine($this->searchContext);
+
+        $indices = $engine->search($params, [
             'from' => ($currentPage * $limit) - $limit,
             'limit' => $limit,
             'sort' => $sortOptions['sort'],
@@ -521,7 +494,7 @@ class ProductRepository extends Repository
             'variants.price_indices',
             'variants.inventory_indices',
         ])->scopeQuery(function ($query) use ($params, $indices) {
-            $qb = $query->distinct()
+            $qb = $query
                 ->select('products.*')
                 ->whereIn('products.id', $indices['ids']);
 
@@ -536,7 +509,7 @@ class ProductRepository extends Repository
 
             $table = DB::getTablePrefix().$query->getModel()->getTable();
 
-            $qb->orderBy(DB::raw('FIELD('.$table.'.id, '.implode(',', $indices['ids']).')'));
+            $qb->orderByRaw(db_grammar()->orderByField($table.'.id', $indices['ids']));
 
             return $qb;
         });
@@ -571,7 +544,7 @@ class ProductRepository extends Repository
      * Returns product's super attribute with options.
      *
      * @param  Product  $product
-     * @return Collection
+     * @return array
      */
     public function getSuperAttributes($product)
     {
@@ -594,6 +567,36 @@ class ProductRepository extends Repository
     }
 
     /**
+     * Get the ids of the configurable, bundle and grouped products whose prices are built from the given products.
+     */
+    public function getCompositeParentIds(array $productIds): array
+    {
+        if (empty($productIds)) {
+            return [];
+        }
+
+        $configurableIds = $this->findWhereIn('id', $productIds, ['parent_id'])
+            ->pluck('parent_id')
+            ->filter();
+
+        $bundleAndGroupedIds = $this->scopeQuery(function ($query) use ($productIds) {
+            return $query
+                ->whereHas('bundle_options.bundle_option_products', function ($optionProducts) use ($productIds) {
+                    $optionProducts->whereIn($optionProducts->qualifyColumn('product_id'), $productIds);
+                })
+                ->orWhereHas('grouped_products', function ($groupedProducts) use ($productIds) {
+                    $groupedProducts->whereIn($groupedProducts->qualifyColumn('associated_product_id'), $productIds);
+                });
+        })->all(['id'])->pluck('id');
+
+        return $configurableIds
+            ->merge($bundleAndGroupedIds)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
      * Return category product maximum price.
      *
      * @param  array  $params
@@ -601,47 +604,8 @@ class ProductRepository extends Repository
      */
     public function getMaxPrice($params = [])
     {
-        if ($this->searchEngine == 'elastic') {
-            return $this->elasticSearchRepository->getMaxPrice($params);
-        }
-
-        $attributeCode = $params['attribute_code'] ?? 'price';
-
-        if ($attributeCode === 'price') {
-            $customerGroup = $this->customerRepository->getCurrentGroup();
-
-            $query = $this->model
-                ->leftJoin('product_price_indices', 'products.id', 'product_price_indices.product_id')
-                ->leftJoin('product_categories', 'products.id', 'product_categories.product_id')
-                ->where('product_price_indices.customer_group_id', $customerGroup->id);
-
-            if (! empty($params['category_id'])) {
-                $query->where('product_categories.category_id', $params['category_id']);
-            }
-
-            return $query->max('min_price') ?? 0;
-        }
-
-        $attribute = $this->attributeRepository->findOneByField('code', $attributeCode);
-
-        if (
-            ! $attribute
-            || $attribute->type !== AttributeTypeEnum::PRICE->value
-        ) {
-            return 0;
-        }
-
-        $query = $this->model
-            ->leftJoin('product_attribute_values as attr_pav', function ($join) use ($attribute) {
-                $join->on('products.id', '=', 'attr_pav.product_id')
-                    ->where('attr_pav.attribute_id', $attribute->id);
-            });
-
-        if (! empty($params['category_id'])) {
-            $query->leftJoin('product_categories', 'products.id', 'product_categories.product_id')
-                ->where('product_categories.category_id', $params['category_id']);
-        }
-
-        return $query->max('attr_pav.float_value') ?? 0;
+        return $this->searchEngineManager
+            ->engine($this->searchContext)
+            ->getMaxPrice($params);
     }
 }

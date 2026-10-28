@@ -13,9 +13,13 @@ export interface BaseProduct {
     name: string;
     shortDescription: string;
     description: string;
+    urlKey?: string;
     price?: number;
     weight?: number;
     inventory?: number;
+    allowRma?: boolean;
+    groupedItems?: string[];
+    bundleItems?: string[];
     bookingType?: "default" | "appointment" | "event" | "rental" | "table";
     defaultBookingType?: "one" | "many";
     rentalType?: "hourly" | "daily" | "both";

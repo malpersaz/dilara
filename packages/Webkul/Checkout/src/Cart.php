@@ -62,7 +62,7 @@ class Cart
     }
 
     /**
-     * Initialize cart
+     * Initialize cart.
      */
     public function initCart(?CustomerContract $customer = null): void
     {
@@ -88,7 +88,7 @@ class Cart
     }
 
     /**
-     * Returns cart
+     * Reload the cart from the database.
      */
     public function refreshCart(): void
     {
@@ -100,7 +100,7 @@ class Cart
     }
 
     /**
-     * Set cart
+     * Set cart.
      */
     public function setCart(Contracts\Cart $cart): void
     {
@@ -158,7 +158,7 @@ class Cart
     }
 
     /**
-     * Remove cart and destroy the session
+     * Remove cart and destroy the session.
      */
     public function removeCart(Contracts\Cart $cart): void
     {
@@ -172,7 +172,7 @@ class Cart
     }
 
     /**
-     * Reset cart
+     * Reset cart.
      */
     public function resetCart(): void
     {
@@ -225,9 +225,6 @@ class Cart
 
         $guestCart = $this->cartRepository->find(session()->get('cart')->id);
 
-        /**
-         * When the logged in customer is not having any of the cart instance previously and are active.
-         */
         if (! $cart) {
             $this->cartRepository->update([
                 'customer_id' => $customer->id,
@@ -248,7 +245,6 @@ class Cart
             try {
                 $this->addProduct($guestCartItem->product, $guestCartItem->additional);
             } catch (\Exception $e) {
-                // Ignore exception
             }
         }
 
@@ -262,15 +258,19 @@ class Cart
      */
     public function addProduct(ProductContract $product, array $data): Contracts\Cart|\Exception
     {
+        if (! $product->isAvailableInChannel($this->cart?->channel_id)) {
+            throw new \Exception(trans('shop::app.checkout.cart.inactive-add'));
+        }
+
         Event::dispatch('checkout.cart.add.before', $product->id);
 
         if (! $this->cart) {
             $this->createCart([]);
         }
 
-        $cartProducts = $product->getTypeInstance()->prepareForCart(array_merge([
+        $cartProducts = $product->getTypeInstance()->prepareForCart(array_merge($data, [
             'cart_id' => $this->cart->id,
-        ], $data));
+        ]));
 
         if (is_string($cartProducts)) {
             if (! $this->cart->all_items->count()) {
@@ -424,6 +424,26 @@ class Cart
     }
 
     /**
+     * The saved address a cart address was filled from, when it belongs to this cart's customer.
+     */
+    public function customerAddressId(array $params): ?int
+    {
+        if (
+            ($params['address_type'] ?? '') !== 'customer'
+            || empty($params['id'])
+            || ! $this->cart->customer_id
+        ) {
+            return null;
+        }
+
+        $address = $this->customerAddressRepository->find($params['id']);
+
+        return $address?->customer_id === $this->cart->customer_id
+            ? $address->id
+            : null;
+    }
+
+    /**
      * Update or create billing address.
      */
     public function saveAddresses(array $params): void
@@ -460,7 +480,7 @@ class Cart
             ])
             ->merge([
                 'address_type' => CartAddress::ADDRESS_TYPE_BILLING,
-                'parent_address_id' => ($params['address_type'] ?? '') == 'customer' ? $params['id'] : null,
+                'parent_address_id' => $this->customerAddressId($params),
                 'cart_id' => $this->cart->id,
                 'customer_id' => $this->cart->customer_id,
                 'address' => implode(PHP_EOL, $params['address']),
@@ -484,9 +504,6 @@ class Cart
      */
     public function updateOrCreateShippingAddress(array $params): ?CartAddressContract
     {
-        /**
-         * If cart is not having any stockable items then no need to save shipping address.
-         */
         if (! $this->cart->haveStockableItems()) {
             return null;
         }
@@ -527,7 +544,7 @@ class Cart
                 ->only($fillableFields)
                 ->merge([
                     'address_type' => CartAddress::ADDRESS_TYPE_SHIPPING,
-                    'parent_address_id' => ($params['address_type'] ?? '') == 'customer' ? $params['id'] : null,
+                    'parent_address_id' => $this->customerAddressId($params),
                     'cart_id' => $this->cart->id,
                     'customer_id' => $this->cart->customer_id,
                     'address' => implode(PHP_EOL, $params['address']),
@@ -856,9 +873,6 @@ class Cart
     public function collectTotals(): self
     {
         if (! $this->validateItems()) {
-            /**
-             * Reset the cart so that fresh copy of cart can be created.
-             */
             $this->refreshCart();
         }
 

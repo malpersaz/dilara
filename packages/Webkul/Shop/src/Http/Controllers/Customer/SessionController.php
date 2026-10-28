@@ -2,6 +2,7 @@
 
 namespace Webkul\Shop\Http\Controllers\Customer;
 
+use Illuminate\Foundation\Auth\ThrottlesLogins;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Cookie;
@@ -12,6 +13,18 @@ use Webkul\Shop\Http\Requests\Customer\LoginRequest;
 
 class SessionController extends Controller
 {
+    use ThrottlesLogins;
+
+    /**
+     * The failed login attempts an email address and caller may make before waiting.
+     */
+    protected $maxAttempts = 6;
+
+    /**
+     * How many minutes those failed attempts are remembered for.
+     */
+    protected $decayMinutes = 1;
+
     /**
      * Display the resource.
      *
@@ -27,6 +40,14 @@ class SessionController extends Controller
     }
 
     /**
+     * The request field holding the identifier login attempts are counted against.
+     */
+    public function username(): string
+    {
+        return 'email';
+    }
+
+    /**
      * Show the form for creating a new resource.
      *
      * @return Response
@@ -37,11 +58,21 @@ class SessionController extends Controller
 
         $credentials['channel_id'] = core()->getCurrentChannel()->id;
 
+        if ($this->hasTooManyLoginAttempts($loginRequest)) {
+            $this->fireLockoutEvent($loginRequest);
+
+            return $this->sendLockoutResponse($loginRequest);
+        }
+
         if (! auth()->guard('customer')->attempt($credentials)) {
+            $this->incrementLoginAttempts($loginRequest);
+
             session()->flash('error', trans('shop::app.customers.login-form.invalid-credentials'));
 
             return redirect()->back();
         }
+
+        $this->clearLoginAttempts($loginRequest);
 
         if (! auth()->guard('customer')->user()->status) {
             auth()->guard('customer')->logout();
@@ -56,7 +87,7 @@ class SessionController extends Controller
 
             Cookie::queue(Cookie::make('enable-resend', 'true', 1));
 
-            Cookie::queue(Cookie::make('email-for-resend', $loginRequest->get('email'), 1));
+            Cookie::queue(Cookie::make('email-for-resend', $loginRequest->input('email'), 1));
 
             auth()->guard('customer')->logout();
 
@@ -67,6 +98,10 @@ class SessionController extends Controller
          * Event passed to prepare cart after login.
          */
         Event::dispatch('customer.after.login', auth()->guard()->user());
+
+        if ($intended = session()->pull('shop.url.intended')) {
+            return redirect()->to($intended);
+        }
 
         if (core()->getConfigData('customer.settings.login_options.redirected_to_page') == 'account') {
             return redirect()->route('shop.customers.account.profile.index');
@@ -85,6 +120,10 @@ class SessionController extends Controller
         $id = auth()->guard('customer')->user()->id;
 
         auth()->guard('customer')->logout();
+
+        session()->invalidate();
+
+        session()->regenerateToken();
 
         Event::dispatch('customer.after.logout', $id);
 

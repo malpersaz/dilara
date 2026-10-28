@@ -10,10 +10,19 @@ use Webkul\Admin\Exports\ProductDataGridExport;
 use Webkul\Attribute\Repositories\AttributeFamilyRepository;
 use Webkul\Core\Facades\ElasticSearch;
 use Webkul\DataGrid\DataGrid;
-use Webkul\Product\Helpers\Product;
+use Webkul\Marketing\Repositories\SearchSynonymRepository;
+use Webkul\Product\Enums\SearchContextEnum;
+use Webkul\Product\Enums\SearchEngineEnum;
+use Webkul\Product\Services\Search\Engines\ElasticSearchEngine;
+use Webkul\Product\Services\Search\SearchEngineManager;
 
 class ProductDataGrid extends DataGrid
 {
+    /**
+     * Product count the Elasticsearch total stays exact up to, which is its own ceiling.
+     */
+    protected const TOTAL_PRECISION_THRESHOLD = 40000;
+
     /**
      * Primary column.
      *
@@ -22,11 +31,14 @@ class ProductDataGrid extends DataGrid
     protected $primaryColumn = 'product_id';
 
     /**
-     * Constructor for the class.
+     * Create a new datagrid instance.
      *
      * @return void
      */
-    public function __construct(protected AttributeFamilyRepository $attributeFamilyRepository) {}
+    public function __construct(
+        protected AttributeFamilyRepository $attributeFamilyRepository,
+        protected SearchSynonymRepository $searchSynonymRepository
+    ) {}
 
     /**
      * Prepare query builder.
@@ -35,27 +47,10 @@ class ProductDataGrid extends DataGrid
      */
     public function prepareQueryBuilder()
     {
-        $tablePrefix = DB::getTablePrefix();
-
-        /**
-         * Query Builder to fetch records from `product_flat` table
-         */
         $queryBuilder = DB::table('product_flat')
-            ->distinct()
-            ->leftJoin('attribute_families as af', 'product_flat.attribute_family_id', '=', 'af.id')
-            ->leftJoin('product_inventories', 'product_flat.product_id', '=', 'product_inventories.product_id')
-            ->leftJoin('product_images', 'product_flat.product_id', '=', 'product_images.product_id')
-            ->leftJoin('product_categories as pc', 'product_flat.product_id', '=', 'pc.product_id')
-            ->leftJoin('category_translations as ct', function ($leftJoin) {
-                $leftJoin->on('pc.category_id', '=', 'ct.category_id')
-                    ->where('ct.locale', app()->getLocale());
-            })
             ->select(
                 'product_flat.locale',
                 'product_flat.channel',
-                'product_images.path as base_image',
-                'pc.category_id',
-                'ct.name as category_name',
                 'product_flat.product_id',
                 'product_flat.sku',
                 'product_flat.name',
@@ -64,20 +59,16 @@ class ProductDataGrid extends DataGrid
                 'product_flat.price',
                 'product_flat.url_key',
                 'product_flat.visible_individually',
-                'af.name as attribute_family',
+                'product_flat.quantity',
+                'product_flat.images_count',
+                'product_flat.base_image',
+                'product_flat.manage_stock',
+                'product_flat.category_name',
+                'product_flat.attribute_family_name as attribute_family',
             )
-            ->addSelect(DB::raw('SUM(DISTINCT '.$tablePrefix.'product_inventories.qty) as quantity'))
-            ->addSelect(DB::raw('COUNT(DISTINCT '.$tablePrefix.'product_images.id) as images_count'))
-            ->where('product_flat.locale', app()->getLocale())
-            ->groupBy('product_flat.product_id');
+            ->where('product_flat.locale', app()->getLocale());
 
-        $this->addFilter('product_id', 'product_flat.product_id');
-        $this->addFilter('channel', 'product_flat.channel');
-        $this->addFilter('locale', 'product_flat.locale');
-        $this->addFilter('name', 'product_flat.name');
-        $this->addFilter('type', 'product_flat.type');
-        $this->addFilter('status', 'product_flat.status');
-        $this->addFilter('attribute_family', 'af.id');
+        $this->addFilter('attribute_family', 'attribute_family_id');
 
         return $queryBuilder;
     }
@@ -192,6 +183,7 @@ class ProductDataGrid extends DataGrid
             'index' => 'category_name',
             'label' => trans('admin::app.catalog.products.index.datagrid.category'),
             'type' => 'string',
+            'filterable' => true,
         ]);
 
         $this->addColumn([
@@ -286,72 +278,109 @@ class ProductDataGrid extends DataGrid
     }
 
     /**
-     * Process request.
+     * One flat row id per product, so a product carried by several channels is listed once, narrowed
+     * to the given products when they are already known.
+     */
+    protected function representativeRowIds(?array $productIds = null): Builder
+    {
+        $channelCodes = (array) request()->input('filters.channel');
+
+        return DB::table('product_flat')
+            ->selectRaw('MIN(id)')
+            ->where('locale', app()->getLocale())
+            ->when($channelCodes, fn ($query) => $query->whereIn('channel', $channelCodes))
+            ->when($productIds !== null, fn ($query) => $query->whereIn('product_id', $productIds))
+            ->groupBy('product_id');
+    }
+
+    /**
+     * Process the request through Elasticsearch when the admin grid is set to search with it.
      */
     protected function processRequest(): void
     {
-        if (
-            core()->getConfigData('catalog.products.search.engine') != 'elastic'
-            || core()->getConfigData('catalog.products.search.admin_mode') != 'elastic'
-        ) {
-            parent::processRequest();
+        $manager = app(SearchEngineManager::class);
+
+        if ($manager->resolveDriver(SearchContextEnum::ADMIN) === SearchEngineEnum::DATABASE) {
+            $this->processDatabaseRequest();
 
             return;
         }
 
-        /**
-         * Store all request parameters in this variable; avoid using direct request helpers afterward.
-         */
         $params = $this->validatedRequest();
 
-        if (isset($params['export']) && (bool) $params['export']) {
-            parent::processRequest();
+        if (
+            isset($params['export'])
+            && (bool) $params['export']
+        ) {
+            $this->processDatabaseRequest();
 
             return;
         }
 
         $this->dispatchEvent('process_request.before', $this);
 
-        $pagination = $params['pagination'];
+        $pagination = $params['pagination'] ?? [];
 
-        $channelCodes = request()->input('filters.channel') ?? core()->getAllChannels()->pluck('code')->toArray();
+        $page = (int) ($pagination['page'] ?? 1);
 
-        $indexNames = collect($channelCodes)->map(function ($channelCode) {
-            return Product::formatElasticSearchIndexName($channelCode, app()->getLocale());
+        $perPage = (int) ($pagination['per_page'] ?? $this->itemsPerPage);
+
+        $channels = core()->getAllChannels();
+
+        $channelCodes = (array) request()->input('filters.channel') ?: $channels->pluck('code')->toArray();
+
+        $indexNames = collect($channelCodes)->map(function ($channelCode) use ($channels) {
+            $localeCode = $channels->firstWhere('code', $channelCode)?->resolveLocaleCode(app()->getLocale()) ?? app()->getLocale();
+
+            return ElasticSearchEngine::formatIndexName($channelCode, $localeCode);
         })->toArray();
 
         $results = ElasticSearch::search([
             'index' => $indexNames,
             'ignore_unavailable' => true,
             'body' => [
-                'from' => ($pagination['page'] * $pagination['per_page']) - $pagination['per_page'],
-                'size' => $pagination['per_page'],
+                'from' => ($page * $perPage) - $perPage,
+                'size' => $perPage,
                 'stored_fields' => [],
                 'query' => [
                     'bool' => $this->getElasticFilters($params['filters'] ?? []) ?: new \stdClass,
                 ],
+                'collapse' => [
+                    'field' => 'id',
+                ],
+                'aggs' => [
+                    'total' => [
+                        'cardinality' => [
+                            'field' => 'id',
+                            'precision_threshold' => self::TOTAL_PRECISION_THRESHOLD,
+                        ],
+                    ],
+                ],
                 'sort' => $this->getElasticSort($params['sort'] ?? []),
-                'track_total_hits' => true,
             ],
         ]);
 
-        $ids = collect($results['hits']['hits'])->pluck('_id')->toArray();
+        $ids = collect($results['hits']['hits'])
+            ->pluck('_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
 
         $this->queryBuilder
+            ->whereIn('product_flat.id', $this->representativeRowIds($ids))
             ->whereIn('product_flat.product_id', $ids);
 
         if ($ids) {
             $this->queryBuilder
-                ->orderBy(DB::raw('FIELD('.DB::getTablePrefix().'product_flat.product_id, '.implode(',', $ids).')'));
+                ->orderByRaw(db_grammar()->orderByField(DB::getTablePrefix().'product_flat.product_id', $ids));
         }
 
-        $total = $results['hits']['total']['value'];
+        $total = (int) ($results['aggregations']['total']['value'] ?? 0);
 
         $this->paginator = new LengthAwarePaginator(
             $total ? $this->queryBuilder->get() : [],
             $total,
-            $pagination['per_page'],
-            $pagination['page'],
+            $perPage,
+            $page,
             [
                 'path' => request()->url(),
                 'query' => [],
@@ -362,9 +391,19 @@ class ProductDataGrid extends DataGrid
     }
 
     /**
-     * Process request.
+     * List one row per product and answer the request from the database.
      */
-    protected function getElasticFilters($params): array
+    protected function processDatabaseRequest(): void
+    {
+        $this->queryBuilder->whereIn('product_flat.id', $this->representativeRowIds());
+
+        parent::processRequest();
+    }
+
+    /**
+     * Return the Elasticsearch filters for every requested datagrid filter.
+     */
+    protected function getElasticFilters(array $params): array
     {
         $filters = [];
 
@@ -384,74 +423,85 @@ class ProductDataGrid extends DataGrid
     }
 
     /**
-     * Return applied filters
+     * Return applied filter clause for the given attribute.
      */
-    public function getFilterValue(mixed $attribute, mixed $values): array
+    protected function getFilterValue(string $attribute, mixed $values): array
     {
-        switch ($attribute) {
-            case 'product_id':
-                return [
-                    'terms' => [
-                        'id' => $values,
-                    ],
-                ];
+        return match ($attribute) {
+            'product_id' => [
+                'terms' => [
+                    'id' => $values,
+                ],
+            ],
 
-            case 'attribute_family':
-                return [
-                    'terms' => [
-                        'attribute_family_id' => $values,
-                    ],
-                ];
+            'attribute_family' => [
+                'terms' => [
+                    'attribute_family_id' => $values,
+                ],
+            ],
 
-            case 'sku':
-            case 'name':
-                $filters = [];
+            'sku', 'name', 'category_name' => $this->getTextFilterValue($attribute, $values),
 
-                foreach ($values as $value) {
-                    $filters['bool']['should'][] = [
-                        'match_phrase_prefix' => [
-                            $attribute => $value,
-                        ],
-                    ];
-                }
-
-                return $filters;
-
-            default:
-                return [
-                    'terms' => [
-                        $attribute => $values,
-                    ],
-                ];
-        }
+            default => [
+                'terms' => [
+                    $attribute => $values,
+                ],
+            ],
+        };
     }
 
     /**
-     * Process request.
+     * Build a text filter that matches each value as a phrase prefix, and a name on its synonyms as well.
      */
-    protected function getElasticSort($params): array
+    protected function getTextFilterValue(string $attribute, mixed $values): array
     {
-        $sort = $params['column'] ?? $this->primaryColumn;
+        $filters = [];
 
-        if ($sort == 'type') {
-            $sort .= '.keyword';
+        foreach ($values as $value) {
+            $terms = $attribute === 'name'
+                ? $this->searchSynonymRepository->getSynonymsByQuery($value)
+                : [$value];
+
+            foreach ($terms as $term) {
+                $filters['bool']['should'][] = [
+                    'match_phrase_prefix' => [
+                        $attribute => $term,
+                    ],
+                ];
+            }
         }
 
-        if ($sort == 'name') {
-            $sort .= '.keyword';
-        }
+        return $filters;
+    }
 
-        if ($sort == 'attribute_family') {
-            $sort .= '_id';
-        }
+    /**
+     * Return the Elasticsearch sort for the requested column, sorting analyzed text on its keyword
+     * copy and leaving a column the index never held unordered rather than failing.
+     */
+    protected function getElasticSort(array $params): array
+    {
+        $sortable = collect($this->getColumns())
+            ->filter(fn ($column) => $column->getSortable())
+            ->map(fn ($column) => $column->getIndex())
+            ->all();
 
-        if ($sort == 'product_id') {
-            $sort = 'id';
-        }
+        $sort = in_array($params['column'] ?? null, $sortable, true)
+            ? $params['column']
+            : $this->primaryColumn;
+
+        $sort = match ($sort) {
+            'name', 'sku', 'type' => $sort.'.keyword',
+            'attribute_family' => $sort.'_id',
+            'product_id' => 'id',
+            default => $sort,
+        };
+
+        $order = strtolower($params['order'] ?? '');
 
         return [
             $sort => [
-                'order' => $params['order'] ?? $this->sortOrder,
+                'order' => in_array($order, ['asc', 'desc'], true) ? $order : $this->sortOrder,
+                'unmapped_type' => 'keyword',
             ],
         ];
     }

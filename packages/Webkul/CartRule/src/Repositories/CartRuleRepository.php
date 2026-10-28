@@ -50,17 +50,11 @@ class CartRuleRepository extends Repository
      */
     public function create(array $data)
     {
-        $data['starts_from'] = $data['starts_from'] ?: null;
-
-        $data['ends_till'] = $data['ends_till'] ?: null;
-
-        $data['status'] = isset($data['status']);
-
         $cartRule = parent::create($data);
 
-        $cartRule->channels()->sync($data['channels']);
+        $cartRule->cart_rule_channels()->sync($data['channels']);
 
-        $cartRule->customer_groups()->sync($data['customer_groups']);
+        $cartRule->cart_rule_customer_groups()->sync($data['customer_groups']);
 
         if (
             $data['coupon_type']
@@ -88,9 +82,6 @@ class CartRuleRepository extends Repository
     public function update(array $data, $id)
     {
         $data = array_merge($data, [
-            'starts_from' => $data['starts_from'] ?: null,
-            'ends_till' => $data['ends_till'] ?: null,
-            'status' => isset($data['status']),
             'conditions' => $data['conditions'] ?? [],
         ]);
 
@@ -98,9 +89,9 @@ class CartRuleRepository extends Repository
 
         parent::update($data, $id);
 
-        $cartRule->channels()->sync($data['channels']);
+        $cartRule->cart_rule_channels()->sync($data['channels']);
 
-        $cartRule->customer_groups()->sync($data['customer_groups']);
+        $cartRule->cart_rule_customer_groups()->sync($data['customer_groups']);
 
         if (! $data['coupon_type']) {
             $cartRuleCoupon = $this->cartRuleCouponRepository->deleteWhere(['is_primary' => 1, 'cart_rule_id' => $cartRule->id]);

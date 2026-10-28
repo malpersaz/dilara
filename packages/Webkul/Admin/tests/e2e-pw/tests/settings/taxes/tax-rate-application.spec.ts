@@ -1,50 +1,76 @@
 import { test } from "../../../setup";
-import { TaxRateCreatePage } from "../../../pages/admin/settings/taxes/TaxRateCreatePage";
-import { TaxRateListPage } from "../../../pages/admin/settings/taxes/TaxRateListPage";
-import { TaxCategoryPage } from "../../../pages/admin/settings/taxes/TaxCategoryPage";
+import { ProductEditPage } from "../../../pages/admin/catalog/products/ProductEditPage";
+import { ProductListPage } from "../../../pages/admin/catalog/products/ProductListPage";
+import { TaxCategoriesPage } from "../../../pages/admin/settings/taxes/TaxCategoriesPage";
+import { TaxRatesPage } from "../../../pages/admin/settings/taxes/TaxRatesPage";
 import { TaxRateApplyPage } from "../../../pages/shop/taxes/TaxRateApplyPage";
 import {
-    assignTaxCategoryToProduct,
     createSimpleTaxableProduct,
+    generateTaxCategoryData,
+    generateTaxRateData,
     TAX_PRODUCT_PRICE,
     TAX_REGIONS,
+    type TaxCategoryData,
+    type TaxRateData,
 } from "../../../utils/tax";
 
-const PRODUCT_PRICE = TAX_PRODUCT_PRICE;
-
-/**
- * End-to-end tax application: rate -> category -> product -> storefront.
- *
- * Each storefront scenario uses a region whose wildcard (empty) state matches
- * the address filled during guest checkout, so the rate is guaranteed to apply
- * and the tax can be asserted mathematically.
- */
 test.describe("tax application", () => {
     test.setTimeout(240000);
 
-    test("should create a tax category from a tax rate and persist the assignment", async ({
-        adminPage,
-    }) => {
-        const rate = await new TaxRateCreatePage(adminPage).createTaxRate();
+    let taxRatesPage: TaxRatesPage;
+    let taxCategoriesPage: TaxCategoriesPage;
+    let productListPage: ProductListPage;
+    let createdRates: string[];
+    let createdCategories: string[];
+    let createdProducts: string[];
 
-        const categoryPage = new TaxCategoryPage(adminPage);
-        const category = await categoryPage.createTaxCategory(rate.identifier);
-
-        await categoryPage.expectRateAssigned(category.name, rate.identifier);
+    test.beforeEach(async ({ adminPage }) => {
+        taxRatesPage = new TaxRatesPage(adminPage);
+        taxCategoriesPage = new TaxCategoriesPage(adminPage);
+        productListPage = new ProductListPage(adminPage);
+        createdRates = [];
+        createdCategories = [];
+        createdProducts = [];
     });
 
-    test("should assign a tax category to a product and save it", async ({
+    test.afterEach(async () => {
+        try {
+            await productListPage.deleteProductsIfPresent(createdProducts);
+        } finally {
+            try {
+                await taxCategoriesPage.deleteTaxCategoriesIfPresent(createdCategories);
+            } finally {
+                await taxRatesPage.deleteTaxRatesIfPresent(createdRates);
+            }
+        }
+    });
+
+    async function createRateAndCategory(
+        rateOverrides: Partial<TaxRateData>,
+    ): Promise<{ rate: TaxRateData; category: TaxCategoryData }> {
+        const rate = generateTaxRateData(rateOverrides);
+        const category = generateTaxCategoryData();
+        createdRates.push(rate.identifier);
+        createdCategories.push(category.name);
+
+        await taxRatesPage.createTaxRate(rate);
+        await taxCategoriesPage.createTaxCategory(category, [rate.identifier]);
+
+        return { rate, category };
+    }
+
+    test("should assign a tax category to a product and keep it after reload", async ({
         adminPage,
     }) => {
-        const rate = await new TaxRateCreatePage(adminPage).createTaxRate();
-        const category = await new TaxCategoryPage(adminPage).createTaxCategory(
-            rate.identifier,
-        );
+        const { category } = await createRateAndCategory({});
+        const productName = await createSimpleTaxableProduct(adminPage);
+        createdProducts.push(productName);
 
-        await createSimpleTaxableProduct(adminPage);
+        const productEditPage = new ProductEditPage(adminPage);
 
-        // Assertion lives inside the helper (success toast).
-        await assignTaxCategoryToProduct(adminPage, category.name);
+        await productEditPage.assignTaxCategory(productName, category.name);
+
+        await productEditPage.expectTaxCategoryAssigned(productName, category.name);
     });
 
     const scenarios = [
@@ -69,51 +95,32 @@ test.describe("tax application", () => {
     ];
 
     for (const scenario of scenarios) {
-        test(`should apply ${scenario.label} on the storefront and include it in the grand total`, async ({
+        test(`should charge ${scenario.label} at checkout and include it in the grand total`, async ({
             adminPage,
             shopPage,
         }) => {
-            /**
-             * Admin setup — create the rate (wildcard state), bundle it in a
-             * category, create a product and assign the category to it.
-             */
-            const rate = await new TaxRateCreatePage(adminPage).createTaxRate({
+            const { category } = await createRateAndCategory({
                 country: scenario.region.country,
                 state: "",
                 taxRate: scenario.taxRate,
             });
-
-            const category = await new TaxCategoryPage(
-                adminPage,
-            ).createTaxCategory(rate.identifier);
-
             const productName = await createSimpleTaxableProduct(adminPage);
+            createdProducts.push(productName);
 
-            await assignTaxCategoryToProduct(adminPage, category.name);
+            await new ProductEditPage(adminPage).assignTaxCategory(
+                productName,
+                category.name,
+            );
 
-            /**
-             * Storefront verification — taxable subtotal in the cart, then the
-             * applied tax and grand total at checkout.
-             */
             await new TaxRateApplyPage(shopPage).verifyTaxApplication(
                 productName,
-                PRODUCT_PRICE,
+                TAX_PRODUCT_PRICE,
                 scenario.taxPercent,
                 {
                     country: scenario.region.country,
                     checkoutState: scenario.region.checkoutState,
                 },
             );
-
-            /**
-             * Cleanup — remove the created tax rate so repeated runs stay clean.
-             */
-            await new TaxRateListPage(adminPage).deleteTaxRate(rate.identifier);
         });
     }
-
-    /**
-     * Tax rates have no priority field in Bagisto's schema, so priority-based
-     * resolution is out of scope (requirement scoped to "if supported").
-     */
 });

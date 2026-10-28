@@ -129,7 +129,7 @@ class Bundle extends AbstractType
     {
         parent::copyRelationships($product);
 
-        $attributesToSkip = config('products.skipAttributesOnCopy') ?? [];
+        $attributesToSkip = config('products.copy.skip_attributes') ?? [];
 
         if (in_array('bundle_options', $attributesToSkip)) {
             return;
@@ -321,7 +321,9 @@ class Bundle extends AbstractType
                     continue;
                 }
 
-                $qty = $data['bundle_option_qty'][$optionId] ?? $optionProduct->qty;
+                $qty = $optionProduct->is_user_defined
+                    ? ($data['bundle_option_qty'][$optionId] ?? $optionProduct->qty)
+                    : $optionProduct->qty;
 
                 if (! isset($products[$optionProduct->product_id])) {
                     $products[$optionProduct->product_id] = [

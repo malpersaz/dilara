@@ -4,7 +4,11 @@ namespace Webkul\Stripe\Payment;
 
 use Illuminate\Support\Facades\Storage;
 use Stripe\Checkout\Session;
+use Stripe\Coupon;
+use Stripe\Event;
+use Stripe\Exception\SignatureVerificationException;
 use Stripe\Stripe as BaseStripe;
+use Stripe\Webhook;
 use Webkul\Checkout\Facades\Cart;
 use Webkul\Payment\Payment\Payment;
 
@@ -34,7 +38,8 @@ class Stripe extends Payment
      */
     public function isAvailable()
     {
-        return parent::isAvailable() && $this->hasValidCredentials();
+        return parent::isAvailable()
+            && $this->hasValidCredentials();
     }
 
     /**
@@ -107,10 +112,12 @@ class Stripe extends Payment
         $isSandbox = $this->getConfigData('sandbox');
 
         if ($isSandbox) {
-            return $this->getConfigData('api_test_key') && $this->getConfigData('api_test_publishable_key');
+            return $this->getConfigData('api_test_key')
+                && $this->getConfigData('api_test_publishable_key');
         }
 
-        return $this->getConfigData('api_key') && $this->getConfigData('api_publishable_key');
+        return $this->getConfigData('api_key')
+            && $this->getConfigData('api_publishable_key');
     }
 
     /**
@@ -126,18 +133,23 @@ class Stripe extends Payment
 
         BaseStripe::setApiKey($this->getApiKey());
 
-        $lineItems = $this->prepareLineItems($cart);
-
-        return Session::create([
+        $parameters = [
             'payment_method_types' => ['card'],
-            'line_items' => $lineItems,
+            'line_items' => $this->prepareLineItems($cart),
             'mode' => 'payment',
             'success_url' => route('stripe.payment.success').'?session_id={CHECKOUT_SESSION_ID}',
             'cancel_url' => route('stripe.payment.cancel').'?session_id={CHECKOUT_SESSION_ID}',
             'metadata' => [
                 'cart_id' => $cart->id,
+                'base_grand_total' => (string) $cart->base_grand_total,
             ],
-        ]);
+        ];
+
+        if ($coupon = $this->prepareDiscount($cart)) {
+            $parameters['discounts'] = [['coupon' => $coupon->id]];
+        }
+
+        return Session::create($parameters);
     }
 
     /**
@@ -154,18 +166,67 @@ class Stripe extends Payment
             $session = Session::retrieve($sessionId);
 
             return $session->payment_status === 'paid' ? $session : false;
-
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return false;
         }
     }
 
     /**
-     * Convert an amount to the smallest currency unit expected by Stripe.
-     *
-     * Stripe expects amounts in the currency's smallest unit, which is derived
-     * from the number of decimal digits configured for the base currency. For
-     * zero-decimal currencies (such as JPY) the amount is charged as-is.
+     * Find the checkout session a payment intent was taken through, or nothing when no checkout took it.
+     */
+    public function findCheckoutSession(string $paymentIntentId): ?Session
+    {
+        BaseStripe::setApiKey($this->getApiKey());
+
+        return Session::all([
+            'payment_intent' => $paymentIntentId,
+            'limit' => 1,
+        ])->first();
+    }
+
+    /**
+     * Get the signing secret of the webhook endpoint for the configured mode.
+     */
+    public function getWebhookSecret(): ?string
+    {
+        return $this->getConfigData('sandbox')
+            ? $this->getConfigData('webhook_test_secret')
+            : $this->getConfigData('webhook_secret');
+    }
+
+    /**
+     * Read a webhook event, or nothing when no secret is set or Stripe did not sign it with that secret.
+     */
+    public function constructWebhookEvent(string $payload, ?string $signature): ?Event
+    {
+        $secret = $this->getWebhookSecret();
+
+        if (
+            empty($secret)
+            || empty($signature)
+        ) {
+            return null;
+        }
+
+        try {
+            return Webhook::constructEvent($payload, $signature, $secret);
+        } catch (\UnexpectedValueException|SignatureVerificationException) {
+            return null;
+        }
+    }
+
+    /**
+     * Convert an amount in a currency's smallest unit, as Stripe reports it, back to the currency itself.
+     */
+    public function fromStripeAmount(int $amount, string $currencyCode): float
+    {
+        $currency = core()->getAllCurrencies()->firstWhere('code', strtoupper($currencyCode));
+
+        return $amount / (10 ** ($currency?->decimal ?? 2));
+    }
+
+    /**
+     * Convert an amount to the base currency's smallest unit, as Stripe charges it; a zero-decimal currency is unchanged.
      *
      * @param  float  $amount
      * @return int
@@ -175,6 +236,16 @@ class Stripe extends Payment
         $decimal = core()->getBaseCurrency()->decimal ?? 2;
 
         return (int) round($amount * (10 ** $decimal));
+    }
+
+    /**
+     * Convert an amount to the base currency's smallest unit as the decimal string Stripe prices a line at.
+     */
+    private function formatDecimalAmount(float $amount): string
+    {
+        $decimal = core()->getBaseCurrency()->decimal ?? 2;
+
+        return sprintf('%.4F', $amount * (10 ** $decimal));
     }
 
     /**
@@ -195,7 +266,7 @@ class Stripe extends Payment
                         'name' => $item->product->name,
                     ],
 
-                    'unit_amount' => $this->formatAmount($item->base_price),
+                    'unit_amount_decimal' => $this->formatDecimalAmount($item->base_price),
                 ],
 
                 'quantity' => $item->quantity,
@@ -208,10 +279,10 @@ class Stripe extends Payment
                     'currency' => strtolower(core()->getBaseCurrencyCode()),
 
                     'product_data' => [
-                        'name' => 'Shipping',
+                        'name' => trans('stripe::app.line-items.shipping'),
                     ],
 
-                    'unit_amount' => $this->formatAmount($cart->base_shipping_amount),
+                    'unit_amount_decimal' => $this->formatDecimalAmount($cart->base_shipping_amount),
                 ],
 
                 'quantity' => 1,
@@ -224,10 +295,10 @@ class Stripe extends Payment
                     'currency' => strtolower(core()->getBaseCurrencyCode()),
 
                     'product_data' => [
-                        'name' => 'Tax',
+                        'name' => trans('stripe::app.line-items.tax'),
                     ],
 
-                    'unit_amount' => $this->formatAmount($cart->base_tax_total),
+                    'unit_amount_decimal' => $this->formatDecimalAmount($cart->base_tax_total),
                 ],
 
                 'quantity' => 1,
@@ -235,5 +306,25 @@ class Stripe extends Payment
         }
 
         return $lineItems;
+    }
+
+    /**
+     * Prepare a single-use coupon for the cart's discount, so Stripe charges the total the order is placed at.
+     */
+    private function prepareDiscount($cart): ?Coupon
+    {
+        $amount = $this->formatAmount($cart->base_discount_amount);
+
+        if ($amount <= 0) {
+            return null;
+        }
+
+        return Coupon::create([
+            'name' => trans('stripe::app.line-items.discount'),
+            'amount_off' => $amount,
+            'currency' => strtolower(core()->getBaseCurrencyCode()),
+            'duration' => 'once',
+            'max_redemptions' => 1,
+        ]);
     }
 }

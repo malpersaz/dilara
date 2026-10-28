@@ -6,8 +6,9 @@ use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Webkul\Category\Repositories\CategoryRepository;
 use Webkul\Marketing\Repositories\URLRewriteRepository;
+use Webkul\Product\Enums\SearchContextEnum;
 use Webkul\Product\Repositories\ProductRepository;
-use Webkul\Theme\Repositories\ThemeCustomizationRepository;
+use Webkul\Theme\Repositories\SectionRepository;
 
 class ProductsCategoriesProxyController extends Controller
 {
@@ -26,7 +27,7 @@ class ProductsCategoriesProxyController extends Controller
     public function __construct(
         protected CategoryRepository $categoryRepository,
         protected ProductRepository $productRepository,
-        protected ThemeCustomizationRepository $themeCustomizationRepository,
+        protected SectionRepository $sectionRepository,
         protected URLRewriteRepository $urlRewriteRepository
     ) {}
 
@@ -43,17 +44,21 @@ class ProductsCategoriesProxyController extends Controller
          * Support url for chinese, japanese, arabic and english with numbers.
          */
         if (! preg_match('/^([\p{L}\p{N}\p{M}\x{0900}-\x{097F}\x{0590}-\x{05FF}\x{0600}-\x{06FF}\x{0400}-\x{04FF}_-]+\/?)+$/u', $slugOrURLKey)) {
-            $customizations = $this->themeCustomizationRepository->orderBy('sort_order')->findWhere([
-                'status' => self::STATUS,
-                'channel_id' => core()->getCurrentChannel()->id,
-            ]);
+            $sections = $this->sectionRepository->getRenderable(
+                core()->getCurrentChannel()->id,
+                core()->getCurrentChannel()->theme
+            );
 
-            return view('shop::home.index', compact('customizations'));
+            return view('shop::home.index', compact('sections'));
         }
 
         $category = $this->categoryRepository->findBySlug($slugOrURLKey);
 
         if ($category) {
+            if (! $category->isAvailableInChannel()) {
+                abort(404);
+            }
+
             return view('shop::categories.view', [
                 'category' => $category,
                 'params' => [
@@ -64,12 +69,8 @@ class ProductsCategoriesProxyController extends Controller
             ]);
         }
 
-        if (core()->getConfigData('catalog.products.search.engine') == 'elastic') {
-            $searchEngine = core()->getConfigData('catalog.products.search.storefront_mode');
-        }
-
         $product = $this->productRepository
-            ->setSearchEngine($searchEngine ?? 'database')
+            ->setSearchContext(SearchContextEnum::STOREFRONT)
             ->findBySlug($slugOrURLKey);
 
         if ($product) {
@@ -77,6 +78,7 @@ class ProductsCategoriesProxyController extends Controller
                 ! $product->url_key
                 || ! $product->visible_individually
                 || ! $product->status
+                || ! $product->isAvailableInChannel()
             ) {
                 abort(404);
             }
@@ -104,7 +106,7 @@ class ProductsCategoriesProxyController extends Controller
 
             $category = $this->categoryRepository->findBySlug($trimmedSlug);
 
-            if ($category) {
+            if ($category?->isAvailableInChannel()) {
                 return redirect()->to($trimmedSlug, 301);
             }
         }

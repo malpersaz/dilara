@@ -51,7 +51,7 @@
 
                             <x-admin::form.control-group.control
                                 type="textarea"
-                                class="h-[180px]"
+                                class="h-45"
                                 name="prompt"
                                 rules="required"
                                 v-model="ai.prompt"
@@ -114,7 +114,7 @@
 
                             <x-admin::form.control-group.control
                                 type="textarea"
-                                class="h-[180px]"
+                                class="h-45"
                                 name="content"
                                 v-model="ai.content"
                             />
@@ -306,7 +306,7 @@
                     tinyMCEHelper.initTinyMCE({
                         selector: this.selector,
                         plugins: 'image media wordcount save fullscreen code table lists link',
-                        toolbar1: 'formatselect | bold italic strikethrough forecolor backcolor image alignleft aligncenter alignright alignjustify | link hr |numlist bullist outdent indent  | removeformat | code | table | aibutton',
+                        toolbar1: 'blocks | bold italic strikethrough forecolor backcolor image alignleft aligncenter alignright alignjustify | link hr | numlist bullist outdent indent | removeformat | code | table | aibutton',
                         image_advtab: true,
                         directionality : "{{ core()->getCurrentLocale()->direction }}",
 

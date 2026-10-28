@@ -1,134 +1,116 @@
-import {
-    createTaxRate,
-    createTaxCategoryReturnName,
-} from "../../../../utils/admin";
-import { expect, test } from "../../../../setup";
-import { ProductCreation } from "../../../../pages/admin/catalog/products/ProductCreatePage";
-import { RuleDeletePage } from "../../../../pages/admin/marketing/promotion/RuleDeletePage";
+import { test } from "../../../../setup";
+import { ProductListPage } from "../../../../pages/admin/catalog/products/ProductListPage";
 import { RuleCreatePage } from "../../../../pages/admin/marketing/promotion/RuleCreatePage";
+import { RuleDeletePage } from "../../../../pages/admin/marketing/promotion/RuleDeletePage";
 import { RuleApplyPage } from "../../../../pages/shop/rules/RuleApplyPage";
-import { loginAsAdmin } from "../../../../utils/admin";
-import { generateName } from "../../../../utils/faker";
-import { Page } from "@playwright/test";
+import type { BaseProduct } from "../../../../pages/types/product.types";
+import {
+    createTaxCategory,
+    createTaxRate,
+    deleteTaxCategoriesIfPresent,
+    deleteTaxRatesIfPresent,
+} from "../../../../utils/admin";
+import { uniqueStamp } from "../../../../utils/faker";
+import {
+    addRuleCondition,
+    applyProductChange,
+    buildRuleConditionCases,
+    caseTitle,
+    createRuleProduct,
+    RULE_PRODUCT_PRICE,
+} from "../../rule-conditions";
 
-let generatedSku: string;
-generatedSku = `SKU-${Date.now()}`;
-const taxCategoryName = generateName();
-const taxCategoryName2 = generateName();
+type TaxCategoryChoice = "assigned" | "other";
 
-test.beforeEach(
-    "should create simple product and tax category",
-    async ({ adminPage }) => {
-        await createTaxRate(adminPage);
+let taxCategories: Record<TaxCategoryChoice, string>;
+let rateIdentifier: string;
+let product: BaseProduct;
+let createdRules: string[];
 
-        await createTaxCategoryReturnName(taxCategoryName, adminPage);
+test.beforeEach(async ({ adminPage }) => {
+    const stamp = uniqueStamp();
 
-        await createTaxCategoryReturnName(taxCategoryName2, adminPage);
+    createdRules = [];
+    taxCategories = {
+        assigned: `Assigned Tax ${stamp}`,
+        other: `Other Tax ${stamp}`,
+    };
 
-        const productCreation = new ProductCreation(adminPage);
+    rateIdentifier = await createTaxRate(adminPage);
 
-        await productCreation.createProduct({
-            type: "simple",
-            sku: generatedSku,
-            name: `Simple-${Date.now()}`,
-            shortDescription: "Short desc",
-            description: "Full desc",
-            price: 199,
-            weight: 1,
-            inventory: 100,
-        });
+    await createTaxCategory(adminPage, taxCategories.assigned, rateIdentifier);
+    await createTaxCategory(adminPage, taxCategories.other, rateIdentifier);
 
-        await assignTaxCategory(taxCategoryName, adminPage);
-    },
-);
+    product = await createRuleProduct(adminPage);
 
-test.afterEach(async ({ adminPage }) => {
-    const ruleDeletePage = new RuleDeletePage(adminPage);
-
-    await ruleDeletePage.deleteCatalogRuleAndProduct();
+    await applyProductChange(adminPage, product.name, {
+        kind: "select",
+        code: "tax_category_id",
+        label: taxCategories.assigned,
+    });
 });
 
-async function assignTaxCategory(taxCategoryName: string, page: Page) {
-    await page.goto("admin/catalog/products");
-    await page.locator("span.cursor-pointer.icon-sort-right").nth(1).click();
-    await page.waitForLoadState("networkidle");
-    await page.locator('span:text-is("Tax Category")').click();
-    await page.locator(`span:text-is("${taxCategoryName}")`).first().click();
-    await page.locator('button:has-text("Save Product")').first().click();
+test.afterEach(async ({ adminPage }) => {
+    try {
+        await new RuleDeletePage(adminPage).deleteCatalogRulesIfPresent(createdRules);
+    } finally {
+        try {
+            await new ProductListPage(adminPage).deleteProductsIfPresent([
+                product.name,
+            ]);
+        } finally {
+            try {
+                await deleteTaxCategoriesIfPresent(adminPage, [
+                    taxCategories.assigned,
+                    taxCategories.other,
+                ]);
+            } finally {
+                await deleteTaxRatesIfPresent(adminPage, [rateIdentifier]);
+            }
+        }
+    }
+});
 
-    await expect(
-        page.getByText("Product updated successfully").first(),
-    ).toBeVisible();
-}
-
-async function runCatalogRuleTest({
-    page,
-    operator,
-    option,
-    type,
-}: {
-    page: Page;
-    operator: string;
-    option: string;
-    type: string;
-}) {
-    const ruleCreatePage = new RuleCreatePage(page);
-    const ruleApplyPage = new RuleApplyPage(page);
-
-    await loginAsAdmin(page);
-
-    await ruleCreatePage.catalogRuleCreationFlow();
-
-    const discountValue = await ruleCreatePage.addCondition({
+const cases = buildRuleConditionCases([
+    {
+        conditionLabel: "tax category",
         attribute: "product|tax_category_id",
-        operator,
-        optionSelect: option,
-        couponType: type,
-    });
-
-    await ruleCreatePage.saveCatalogRule();
-
-    await ruleApplyPage.verifyCatalogRule(discountValue ?? 0, type);
-}
-
-const testCases = [
-    {
-        operator: "==",
-        option: taxCategoryName,
-        label: "is equal to",
-        type: "percentage",
+        rows: [
+            { operator: "==", optionSelect: () => taxCategories.assigned },
+            { operator: "!=", optionSelect: () => taxCategories.other },
+        ],
     },
-    {
-        operator: "==",
-        option: taxCategoryName,
-        label: "is equal to",
-        type: "fixed",
-    },
-    {
-        operator: "!=",
-        option: taxCategoryName2,
-        label: "is not equal to",
-        type: "percentage",
-    },
-    {
-        operator: "!=",
-        option: taxCategoryName2,
-        label: "is not equal to",
-        type: "fixed",
-    },
-];
+]);
 
 test.describe("catalog rules", () => {
     test.describe("product attribute conditions", () => {
-        for (const tc of testCases) {
-            test(`should apply condition when tax category condition is -> ${tc.label} (${tc.type})`, async ({
-                page,
+        for (const testCase of cases) {
+            test(caseTitle(testCase, "discount the listed price"), async ({
+                adminPage,
+                shopPage,
             }) => {
-                await runCatalogRuleTest({
-                    page,
-                    operator: tc.operator,
-                    option: tc.option,
-                    type: tc.type,
+                const ruleCreatePage = new RuleCreatePage(adminPage);
+                const ruleApplyPage = new RuleApplyPage(shopPage);
+
+                const rule = await ruleCreatePage.catalogRuleCreationFlow();
+
+                createdRules.push(rule.name);
+
+                const discountValue = await addRuleCondition(
+                    ruleCreatePage,
+                    testCase,
+                    product.sku,
+                );
+
+                await ruleCreatePage.saveCatalogRule();
+
+                await ruleApplyPage.searchProduct(product.name);
+
+                await ruleApplyPage.expectCatalogRuleDiscount({
+                    productName: product.name,
+                    price: RULE_PRODUCT_PRICE,
+                    value: discountValue,
+                    type: testCase.couponType,
                 });
             });
         }

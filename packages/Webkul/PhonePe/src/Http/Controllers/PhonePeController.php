@@ -55,6 +55,17 @@ class PhonePeController extends Controller
             return redirect()->route('shop.checkout.cart.index');
         }
 
+        $currency = strtoupper($cart->base_currency_code ?? core()->getBaseCurrencyCode());
+
+        if (! $this->phonePe->isCurrencySupported($currency)) {
+            session()->flash('error', trans('phonepe::app.response.supported-currency-error', [
+                'currency' => $currency,
+                'supportedCurrencies' => implode(', ', $this->phonePe->getSupportedCurrencies()),
+            ]));
+
+            return redirect()->route('shop.checkout.cart.index');
+        }
+
         $paymentUrl = $this->phonePe->initiatePayment($cart);
 
         if (! $paymentUrl) {
@@ -131,6 +142,23 @@ class PhonePeController extends Controller
                 Cart::setCart($cart);
 
                 Cart::collectTotals();
+
+                $cart = Cart::getCart();
+
+                if (! $cart) {
+                    session()->flash('info', trans('phonepe::app.response.cart-not-found'));
+
+                    return redirect()->route('phonepe.cancel', ['merchantOrderId' => $merchantOrderId]);
+                }
+
+                if (
+                    Cart::hasError()
+                    || ! $this->paidAmountCoversCart($response, $cart)
+                ) {
+                    session()->flash('warning', trans('phonepe::app.response.phonepe-payment-failed'));
+
+                    return redirect()->route('phonepe.cancel', ['merchantOrderId' => $merchantOrderId]);
+                }
 
                 $data = (new OrderResource($cart))->jsonSerialize();
 
@@ -260,6 +288,12 @@ class PhonePeController extends Controller
 
             Cart::collectTotals();
 
+            $cart = Cart::getCart();
+
+            if (! $cart) {
+                return response()->json(['status' => 'cart_inactive'], 200);
+            }
+
             $data = (new OrderResource($cart))->jsonSerialize();
 
             $data['payment']['additional'] = [
@@ -296,6 +330,22 @@ class PhonePeController extends Controller
                 'status' => 'error',
             ], 500);
         }
+    }
+
+    /**
+     * Whether the amount PhonePe reports as paid still covers the cart being ordered.
+     *
+     * @param  object  $cart
+     */
+    protected function paidAmountCoversCart(array $response, $cart): bool
+    {
+        $paid = $response['data']['amount'] ?? null;
+
+        if ($paid === null) {
+            return true;
+        }
+
+        return (int) $paid === (int) round($cart->base_grand_total * 100);
     }
 
     /**

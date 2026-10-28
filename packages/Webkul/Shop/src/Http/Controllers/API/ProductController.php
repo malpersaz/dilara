@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Webkul\Category\Repositories\CategoryRepository;
 use Webkul\Marketing\Jobs\UpdateCreateSearchTerm as UpdateCreateSearchTermJob;
+use Webkul\Product\Enums\SearchContextEnum;
 use Webkul\Product\Repositories\ProductRepository;
 use Webkul\Shop\Helpers\CatalogApiCache;
 use Webkul\Shop\Http\Resources\ProductCardResource;
@@ -28,13 +29,7 @@ class ProductController extends APIController
      */
     public function index(): JsonResource|JsonResponse
     {
-        $searchEngine = 'database';
-
-        if (core()->getConfigData('catalog.products.search.engine') == 'elastic') {
-            $searchEngine = core()->getConfigData('catalog.products.search.storefront_mode');
-        }
-
-        $searchData = $this->resolveSearchQueryData($searchEngine);
+        $searchData = $this->resolveSearchQueryData();
 
         $query = $searchData['effective_query'] ?? $searchData['original_query'];
 
@@ -43,7 +38,7 @@ class ProductController extends APIController
          * and the search-term job must run on every request.
          */
         if (! empty($query)) {
-            $products = $this->getProducts($searchEngine, $query);
+            $products = $this->getProducts($query);
 
             /**
              * Update or create search term only if
@@ -65,8 +60,8 @@ class ProductController extends APIController
          * Listing/carousel responses (no search term) are cached per catalog
          * version, so repeated homepage visits skip the database entirely.
          */
-        $data = $this->catalogApiCache->remember('products', request()->query(), function () use ($searchEngine) {
-            return ProductCardResource::collection($this->getProducts($searchEngine, ''))
+        $data = $this->catalogApiCache->remember('products', request()->query(), function () {
+            return ProductCardResource::collection($this->getProducts(''))
                 ->response()
                 ->getData(true);
         });
@@ -75,24 +70,42 @@ class ProductController extends APIController
     }
 
     /**
-     * Fetch the storefront product listing for the given search engine and query.
+     * Fetch the storefront product listing for the given query.
      */
-    protected function getProducts(string $searchEngine, string $query)
+    protected function getProducts(string $query)
     {
+        $params = array_merge(request()->query(), [
+            'query' => $query,
+            'channel_id' => core()->getCurrentChannel()->id,
+            'status' => 1,
+            'visible_individually' => 1,
+        ]);
+
+        if (! empty($params['category_id'])) {
+            $categoryIds = [];
+
+            foreach (explode(',', $params['category_id']) as $categoryId) {
+                $category = $this->categoryRepository->find($categoryId);
+
+                if ($category) {
+                    $categoryIds = array_merge($categoryIds, $category->descendantsAndSelf($category->id)->pluck('id')->toArray());
+                } else {
+                    $categoryIds[] = $categoryId;
+                }
+            }
+
+            $params['category_id'] = implode(',', array_unique($categoryIds));
+        }
+
         return $this->productRepository
-            ->setSearchEngine($searchEngine)
-            ->getAll(array_merge(request()->query(), [
-                'query' => $query,
-                'channel_id' => core()->getCurrentChannel()->id,
-                'status' => 1,
-                'visible_individually' => 1,
-            ]));
+            ->setSearchContext(SearchContextEnum::STOREFRONT)
+            ->getAll($params);
     }
 
     /**
      * Resolve search query data.
      */
-    protected function resolveSearchQueryData($searchEngine): array
+    protected function resolveSearchQueryData(): array
     {
         if (request()->query('suggest', '') === '0') {
             return [
@@ -105,18 +118,16 @@ class ProductController extends APIController
 
         return [
             'original_query' => $originalQuery,
-            'effective_query' => $this->getEffectiveQuery($originalQuery, $searchEngine),
+            'effective_query' => $this->getEffectiveQuery($originalQuery),
         ];
     }
 
     /**
      * It will return the effective query based on the search engine.
      */
-    protected function getEffectiveQuery(string $originalQuery, string $searchEngine): ?string
+    protected function getEffectiveQuery(string $originalQuery): ?string
     {
-        $effectiveQuery = $this->productRepository->setSearchEngine($searchEngine)->getSuggestions($originalQuery);
-
-        return $effectiveQuery;
+        return $this->productRepository->setSearchContext(SearchContextEnum::STOREFRONT)->getSuggestions($originalQuery);
     }
 
     /**

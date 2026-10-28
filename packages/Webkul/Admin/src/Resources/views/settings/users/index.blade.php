@@ -168,7 +168,7 @@
 
                             <!-- Email -->
                             <p
-                                class="break-words"
+                                class="wrap-break-word"
                                 data-label="@lang('admin::app.settings.users.index.datagrid.email')"
                             >@{{ record.email }}</p>
 
@@ -180,7 +180,10 @@
                                 class="flex justify-end"
                                 data-label="actions"
                             >
-                                <a @click="id=1; editModal(record.actions.find(action => action.index === 'edit')?.url)">
+                                <a
+                                    v-if="record.actions.find(action => action.index === 'edit')"
+                                    @click="id=1; editModal(record.actions.find(action => action.index === 'edit')?.url)"
+                                >
                                     <span
                                         :class="record.actions.find(action => action.index === 'edit')?.icon"
                                         class="cursor-pointer rounded-md p-1.5 text-2xl transition-all hover:bg-gray-200 dark:hover:bg-gray-800 max-sm:place-self-center"
@@ -188,7 +191,10 @@
                                     </span>
                                 </a>
 
-                                <a @click="performAction(record.actions.find(action => action.index === 'delete'))">
+                                <a
+                                    v-if="record.actions.find(action => action.index === 'delete')"
+                                    @click="performAction(record.actions.find(action => action.index === 'delete'))"
+                                >
                                     <span
                                         :class="record.actions.find(action => action.index === 'delete')?.icon"
                                         class="cursor-pointer rounded-md p-1.5 text-2xl transition-all hover:bg-gray-200 dark:hover:bg-gray-800 max-sm:place-self-center"
@@ -333,7 +339,7 @@
                                     >
                                         <select
                                             name="role_id"
-                                            class="flex min-h-[39px] w-full rounded-md border bg-white px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400 focus:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"
+                                            class="flex min-h-9.75 w-full rounded-md border bg-white px-3 py-2 text-sm text-gray-600 transition-all hover:border-gray-400 focus:border-gray-400 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-400 dark:focus:border-gray-400"
                                             :class="[errors['options[sort]'] ? 'border border-red-600 hover:border-red-600' : '']"
                                             v-model="data.user.role_id"
                                         >
@@ -352,7 +358,7 @@
                                 </x-admin::form.control-group>
 
                                 <template v-if="currentUserId != data.user.id">
-                                    <x-admin::form.control-group class="!mb-0 w-full flex-1">
+                                    <x-admin::form.control-group class="mb-0! w-full flex-1">
                                         <x-admin::form.control-group.label>
                                             @lang('admin::app.settings.users.index.create.status')
                                         </x-admin::form.control-group.label>

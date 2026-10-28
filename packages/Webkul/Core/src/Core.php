@@ -28,7 +28,7 @@ class Core
      *
      * @var string
      */
-    const BAGISTO_VERSION = '2.4.9';
+    const BAGISTO_VERSION = '2.5.0';
 
     /**
      * Current Channel.
@@ -66,28 +66,28 @@ class Core
     protected $currentLocale;
 
     /**
-     * Guest Customer Group
+     * Guest Customer Group.
      *
      * @var CustomerGroup
      */
     protected $guestCustomerGroup;
 
     /**
-     * Exchange rates
+     * Exchange rates.
      *
      * @var array
      */
     protected $exchangeRates = [];
 
     /**
-     * Exchange rates
+     * Tax categories, keyed by id.
      *
      * @var array
      */
     protected $taxCategoriesById = [];
 
     /**
-     * Stores singleton instances
+     * Stores singleton instances.
      *
      * @var array
      */
@@ -218,7 +218,7 @@ class Core
     }
 
     /**
-     * Get channel code from request.
+     * Get channel from request, falling back to the current one when the request names a channel the store does not have.
      *
      * @return Contracts\Channel
      */
@@ -227,7 +227,7 @@ class Core
         $code = request()->query('channel');
 
         if ($code) {
-            return $this->channelRepository->findOneByField('code', $code);
+            return $this->channelRepository->findOneByField('code', $code) ?? $this->getCurrentChannel();
         }
 
         return $this->getCurrentChannel();
@@ -241,7 +241,7 @@ class Core
      */
     public function getRequestedChannelCode($fallback = true)
     {
-        $channelCode = request()->get('channel');
+        $channelCode = request()->input('channel');
 
         if (! $fallback) {
             return $channelCode;
@@ -291,7 +291,7 @@ class Core
     /**
      * Get locale from request.
      *
-     * @return string
+     * @return Contracts\Locale
      */
     public function getRequestedLocale()
     {
@@ -314,7 +314,7 @@ class Core
      */
     public function getRequestedLocaleCode($localeKey = 'locale', $fallback = true)
     {
-        $localeCode = request()->get($localeKey);
+        $localeCode = request()->input($localeKey);
 
         if (! $fallback) {
             return $localeCode;
@@ -324,22 +324,31 @@ class Core
     }
 
     /**
-     * Check requested locale code in requested channel. If not found,
-     * then set channel default locale code.
+     * Locale codes the request applies to, expanding the locale switcher's "all" option to every
+     * locale rather than using it as a locale of its own.
+     *
+     * @param  string  $localeKey  optional
+     * @return array<int, string>
+     */
+    public function getRequestedLocaleCodes($localeKey = 'locale'): array
+    {
+        $localeCode = request()->input($localeKey);
+
+        if ($localeCode === 'all') {
+            return $this->getAllLocales()->pluck('code')->all();
+        }
+
+        return [$localeCode ?: app()->getLocale()];
+    }
+
+    /**
+     * The requested locale code when the requested channel has it, otherwise that channel's default.
      *
      * @return string
      */
     public function getRequestedLocaleCodeInRequestedChannel()
     {
-        $requestedLocaleCode = $this->getRequestedLocaleCode();
-
-        $requestedChannel = $this->getRequestedChannel();
-
-        if ($requestedChannel->locales->contains('code', $requestedLocaleCode)) {
-            return $requestedLocaleCode;
-        }
-
-        return $requestedChannel->default_locale->code;
+        return $this->getRequestedChannel()->resolveLocaleCode($this->getRequestedLocaleCode());
     }
 
     /**
@@ -420,9 +429,7 @@ class Core
     }
 
     /**
-     * Returns current channel's currency model.
-     *
-     * Will fallback to base currency if not set.
+     * Returns current channel's currency model, falling back to the channel's base currency.
      *
      * @return Contracts\Currency
      */
@@ -446,7 +453,7 @@ class Core
     }
 
     /**
-     * Returns exchange rates.
+     * Returns the exchange rate of the target currency.
      *
      * @return object
      */
@@ -466,7 +473,7 @@ class Core
      *
      * @param  float  $amount
      * @param  string  $targetCurrencyCode
-     * @return string
+     * @return float
      */
     public function convertPrice($amount, $targetCurrencyCode = null)
     {
@@ -492,7 +499,7 @@ class Core
      *
      * @param  float  $amount
      * @param  string  $targetCurrencyCode
-     * @return string
+     * @return float
      */
     public function convertToBasePrice($amount, $targetCurrencyCode = null)
     {
@@ -578,7 +585,7 @@ class Core
 
         $now = Carbon::now($timezone);
 
-        if (! $this->is_empty_date($dateFrom)) {
+        if (! $this->isEmptyDate($dateFrom)) {
             $from = Carbon::parse($dateFrom, $timezone)->startOfDay();
 
             if ($now->lt($from)) {
@@ -586,7 +593,7 @@ class Core
             }
         }
 
-        if (! $this->is_empty_date($dateTo)) {
+        if (! $this->isEmptyDate($dateTo)) {
             $to = Carbon::parse($dateTo, $timezone)->endOfDay();
 
             if ($now->gt($to)) {
@@ -616,7 +623,7 @@ class Core
      * @param  string  $date
      * @return bool
      */
-    public function is_empty_date($date)
+    public function isEmptyDate($date)
     {
         return preg_replace('#[ 0:-]#', '', $date) === '';
     }
@@ -648,11 +655,44 @@ class Core
     }
 
     /**
-     * Retrieve information from payment configuration.
+     * Week range.
+     *
+     * @param  string  $date
+     * @param  int  $day
+     * @return string
+     */
+    public function xWeekRange($date, $day)
+    {
+        $carbonDate = Carbon::parse($date);
+
+        if (! $day) {
+            $start = $carbonDate->isSunday() ? $carbonDate : $carbonDate->previous(Carbon::SUNDAY);
+
+            return $start->format('Y-m-d');
+        } else {
+            $end = $carbonDate->isSaturday() ? $carbonDate : $carbonDate->next(Carbon::SATURDAY);
+
+            return $end->format('Y-m-d');
+        }
+    }
+
+    /**
+     * Retrieve a value from the system configuration.
      */
     public function getConfigData(string $field, ?string $currentChannelCode = null, ?string $currentLocaleCode = null): mixed
     {
         return system_config()->getConfigData($field, $currentChannelCode, $currentLocaleCode);
+    }
+
+    /**
+     * Get config field.
+     *
+     * @param  string  $fieldName
+     * @return array
+     */
+    public function getConfigField($fieldName)
+    {
+        return system_config()->getConfigField($fieldName);
     }
 
     /**
@@ -671,7 +711,7 @@ class Core
      * @param  string  $code
      * @return string
      */
-    public function country_name($code)
+    public function countryName($code)
     {
         $country = $this->countryRepository->findOneByField('code', $code);
 
@@ -692,7 +732,7 @@ class Core
     /**
      * Retrieve all grouped states by country code.
      *
-     * @return Collection
+     * @return array
      */
     public function groupedStatesByCountries()
     {
@@ -706,9 +746,9 @@ class Core
     }
 
     /**
-     * Retrieve all grouped states by country code.
+     * Find a state by its country code and state code.
      *
-     * @return Collection
+     * @return Contracts\CountryState|false
      */
     public function findStateByCountryCode($countryCode = null, $stateCode = null)
     {
@@ -721,20 +761,6 @@ class Core
         } else {
             return false;
         }
-    }
-
-    /**
-     * Return guest customer group.
-     *
-     * @return \Webkul\Customer\Contract\CustomerGroup
-     */
-    public function getGuestCustomerGroup()
-    {
-        if ($this->guestCustomerGroup) {
-            return $this->guestCustomerGroup;
-        }
-
-        return $this->guestCustomerGroup = $this->customerGroupRepository->findOneByField('code', 'guest');
     }
 
     /**
@@ -768,36 +794,17 @@ class Core
     }
 
     /**
-     * Week range.
+     * Return guest customer group.
      *
-     * @param  string  $date
-     * @param  int  $day
-     * @return string
+     * @return CustomerGroup
      */
-    public function xWeekRange($date, $day)
+    public function getGuestCustomerGroup()
     {
-        $carbonDate = Carbon::parse($date);
-
-        if (! $day) {
-            $start = $carbonDate->isSunday() ? $carbonDate : $carbonDate->previous(Carbon::SUNDAY);
-
-            return $start->format('Y-m-d');
-        } else {
-            $end = $carbonDate->isSaturday() ? $carbonDate : $carbonDate->next(Carbon::SATURDAY);
-
-            return $end->format('Y-m-d');
+        if ($this->guestCustomerGroup) {
+            return $this->guestCustomerGroup;
         }
-    }
 
-    /**
-     * Get config field.
-     *
-     * @param  string  $fieldName
-     * @return array
-     */
-    public function getConfigField($fieldName)
-    {
-        return system_config()->getConfigField($fieldName);
+        return $this->guestCustomerGroup = $this->customerGroupRepository->findOneByField('code', 'guest');
     }
 
     /**
@@ -809,7 +816,10 @@ class Core
     public function convertEmptyStringsToNull($array)
     {
         foreach ($array as $key => $value) {
-            if ($value == '' || $value == 'null') {
+            if (
+                $value == ''
+                || $value == 'null'
+            ) {
                 $array[$key] = null;
             }
         }
@@ -939,9 +949,6 @@ class Core
 
         $rules = [];
 
-        /**
-         * Prerender Rules
-         */
         if ($this->getConfigData($configPath.'prerender_enabled')) {
             $prerenderEagerness = $this->getConfigData($configPath.'prerender_eagerness') ?? 'moderate';
 
@@ -973,9 +980,6 @@ class Core
             ];
         }
 
-        /**
-         * Prefetch Rules
-         */
         if ($this->getConfigData($configPath.'prefetch_enabled')) {
             $prefetchEagerness = $this->getConfigData($configPath.'prefetch_eagerness') ?? 'moderate';
 

@@ -222,7 +222,7 @@
                                 <p class="text-sm text-gray-500 dark:text-gray-300" v-text="ticket.formatted_price_text"></p>
                             </div>
 
-                            <x-admin::form.control-group class="!mb-0">
+                            <x-admin::form.control-group class="mb-0!">
                                 <x-admin::form.control-group.control
                                     type="text"
                                     ::name="'booking[qty][' + ticket.id + ']'"
@@ -351,7 +351,7 @@
                     this.isLoading = true;
 
                     this.$axios
-                        .get("{{ route('admin.sales.booking-product.config', ':id') }}".replace(':id', this.productOptions.product.id))
+                        .get("{{ route('admin.sales.booking_product.config', ':id') }}".replace(':id', this.productOptions.product.id))
                         .then((response) => {
                             this.config = response.data.data;
 
@@ -388,7 +388,7 @@
                     }
 
                     this.$axios
-                        .get("{{ route('admin.sales.booking-product.slots', ':id') }}".replace(':id', this.productOptions.product.id), {
+                        .get("{{ route('admin.sales.booking_product.slots', ':id') }}".replace(':id', this.productOptions.product.id), {
                             params: { date },
                         })
                         .then((response) => {

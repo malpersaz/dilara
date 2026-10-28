@@ -6,6 +6,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Webkul\MagicAI\Facades\MagicAI;
 use Webkul\Marketing\Repositories\SearchTermRepository;
+use Webkul\Product\Enums\SearchContextEnum;
 use Webkul\Product\Repositories\SearchRepository;
 
 class SearchController extends Controller
@@ -28,20 +29,22 @@ class SearchController extends Controller
     public function index()
     {
         $this->validate(request(), [
-            'query' => ['sometimes', 'required', 'string', 'regex:/^[^\\\\]+$/u'],
+            'query' => ['sometimes', 'bail', 'required', 'string', 'regex:/^[^\\\\]+$/u'],
         ]);
-
-        $searchTerm = $this->searchTermRepository->findOneWhere([
-            'term' => request()->query('query'),
-            'channel_id' => core()->getCurrentChannel()->id,
-            'locale' => app()->getLocale(),
-        ]);
-
-        if ($searchTerm?->redirect_url) {
-            return redirect()->to($searchTerm->redirect_url);
-        }
 
         $query = request()->query('query');
+
+        if (is_string($query)) {
+            $searchTerm = $this->searchTermRepository->findOneWhere([
+                'term' => $query,
+                'channel_id' => core()->getCurrentChannel()->id,
+                'locale' => app()->getLocale(),
+            ]);
+
+            if ($searchTerm?->redirect_url) {
+                return redirect()->to($searchTerm->redirect_url);
+            }
+        }
 
         $suggestion = null;
 
@@ -49,12 +52,8 @@ class SearchController extends Controller
             ! request()->has('suggest')
             || request()->query('suggest') !== '0'
         ) {
-            $searchEngine = core()->getConfigData('catalog.products.search.engine') === 'elastic'
-                ? core()->getConfigData('catalog.products.search.storefront_mode')
-                : 'database';
-
             $suggestion = $this->searchRepository
-                ->setSearchEngine($searchEngine)
+                ->setSearchContext(SearchContextEnum::STOREFRONT)
                 ->getSuggestions($query);
         }
 

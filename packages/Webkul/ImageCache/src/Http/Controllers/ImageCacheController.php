@@ -2,11 +2,12 @@
 
 namespace Webkul\ImageCache\Http\Controllers;
 
-use Closure;
 use Exception;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\Storage;
 use Webkul\Core\Helpers\InstalledPackages;
+use Webkul\ImageCache\TemplateRegistry;
 
 class ImageCacheController extends Controller
 {
@@ -16,9 +17,22 @@ class ImageCacheController extends Controller
     protected const BAGISTO_LOGO = 'https://updates.bagisto.com/bagisto.png';
 
     /**
+     * The image types the cache serves, so a stored file whose bytes read as anything else is never sent from the store.
+     */
+    protected const SERVABLE_MIME_TYPES = [
+        'image/avif', 'image/bmp', 'image/gif', 'image/jpeg', 'image/png', 'image/vnd.microsoft.icon', 'image/webp',
+        'image/x-icon', 'image/x-ms-bmp',
+    ];
+
+    /**
      * The current cache template name.
      */
     protected string $template = '';
+
+    /**
+     * Create a new controller instance.
+     */
+    public function __construct(protected TemplateRegistry $templateRegistry) {}
 
     /**
      * Get the HTTP response for the requested image.
@@ -46,28 +60,32 @@ class ImageCacheController extends Controller
             abort(404, 'Template not found.');
         }
 
-        $path = $this->getImagePath($filename);
+        $contents = $this->getImageContents($filename);
 
-        if (! file_exists($path)) {
+        if (is_null($contents)) {
             abort(404, 'Image not found.');
         }
 
         try {
-            $image = image_manager()->read($path);
+            $image = image_manager()->fromBytes($contents);
 
-            if (is_object($templateConfig) && method_exists($templateConfig, 'applyFilter')) {
+            if (
+                is_object($templateConfig)
+                && method_exists($templateConfig, 'applyFilter')
+            ) {
                 $image = $templateConfig->applyFilter($image);
-            } elseif (class_exists($templateConfig)) {
+            } elseif (
+                is_string($templateConfig)
+                && class_exists($templateConfig)
+            ) {
                 $filter = new $templateConfig;
 
                 if (method_exists($filter, 'applyFilter')) {
                     $image = $filter->applyFilter($image);
                 }
-            } elseif ($templateConfig instanceof Closure) {
-                $image = $templateConfig($image);
             }
 
-            $content = (string) $image->encodeByMediaType();
+            $content = $image->toBytes();
 
             return $this->buildResponse($content);
         } catch (Exception) {
@@ -141,13 +159,11 @@ class ImageCacheController extends Controller
      */
     protected function getOriginal(string $filename): Response
     {
-        $path = $this->getImagePath($filename);
+        $content = $this->getImageContents($filename);
 
-        if (! file_exists($path)) {
+        if (is_null($content)) {
             abort(404, 'Image not found.');
         }
-
-        $content = file_get_contents($path);
 
         return $this->buildResponse($content);
     }
@@ -157,19 +173,42 @@ class ImageCacheController extends Controller
      */
     protected function getDownload(string $filename): Response
     {
-        $path = $this->getImagePath($filename);
+        $content = $this->getImageContents($filename);
 
-        if (! file_exists($path)) {
+        if (is_null($content)) {
             abort(404, 'Image not found.');
         }
-
-        $content = file_get_contents($path);
 
         $response = $this->buildResponse($content);
 
         $response->header('Content-Disposition', 'attachment; filename="'.basename($filename).'"');
 
         return $response;
+    }
+
+    /**
+     * Read an image, wherever the application keeps its files.
+     *
+     * The configured disk is asked first; the configured paths then cover a file
+     * published beside the application rather than held on a disk.
+     */
+    protected function getImageContents(string $filename): ?string
+    {
+        $contents = Storage::get($this->sanitizeFilename($filename));
+
+        if (! is_null($contents)) {
+            return $contents;
+        }
+
+        $path = $this->getImagePath($filename);
+
+        if (! file_exists($path)) {
+            return null;
+        }
+
+        $contents = file_get_contents($path);
+
+        return $contents === false ? null : $contents;
     }
 
     /**
@@ -259,25 +298,27 @@ class ImageCacheController extends Controller
     }
 
     /**
-     * Get the template class or closure.
+     * Get the template class registered under the name, for the theme of the requesting channel.
      */
     protected function getTemplate(string $template): mixed
     {
-        $templates = config('imagecache.templates', []);
-
-        return $templates[$template] ?? null;
+        return $this->templateRegistry->find($template, $this->templateRegistry->currentTheme());
     }
 
     /**
-     * Build the HTTP response with the image content.
+     * Build the HTTP response with the image content, refusing content that is not a servable image.
      */
     protected function buildResponse(string $content): Response
     {
         $mime = finfo_buffer(finfo_open(FILEINFO_MIME_TYPE), $content);
 
+        if (! in_array($mime, self::SERVABLE_MIME_TYPES)) {
+            abort(404, 'Image not found.');
+        }
+
         $eTag = md5($content);
 
-        $notModified = isset($_SERVER['HTTP_IF_NONE_MATCH']) && $_SERVER['HTTP_IF_NONE_MATCH'] === $eTag;
+        $notModified = request()->header('If-None-Match') === $eTag;
 
         $statusCode = $notModified ? 304 : 200;
 
@@ -289,7 +330,9 @@ class ImageCacheController extends Controller
             'Content-Type' => $mime,
             'Cache-Control' => 'max-age='.$maxAge.', public',
             'Content-Length' => strlen($content),
+            'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; sandbox",
             'Etag' => $eTag,
+            'X-Content-Type-Options' => 'nosniff',
         ]);
     }
 }

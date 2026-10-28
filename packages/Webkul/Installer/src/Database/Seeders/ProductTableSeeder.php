@@ -10,15 +10,23 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File as Filesystem;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Webkul\Core\Concerns\SyncsPostgresSequences;
 use Webkul\Installer\Database\Seeders\Category\CategoryTableSeeder;
-use Webkul\Installer\Database\Seeders\Shop\ThemeCustomizationTableSeeder;
+use Webkul\Installer\Database\Seeders\Shop\SectionTableSeeder;
 
 class ProductTableSeeder extends Seeder
 {
+    use SyncsPostgresSequences;
+
     /**
      * Base path for product images within the package.
      */
     const BASE_PATH = 'packages/Webkul/Installer/src/Resources/assets/images/seeders/products/';
+
+    /**
+     * Base path for downloadable link and sample files within the package.
+     */
+    const DOWNLOADABLE_BASE_PATH = 'packages/Webkul/Installer/src/Resources/assets/downloadables/seeders/';
 
     /**
      * Path to the JSON data file.
@@ -149,11 +157,13 @@ class ProductTableSeeder extends Seeder
 
         (new CategoryTableSeeder)->sampleCategories($parameters);
 
-        (new ThemeCustomizationTableSeeder)->sampleThemeCustomizations($parameters);
+        (new SectionTableSeeder)->sampleSections($parameters);
 
         $this->seedProducts($this->defaultLocale);
 
         $this->seedProductRelations();
+
+        $this->syncPostgresSequences();
     }
 
     // =========================================================================
@@ -380,7 +390,12 @@ class ProductTableSeeder extends Seeder
         $data = $this->loadJsonData();
 
         if (filled($data['downloadable_links'] ?? [])) {
-            $this->insertStrippingTranslations('downloadable_links', 'product_downloadable_links', withTimestamps: true);
+            $this->insertStrippingTranslations(
+                'downloadable_links',
+                'product_downloadable_links',
+                withTimestamps: true,
+                transform: fn ($row) => $this->storeDownloadableFile($row, 'downloadable-links'),
+            );
 
             $this->insertTranslations($data['downloadable_links'], 'product_downloadable_link_translations', 'product_downloadable_link_id', [
                 'title' => 'translations.title',
@@ -388,7 +403,12 @@ class ProductTableSeeder extends Seeder
         }
 
         if (filled($data['downloadable_samples'] ?? [])) {
-            $this->insertStrippingTranslations('downloadable_samples', 'product_downloadable_samples', withTimestamps: true);
+            $this->insertStrippingTranslations(
+                'downloadable_samples',
+                'product_downloadable_samples',
+                withTimestamps: true,
+                transform: fn ($row) => $this->storeDownloadableFile($row, 'downloadable-samples'),
+            );
 
             $this->insertTranslations($data['downloadable_samples'], 'product_downloadable_sample_translations', 'product_downloadable_sample_id', [
                 'title' => 'translations.title',
@@ -745,10 +765,10 @@ class ProductTableSeeder extends Seeder
     }
 
     /**
-     * Insert data from a JSON key, stripping the embedded 'translations' key
-     * and optionally appending timestamps.
+     * Insert data from a JSON key, stripping the embedded 'translations' key, optionally
+     * appending timestamps and passing each row through a transformer.
      */
-    protected function insertStrippingTranslations(string $jsonKey, string $table, bool $withTimestamps = false): void
+    protected function insertStrippingTranslations(string $jsonKey, string $table, bool $withTimestamps = false, ?callable $transform = null): void
     {
         $data = $this->loadJsonData();
 
@@ -757,8 +777,12 @@ class ProductTableSeeder extends Seeder
         }
 
         $rows = collect($data[$jsonKey])
-            ->map(function ($item) use ($withTimestamps) {
+            ->map(function ($item) use ($withTimestamps, $transform) {
                 $row = Arr::except($item, ['translations']);
+
+                if ($transform) {
+                    $row = $transform($row);
+                }
 
                 if ($withTimestamps) {
                     $row['created_at'] = $this->timestamp;
@@ -850,6 +874,34 @@ class ProductTableSeeder extends Seeder
 
         if (Filesystem::exists($filePath)) {
             return Storage::putFile($targetPath, new File($filePath));
+        }
+
+        return null;
+    }
+
+    /**
+     * Copy a downloadable link or sample onto the private disk the storefront serves it from.
+     */
+    protected function storeDownloadableFile(array $row, string $directory): array
+    {
+        $source = Arr::pull($row, 'source_file');
+
+        $row['file'] = $source
+            ? $this->storePrivateFile('products/'.$row['product_id'].'/'.$directory, $source)
+            : null;
+
+        return $row;
+    }
+
+    /**
+     * Copy a packaged downloadable file into private storage, or null when it is missing.
+     */
+    protected function storePrivateFile(string $targetPath, string $file): ?string
+    {
+        $filePath = base_path(self::DOWNLOADABLE_BASE_PATH.$file);
+
+        if (Filesystem::exists($filePath)) {
+            return Storage::disk('private')->putFile($targetPath, new File($filePath));
         }
 
         return null;

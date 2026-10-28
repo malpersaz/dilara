@@ -20,7 +20,7 @@
     @endif
 
     <p 
-        class="!leading-6 text-gray-600 dark:text-gray-300"
+        class="leading-6! text-gray-600 dark:text-gray-300"
         v-pre
     >
         {{ $address->address }}<br>
@@ -29,7 +29,7 @@
 
         {{ $address->state }}<br>
 
-        {{ core()->country_name($address->country) }} @if ($address->postcode) ({{ $address->postcode }}) @endif<br>
+        {{ core()->countryName($address->country) }} @if ($address->postcode) ({{ $address->postcode }}) @endif<br>
 
         {{ trans('admin::app.sales.orders.view.contact') }} : {{ $address->phone }}
     </p>

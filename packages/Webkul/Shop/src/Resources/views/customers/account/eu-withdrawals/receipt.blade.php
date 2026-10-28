@@ -70,7 +70,7 @@
 <div id="eu-withdrawal-print-area">
     <div class="flex items-center justify-between max-sm:flex-col max-sm:items-start max-sm:gap-3">
         <div class="flex items-center gap-3">
-            <span class="grid h-10 w-10 flex-shrink-0 place-items-center rounded-full {{ $statusContext['hero_bg'] }}">
+            <span class="grid h-10 w-10 shrink-0 place-items-center rounded-full {{ $statusContext['hero_bg'] }}">
                 @if ($isDeclined)
                     <span class="text-2xl font-bold leading-none">&times;</span>
                 @else
@@ -80,11 +80,11 @@
 
             <div>
                 <h2 class="text-2xl font-medium max-md:text-xl max-sm:text-base">
-                    @lang('shop::app.eu_withdrawal.confirmation.heading_'.$withdrawal->status)
+                    @lang('shop::app.eu-withdrawal.confirmation.heading-'.$withdrawal->status)
                 </h2>
 
                 <p class="text-sm text-zinc-600 max-sm:hidden">
-                    @lang('shop::app.eu_withdrawal.confirmation.intro_'.$withdrawal->status)
+                    @lang('shop::app.eu-withdrawal.confirmation.intro-'.$withdrawal->status)
                 </p>
             </div>
         </div>
@@ -92,15 +92,15 @@
         <button
             type="button"
             data-eu-print
-            data-eu-print-title="@lang('shop::app.eu_withdrawal.confirmation.page_title')"
+            data-eu-print-title="@lang('shop::app.eu-withdrawal.confirmation.page-title')"
             class="secondary-button border-zinc-200 px-4 py-2 text-sm font-normal max-md:rounded-lg print:hidden"
         >
-            @lang('shop::app.eu_withdrawal.confirmation.print')
+            @lang('shop::app.eu-withdrawal.confirmation.print')
         </button>
     </div>
 
     <p class="mt-3 text-sm text-zinc-600 sm:hidden">
-        @lang('shop::app.eu_withdrawal.confirmation.intro_'.$withdrawal->status)
+        @lang('shop::app.eu-withdrawal.confirmation.intro-'.$withdrawal->status)
     </p>
 
     {{-- Receipt Card --}}
@@ -108,7 +108,7 @@
         <dl class="grid grid-cols-1 divide-y divide-zinc-100 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
             <div class="px-6 py-4">
                 <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    @lang('shop::app.eu_withdrawal.confirmation.received_at')
+                    @lang('shop::app.eu-withdrawal.confirmation.received-at')
                 </dt>
 
                 <dd class="mt-1 text-sm font-medium text-zinc-900">
@@ -119,7 +119,7 @@
 
             <div class="px-6 py-4">
                 <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    @lang('shop::app.eu_withdrawal.confirmation.reference')
+                    @lang('shop::app.eu-withdrawal.confirmation.reference')
                 </dt>
 
                 <dd class="mt-1 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2">
@@ -129,10 +129,10 @@
 
                     <button
                         type="button"
-                        title="@lang('shop::app.eu_withdrawal.confirmation.copy_reference')"
+                        title="@lang('shop::app.eu-withdrawal.confirmation.copy-reference')"
                         data-eu-clipboard="{{ $withdrawal->uuid }}"
-                        data-eu-clipboard-message="@lang('shop::app.eu_withdrawal.confirmation.reference_copied')"
-                        class="grid h-7 w-7 flex-shrink-0 place-items-center rounded-md text-zinc-500 transition-all hover:bg-zinc-200 hover:text-zinc-900"
+                        data-eu-clipboard-message="@lang('shop::app.eu-withdrawal.confirmation.reference-copied')"
+                        class="grid h-7 w-7 shrink-0 place-items-center rounded-md text-zinc-500 transition-all hover:bg-zinc-200 hover:text-zinc-900"
                     >
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -144,7 +144,7 @@
 
             <div class="px-6 py-4 sm:border-t sm:border-zinc-100">
                 <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    @lang('shop::app.eu_withdrawal.confirmation.order')
+                    @lang('shop::app.eu-withdrawal.confirmation.order')
                 </dt>
 
                 <dd class="mt-1 text-sm font-medium text-zinc-900">
@@ -163,7 +163,7 @@
 
             <div class="px-6 py-4 sm:border-t sm:border-zinc-100">
                 <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    @lang('shop::app.eu_withdrawal.confirmation.email')
+                    @lang('shop::app.eu-withdrawal.confirmation.email')
                 </dt>
 
                 <dd class="mt-1 text-sm font-medium text-zinc-900">
@@ -173,19 +173,19 @@
 
             <div class="px-6 py-4 sm:border-t sm:border-zinc-100">
                 <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    @lang('shop::app.eu_withdrawal.confirmation.status')
+                    @lang('shop::app.eu-withdrawal.confirmation.status')
                 </dt>
 
                 <dd class="mt-1">
                     <span class="inline-flex items-center rounded-full px-3 py-1 text-xs font-medium {{ $statusContext['badge'] }}">
-                        @lang('shop::app.eu_withdrawal.confirmation.status_'.$withdrawal->status)
+                        @lang('shop::app.eu-withdrawal.confirmation.status-'.$withdrawal->status)
                     </span>
                 </dd>
             </div>
 
             <div class="px-6 py-4 sm:border-t sm:border-zinc-100">
                 <dt class="text-xs font-medium uppercase tracking-wide text-zinc-500">
-                    @lang('shop::app.eu_withdrawal.confirmation.reason')
+                    @lang('shop::app.eu-withdrawal.confirmation.reason')
                 </dt>
 
                 <dd class="mt-1 whitespace-pre-wrap text-sm text-zinc-900">
@@ -198,16 +198,16 @@
     {{-- Refund Timeline --}}
     <div class="mt-6 rounded-xl border border-zinc-200 bg-white p-5">
         <h3 class="text-base font-medium text-zinc-900">
-            @lang('shop::app.eu_withdrawal.confirmation.next_steps_title')
+            @lang('shop::app.eu-withdrawal.confirmation.next-steps-title')
         </h3>
 
         <ol class="mt-4 space-y-3 text-sm">
             <li class="flex gap-3">
-                <span class="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700 icon-check-box"></span>
+                <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700 icon-check-box"></span>
 
                 <div>
                     <p class="font-medium text-zinc-900">
-                        @lang('shop::app.eu_withdrawal.confirmation.step_received')
+                        @lang('shop::app.eu-withdrawal.confirmation.step-received')
                     </p>
 
                     <p class="text-xs text-zinc-500">
@@ -218,23 +218,23 @@
 
             <li class="flex gap-3">
                 @if ($withdrawal->confirmation_sent_at)
-                    <span class="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700 icon-check-box"></span>
+                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700 icon-check-box"></span>
                 @else
-                    <span class="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border border-zinc-300 text-zinc-400 icon-radio-unselect"></span>
+                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-zinc-300 text-zinc-400 icon-radio-unselect"></span>
                 @endif
 
                 <div>
                     <p class="font-medium text-zinc-900">
-                        @lang('shop::app.eu_withdrawal.confirmation.step_email')
+                        @lang('shop::app.eu-withdrawal.confirmation.step-email')
                     </p>
 
                     <p class="text-xs text-zinc-500">
                         @if ($withdrawal->confirmation_sent_at)
-                            @lang('shop::app.eu_withdrawal.confirmation.email_sent')
+                            @lang('shop::app.eu-withdrawal.confirmation.email-sent')
                         @elseif ($withdrawal->confirmation_error)
-                            <span class="text-amber-700">@lang('shop::app.eu_withdrawal.confirmation.email_pending')</span>
+                            <span class="text-amber-700">@lang('shop::app.eu-withdrawal.confirmation.email-pending')</span>
                         @else
-                            @lang('shop::app.eu_withdrawal.confirmation.email_pending')
+                            @lang('shop::app.eu-withdrawal.confirmation.email-pending')
                         @endif
                     </p>
                 </div>
@@ -242,11 +242,11 @@
             
             <li class="flex gap-3">
                 @if ($withdrawal->refunded_at)
-                    <span class="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700 icon-check-box"></span>
+                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-700 icon-check-box"></span>
 
                     <div>
                         <p class="font-medium text-zinc-900">
-                            @lang('shop::app.eu_withdrawal.confirmation.step_refund_done')
+                            @lang('shop::app.eu-withdrawal.confirmation.step-refund-done')
                         </p>
 
                         <p class="text-xs text-zinc-500">
@@ -254,19 +254,19 @@
                         </p>
                     </div>
                 @elseif ($withdrawal->declined_at)
-                    <span class="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-red-100 text-red-700">
+                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-red-100 text-red-700">
                         <span class="text-base font-bold leading-none">&times;</span>
                     </span>
 
                     <div class="flex-1">
                         <p class="font-medium text-zinc-900">
-                            @lang('shop::app.eu_withdrawal.confirmation.step_declined')
+                            @lang('shop::app.eu-withdrawal.confirmation.step-declined')
                         </p>
 
                         @if ($withdrawal->declined_reason)
                             <div class="mt-2 rounded-md border border-red-100 bg-red-50 p-3">
                                 <p class="text-xs font-medium uppercase tracking-wide text-red-700">
-                                    @lang('shop::app.eu_withdrawal.confirmation.declined_reason_label')
+                                    @lang('shop::app.eu-withdrawal.confirmation.declined-reason-label')
                                 </p>
 
                                 <p class="mt-1 whitespace-pre-wrap text-sm text-red-900">{{ $withdrawal->declined_reason }}</p>
@@ -274,19 +274,19 @@
                         @endif
 
                         <p class="mt-2 text-xs text-zinc-500">
-                            @lang('shop::app.eu_withdrawal.confirmation.declined_notice')
+                            @lang('shop::app.eu-withdrawal.confirmation.declined-notice')
                         </p>
                     </div>
                 @else
-                    <span class="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full border border-zinc-300 text-zinc-400 icon-radio-unselect"></span>
+                    <span class="grid h-6 w-6 shrink-0 place-items-center rounded-full border border-zinc-300 text-zinc-400 icon-radio-unselect"></span>
 
                     <div>
                         <p class="font-medium text-zinc-900">
-                            @lang('shop::app.eu_withdrawal.confirmation.step_refund')
+                            @lang('shop::app.eu-withdrawal.confirmation.step-refund')
                         </p>
 
                         <p class="text-xs text-zinc-500">
-                            @lang('shop::app.eu_withdrawal.confirmation.refund_notice')
+                            @lang('shop::app.eu-withdrawal.confirmation.refund-notice')
                         </p>
                     </div>
                 @endif
@@ -295,7 +295,7 @@
     </div>
 
     <p class="mt-6 text-xs text-zinc-500">
-        @lang('shop::app.eu_withdrawal.confirmation.durable_medium_notice')
+        @lang('shop::app.eu-withdrawal.confirmation.durable-medium-notice')
     </p>
 </div>
 

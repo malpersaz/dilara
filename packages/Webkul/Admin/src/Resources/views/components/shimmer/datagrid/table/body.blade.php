@@ -9,6 +9,8 @@
     'mobileLines' => null,
     'mobileImage' => false,
     'indent'      => null,
+    'actions'     => true,
+    'rows'        => 10,
 ])
 
 @php
@@ -55,7 +57,7 @@
     $indent = $indent ?? $massAction;
 @endphp
 
-@for ($i = 0;  $i < 10; $i++)
+@for ($i = 0;  $i < (int) $rows; $i++)
     @if (! $isMultiRow)
         {{--
             `minmax(150px, …)` so a wide table overflows and scrolls here exactly as
@@ -71,14 +73,14 @@
             @for ($column = 0; $column < (int) $columns; $column++)
                 @if ($massAction && ! $column)
                     <div class="shimmer mb-0.5 h-6 w-6"></div>
-                @elseif ($column === (int) $columns - 1)
+                @elseif ($actions && $column === (int) $columns - 1)
                     <div class="flex gap-2.5 place-self-end">
                         <div class="shimmer h-6 w-6 p-1.5"></div>
 
                         <div class="shimmer h-6 w-6 p-1.5"></div>
                     </div>
                 @else
-                    <div class="shimmer h-[17px] w-full max-w-[100px]"></div>
+                    <div class="shimmer h-4.25 w-full max-w-25"></div>
                 @endif
             @endfor
         </div>
@@ -105,15 +107,15 @@
                             @endif
 
                             @if ($mobileImage)
-                                <div class="shimmer h-12 w-12 shrink-0 rounded"></div>
+                                <div class="shimmer h-12 w-12 shrink-0 rounded-sm"></div>
                             @endif
 
                             <div class="flex w-full flex-col gap-1.5">
                                 @for ($line = 0; $line < (int) $mobileLines; $line++)
                                     <div @class([
                                         'shimmer w-full',
-                                        'h-[19px] max-w-[200px]' => ! $line,
-                                        'h-[17px] max-w-[150px]' => $line,
+                                        'h-4.75 max-w-50' => ! $line,
+                                        'h-4.25 max-w-37.5' => $line,
                                     ])></div>
                                 @endfor
                             </div>
@@ -139,15 +141,15 @@
                         @endif
 
                         @if ($index === $imageGroup)
-                            <div class="shimmer h-[60px] w-[60px] shrink-0 rounded"></div>
+                            <div class="shimmer h-15 w-15 shrink-0 rounded-sm"></div>
                         @endif
 
                         <div class="flex w-full flex-col gap-1.5">
                             @for ($line = 0; $line < $lines; $line++)
                                 <div @class([
                                     'shimmer w-full',
-                                    'h-[19px] max-w-[250px]' => ! $line,
-                                    'h-[17px] max-w-[150px]' => $line,
+                                    'h-4.75 max-w-62.5' => ! $line,
+                                    'h-4.25 max-w-37.5' => $line,
                                 ])></div>
                             @endfor
                         </div>

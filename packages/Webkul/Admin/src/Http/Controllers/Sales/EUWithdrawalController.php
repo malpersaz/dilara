@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 use Webkul\Admin\DataGrids\Sales\EUWithdrawalDataGrid;
 use Webkul\Admin\Http\Controllers\Controller;
+use Webkul\EUWithdrawal\Contracts\Withdrawal;
 use Webkul\EUWithdrawal\Enums\WithdrawalStatus;
 use Webkul\EUWithdrawal\Repositories\WithdrawalRepository;
 use Webkul\Shop\Mail\Customer\EUWithdrawal\WithdrawalConfirmation;
@@ -75,9 +76,9 @@ class EUWithdrawalController extends Controller
             'refund_note' => null,
         ]);
 
-        session()->flash('success', trans('admin::app.eu_withdrawal.flash.declined'));
+        session()->flash('success', trans('admin::app.eu-withdrawal.flash.declined'));
 
-        return redirect()->route('admin.sales.eu-withdrawals.view', $id);
+        return redirect()->route('admin.sales.eu_withdrawals.view', $id);
     }
 
     /**
@@ -106,9 +107,9 @@ class EUWithdrawalController extends Controller
             'declined_by_user_id' => null,
         ]);
 
-        session()->flash('success', trans('admin::app.eu_withdrawal.flash.refunded'));
+        session()->flash('success', trans('admin::app.eu-withdrawal.flash.refunded'));
 
-        return redirect()->route('admin.sales.eu-withdrawals.view', $id);
+        return redirect()->route('admin.sales.eu_withdrawals.view', $id);
     }
 
     /**
@@ -120,13 +121,10 @@ class EUWithdrawalController extends Controller
     {
         $withdrawal = $this->withdrawals->findOrFail($id);
 
-        $previousLocale = app()->getLocale();
-        app()->setLocale($withdrawal->locale);
-
         $isTerminal = in_array($withdrawal->status, [WithdrawalStatus::REFUNDED, WithdrawalStatus::DECLINED], true);
 
         try {
-            Mail::send(new WithdrawalConfirmation($withdrawal));
+            $this->sendConfirmation($withdrawal);
 
             $updates = ['confirmation_error' => null];
 
@@ -143,17 +141,34 @@ class EUWithdrawalController extends Controller
 
             $withdrawal->update($updates);
 
-            session()->flash('success', trans('admin::app.eu_withdrawal.flash.confirmation_resent'));
+            session()->flash('success', trans('admin::app.eu-withdrawal.flash.confirmation-resent'));
         } catch (\Throwable $e) {
             $withdrawal->update([
                 'confirmation_error' => mb_substr($e->getMessage(), 0, 500),
             ]);
 
-            session()->flash('error', trans('admin::app.eu_withdrawal.flash.confirmation_failed'));
+            session()->flash('error', trans('admin::app.eu-withdrawal.flash.confirmation-failed'));
+        }
+
+        return redirect()->route('admin.sales.eu_withdrawals.view', $id);
+    }
+
+    /**
+     * Send the confirmation in the language the customer filed the withdrawal in.
+     *
+     * Only the send is switched. The admin is told what happened in their own language,
+     * which a locale left switched around the flash message would otherwise deny them.
+     */
+    protected function sendConfirmation(Withdrawal $withdrawal): void
+    {
+        $previousLocale = app()->getLocale();
+
+        app()->setLocale($withdrawal->locale);
+
+        try {
+            Mail::send(new WithdrawalConfirmation($withdrawal));
         } finally {
             app()->setLocale($previousLocale);
         }
-
-        return redirect()->route('admin.sales.eu-withdrawals.view', $id);
     }
 }

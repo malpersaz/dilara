@@ -18,6 +18,16 @@ class Category extends TranslatableModel implements CategoryContract
     use HasFactory, NodeTrait;
 
     /**
+     * What separates the steps of the chain of ancestors a category is read by.
+     */
+    const PATH_SEPARATOR = ' › ';
+
+    /**
+     * What separates one category from the next where several are read together.
+     */
+    const PATH_DELIMITER = ', ';
+
+    /**
      * Translated attributes.
      *
      * @var array
@@ -29,6 +39,8 @@ class Category extends TranslatableModel implements CategoryContract
         'meta_title',
         'meta_description',
         'meta_keywords',
+        'logo_alt',
+        'banner_alt',
     ];
 
     /**
@@ -42,6 +54,17 @@ class Category extends TranslatableModel implements CategoryContract
         'display_mode',
         'parent_id',
         'additional',
+    ];
+
+    /**
+     * Attribute casting.
+     *
+     * @var array
+     */
+    protected $casts = [
+        'status' => 'boolean',
+        'position' => 'integer',
+        'additional' => 'array',
     ];
 
     /**
@@ -72,6 +95,7 @@ class Category extends TranslatableModel implements CategoryContract
     public function filterableAttributes(): BelongsToMany
     {
         return $this->belongsToMany(AttributeProxy::modelClass(), 'category_filterable_attributes')
+            ->where('is_filterable', 1)
             ->with([
                 'options' => function ($query) {
                     $query->orderBy('sort_order');
@@ -79,6 +103,23 @@ class Category extends TranslatableModel implements CategoryContract
                 'translations',
                 'options.translations',
             ]);
+    }
+
+    /**
+     * Is within the given channel's tree, defaulting to the current one.
+     * A category belongs to a channel by sitting under that channel's root.
+     */
+    public function isAvailableInChannel(?int $channelId = null): bool
+    {
+        $channel = is_null($channelId)
+            ? core()->getCurrentChannel()
+            : core()->getAllChannels()->firstWhere('id', $channelId);
+
+        if (! $root = $channel?->root_category) {
+            return false;
+        }
+
+        return $this->isSelfOrDescendantOf($root);
     }
 
     /**
@@ -121,6 +162,26 @@ class Category extends TranslatableModel implements CategoryContract
         }
 
         return Storage::url($this->banner_path);
+    }
+
+    /**
+     * Get the logo file name, without the directory and the extension.
+     *
+     * @return string
+     */
+    public function getLogoFileNameAttribute()
+    {
+        return pathinfo((string) $this->logo_path, PATHINFO_FILENAME);
+    }
+
+    /**
+     * Get the banner file name, without the directory and the extension.
+     *
+     * @return string
+     */
+    public function getBannerFileNameAttribute()
+    {
+        return pathinfo((string) $this->banner_path, PATHINFO_FILENAME);
     }
 
     /**

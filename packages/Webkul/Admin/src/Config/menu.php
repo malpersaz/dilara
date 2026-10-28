@@ -90,13 +90,13 @@ return [
     ], [
         'key' => 'sales.rma.custom-fields',
         'name' => 'admin::app.components.layouts.sidebar.custom-fields',
-        'route' => 'admin.sales.rma.custom-fields.index',
+        'route' => 'admin.sales.rma.custom_fields.index',
         'sort' => 5,
         'icon' => '',
     ], [
         'key' => 'sales.eu_withdrawals',
-        'name' => 'admin::app.eu_withdrawal.menu.eu_withdrawals',
-        'route' => 'admin.sales.eu-withdrawals.index',
+        'name' => 'admin::app.eu-withdrawal.menu.eu-withdrawals',
+        'route' => 'admin.sales.eu_withdrawals.index',
         'sort' => 8,
         'icon' => '',
     ],
@@ -144,7 +144,7 @@ return [
         'name' => 'admin::app.components.layouts.sidebar.customers',
         'route' => 'admin.customers.customers.index',
         'sort' => 4,
-        'icon' => 'icon-customer-2',
+        'icon' => 'icon-customer',
     ], [
         'key' => 'customers.customers',
         'name' => 'admin::app.components.layouts.sidebar.customers',
@@ -303,13 +303,31 @@ return [
     ],
 
     /**
+     * Appearance.
+     */
+    [
+        'key' => 'appearance',
+        'name' => 'admin::app.components.layouts.sidebar.appearance',
+        'route' => 'admin.appearance.themes.index',
+        'sort' => 8,
+        'icon' => 'icon-store',
+        'icon-class' => 'appearance-icon',
+    ], [
+        'key' => 'appearance.themes',
+        'name' => 'admin::app.components.layouts.sidebar.themes',
+        'route' => 'admin.appearance.themes.index',
+        'sort' => 1,
+        'icon' => '',
+    ],
+
+    /**
      * Settings.
      */
     [
         'key' => 'settings',
         'name' => 'admin::app.components.layouts.sidebar.settings',
         'route' => 'admin.settings.locales.index',
-        'sort' => 8,
+        'sort' => 9,
         'icon' => 'icon-settings',
         'icon-class' => 'settings-icon',
     ], [
@@ -355,12 +373,6 @@ return [
         'sort' => 7,
         'icon' => '',
     ], [
-        'key' => 'settings.themes',
-        'name' => 'admin::app.components.layouts.sidebar.themes',
-        'route' => 'admin.settings.themes.index',
-        'sort' => 8,
-        'icon' => '',
-    ], [
         'key' => 'settings.taxes',
         'name' => 'admin::app.components.layouts.sidebar.taxes',
         'route' => 'admin.settings.taxes.categories.index',
@@ -399,7 +411,7 @@ return [
         'key' => 'configuration',
         'name' => 'admin::app.components.layouts.sidebar.configure',
         'route' => 'admin.configuration.index',
-        'sort' => 9,
+        'sort' => 10,
         'icon' => 'icon-configuration',
     ],
 ];

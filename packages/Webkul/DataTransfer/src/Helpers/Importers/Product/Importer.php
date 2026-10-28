@@ -27,8 +27,9 @@ use Webkul\DataTransfer\Helpers\Importers\AbstractImporter;
 use Webkul\DataTransfer\Helpers\Importers\Concerns\DownloadsImages;
 use Webkul\DataTransfer\Repositories\ImportBatchRepository;
 use Webkul\Inventory\Repositories\InventorySourceRepository;
-use Webkul\Product\Jobs\ElasticSearch\DeleteIndex as DeleteIndexJob;
-use Webkul\Product\Jobs\ElasticSearch\UpdateCreateIndex as UpdateCreateElasticSearchIndexJob;
+use Webkul\Product\Helpers\Indexers\Flat as FlatIndexer;
+use Webkul\Product\Jobs\Search\DeleteProducts as DeleteSearchIndexJob;
+use Webkul\Product\Jobs\Search\IndexProducts as IndexSearchJob;
 use Webkul\Product\Jobs\UpdateCreateInventoryIndex as UpdateCreateInventoryIndexJob;
 use Webkul\Product\Jobs\UpdateCreatePriceIndex as UpdateCreatePriceIndexJob;
 use Webkul\Product\Models\Product as ProductModel;
@@ -203,6 +204,11 @@ class Importer extends AbstractImporter
     protected array $productFlatColumns = [];
 
     /**
+     * Default value of every attribute that is also a flat column, keyed by column
+     */
+    protected ?array $flatColumnDefaults = null;
+
+    /**
      * Is linking required
      */
     protected bool $linkingRequired = true;
@@ -258,7 +264,8 @@ class Importer extends AbstractImporter
         protected ProductCustomerGroupPriceRepository $productCustomerGroupPriceRepository,
         protected ProductGroupedProductRepository $productGroupedProductRepository,
         protected BookingProductRepository $bookingProductRepository,
-        protected SKUStorage $skuStorage
+        protected SKUStorage $skuStorage,
+        protected FlatIndexer $flatIndexer
     ) {
         parent::__construct($importBatchRepository);
 
@@ -628,19 +635,31 @@ class Importer extends AbstractImporter
             return;
         }
 
+        $urlKeysByLowerCase = [];
+
+        foreach (array_keys($this->urlKeys) as $urlKey) {
+            $urlKeysByLowerCase[mb_strtolower((string) $urlKey)] = $urlKey;
+        }
+
         $products = $this->productRepository
             ->resetScope()
             ->select('products.id', 'product_attribute_values.text_value as url_key', 'products.sku')
             ->leftJoin('product_attribute_values', 'products.id', 'product_attribute_values.product_id')
             ->leftJoin('attributes', 'product_attribute_values.attribute_id', 'attributes.id')
             ->where('attributes.code', 'url_key')
-            ->whereIn('product_attribute_values.text_value', array_keys($this->urlKeys))
+            ->whereIn(DB::raw('LOWER('.DB::getTablePrefix().'product_attribute_values.text_value)'), array_keys($urlKeysByLowerCase))
             ->whereNotIn('products.sku', Arr::pluck($this->urlKeys, 'sku'))
             ->get();
 
         foreach ($products as $product) {
+            $urlKey = $urlKeysByLowerCase[mb_strtolower((string) $product->url_key)] ?? null;
+
+            if ($urlKey === null) {
+                continue;
+            }
+
             $this->skipRow(
-                $this->urlKeys[$product->url_key]['row_number'],
+                $this->urlKeys[$urlKey]['row_number'],
                 self::ERROR_DUPLICATE_URL_KEY,
                 'url_key',
                 sprintf(
@@ -1018,7 +1037,7 @@ class Importer extends AbstractImporter
         Bus::chain([
             new UpdateCreateInventoryIndexJob($productIdsToIndex),
             new UpdateCreatePriceIndexJob($productIdsToIndex),
-            new UpdateCreateElasticSearchIndexJob($productIdsToIndex),
+            new IndexSearchJob($productIdsToIndex),
         ])->onConnection('sync')->dispatch();
 
         /**
@@ -1074,7 +1093,7 @@ class Importer extends AbstractImporter
             Storage::deleteDirectory($imageDirectory);
         }
 
-        DeleteIndexJob::dispatch($idsToDelete)->onConnection('sync');
+        DeleteSearchIndexJob::dispatch($idsToDelete)->onConnection('sync');
 
         return true;
     }
@@ -1728,7 +1747,7 @@ class Importer extends AbstractImporter
             foreach ($images as $key => $image) {
                 $file = new UploadedFile($image['path'], $image['name']);
 
-                $encoded = image_manager()->read($file)->encodeByExtension('webp');
+                $encoded = image_manager()->fromUpload($file)->toWebp()->toBytes();
 
                 $imageDirectory = $this->productImageRepository->getProductDirectory((object) $product);
 
@@ -1764,7 +1783,11 @@ class Importer extends AbstractImporter
                 continue;
             }
 
-            $data[$column] = $rowData[$column] ?? null;
+            /**
+             * Same fallback as the flat indexer, so a column the file left out reads off the
+             * flat table as the default rather than as an empty value.
+             */
+            $data[$column] = $rowData[$column] ?? $this->getFlatColumnDefaults()[$column] ?? null;
         }
 
         $data = array_merge($data, [
@@ -1773,6 +1796,22 @@ class Importer extends AbstractImporter
         ]);
 
         $flatData[] = $data;
+    }
+
+    /**
+     * Return the default value of every attribute that is also a flat column, keyed by column.
+     */
+    public function getFlatColumnDefaults(): array
+    {
+        if (! is_null($this->flatColumnDefaults)) {
+            return $this->flatColumnDefaults;
+        }
+
+        return $this->flatColumnDefaults = $this->attributes
+            ->whereNotNull('default_value')
+            ->whereIn('code', $this->getProductFlatColumns())
+            ->pluck('default_value', 'code')
+            ->toArray();
     }
 
     /**
@@ -1798,6 +1837,14 @@ class Importer extends AbstractImporter
                 'channel',
                 'locale',
             ],
+        );
+
+        /**
+         * The batch has written its inventories and images by now, so the columns derived from
+         * them can be filled. The file itself never carries them.
+         */
+        $this->flatIndexer->refreshDerivedColumns(
+            array_values(array_unique(array_column($products, 'product_id')))
         );
     }
 
@@ -1855,6 +1902,8 @@ class Importer extends AbstractImporter
                 $parentAssociations[] = [
                     'sku' => $variantSku,
                     'parent_id' => $product['id'],
+                    'type' => $variant['type'] ?? 'simple',
+                    'attribute_family_id' => $variant['attribute_family_id'] ?? $product['attribute_family_id'],
                 ];
 
                 foreach ($variantSuperAttributes as $superAttributeCode => $optionLabel) {

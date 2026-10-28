@@ -1,6 +1,6 @@
 {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.before') !!}
 
-<div class="flex min-h-[78px] w-full justify-between border border-b border-l-0 border-r-0 border-t-0 px-[60px] max-1180:px-8">
+<div class="flex min-h-19.5 w-full justify-between border border-b border-l-0 border-r-0 border-t-0 px-15 max-1180:px-8">
     <!--
         This section will provide categories for the first, second, and third levels. If
         additional levels are required, users can customize them according to their needs.
@@ -17,7 +17,7 @@
                 src="{{ core()->getCurrentChannel()->logo_url ?? bagisto_asset('images/logo.svg') }}"
                 width="131"
                 height="29"
-                alt="{{ config('app.name') }}"
+                alt="{{ core()->getCurrentChannel()->logo_alt ?: config('app.name') }}"
             >
         </a>
 
@@ -28,17 +28,17 @@
         <v-desktop-category>
             <div class="flex items-center gap-5">
                 <span
-                    class="w-20 h-6 rounded shimmer"
+                    class="w-20 h-6 rounded-sm shimmer"
                     role="presentation"
                 ></span>
 
                 <span
-                    class="w-20 h-6 rounded shimmer"
+                    class="w-20 h-6 rounded-sm shimmer"
                     role="presentation"
                 ></span>
 
                 <span
-                    class="w-20 h-6 rounded shimmer"
+                    class="w-20 h-6 rounded-sm shimmer"
                     role="presentation"
                 ></span>
             </div>
@@ -56,7 +56,7 @@
         <div class="relative w-full">
             <form
                 action="{{ route('shop.search.index') }}"
-                class="flex max-w-[445px] items-center"
+                class="flex max-w-111.25 items-center"
                 role="search"
                 toolname="search_products"
                 tooldescription="{{ trans('shop::app.components.layouts.webmcp.search-products') }}"
@@ -71,14 +71,23 @@
 
                 <div class="icon-search pointer-events-none absolute top-2.5 flex items-center text-xl ltr:left-3 rtl:right-3"></div>
 
+                @php
+                    $maxQueryLength = ((int) core()->getConfigData('search_engines.elastic.settings.max_query_length')) ?: 1000;
+
+                    $minQueryLength = (int) core()->getConfigData('search_engines.elastic.settings.min_query_length');
+
+                    $minQueryLength = $minQueryLength > 0 && $minQueryLength <= $maxQueryLength ? $minQueryLength : 0;
+                @endphp
+
                 <input
                     type="text"
+                    id="organic-search"
                     name="query"
                     value="{{ request('query') }}"
                     toolparamdescription="{{ trans('shop::app.components.layouts.webmcp.search-products-query') }}"
                     class="block w-full py-3 text-xs font-medium text-gray-900 transition-all border border-transparent rounded-lg bg-zinc-100 px-11 hover:border-gray-400 focus:border-gray-400"
-                    minlength="{{ core()->getConfigData('catalog.products.search.min_query_length') }}"
-                    maxlength="{{ core()->getConfigData('catalog.products.search.max_query_length') }}"
+                    minlength="{{ $minQueryLength }}"
+                    maxlength="{{ $maxQueryLength }}"
                     placeholder="@lang('shop::app.components.layouts.header.desktop.bottom.search-text')"
                     aria-label="@lang('shop::app.components.layouts.header.desktop.bottom.search-text')"
                     aria-required="true"
@@ -135,12 +144,11 @@
             <!-- user profile -->
             <x-shop::dropdown position="bottom-{{ core()->getCurrentLocale()->direction === 'ltr' ? 'right' : 'left' }}">
                 <x-slot:toggle>
-                    <span
+                    <button
+                        type="button"
                         class="inline-block text-2xl cursor-pointer icon-users"
-                        role="button"
                         aria-label="@lang('shop::app.components.layouts.header.desktop.bottom.profile')"
-                        tabindex="0"
-                    ></span>
+                    ></button>
                 </x-slot>
 
                 <!-- Guest Dropdown -->
@@ -182,10 +190,10 @@
 
                         @if (core()->getConfigData('sales.eu_withdrawal.general.enabled', core()->getCurrentChannelCode()))
                             <a
-                                href="{{ route('shop.eu-withdrawal.guest.lookup') }}"
+                                href="{{ route('shop.eu_withdrawal.guest.lookup') }}"
                                 class="mt-4 inline-flex items-center gap-1.5 text-xs font-medium text-navyBlue hover:underline"
                             >
-                                @lang('shop::app.eu_withdrawal.guest_dropdown.link')
+                                @lang('shop::app.eu-withdrawal.guest-dropdown.link')
                             </a>
                         @endif
 
@@ -195,7 +203,7 @@
 
                 <!-- Customers Dropdown -->
                 @auth('customer')
-                    <x-slot:content class="!p-0">
+                    <x-slot:content class="p-0!">
                         <div class="grid gap-2.5 p-5 pb-0">
                             <p class="text-xl font-dmserif" v-pre>
                                 @lang('shop::app.components.layouts.header.desktop.bottom.welcome')’
@@ -274,17 +282,17 @@
             v-if="isLoading"
         >
             <span
-                class="w-20 h-6 rounded shimmer"
+                class="w-20 h-6 rounded-sm shimmer"
                 role="presentation"
             ></span>
 
             <span
-                class="w-20 h-6 rounded shimmer"
+                class="w-20 h-6 rounded-sm shimmer"
                 role="presentation"
             ></span>
 
             <span
-                class="w-20 h-6 rounded shimmer"
+                class="w-20 h-6 rounded-sm shimmer"
                 role="presentation"
             ></span>
         </div>
@@ -295,7 +303,7 @@
             v-else-if="'{{ core()->getConfigData('general.design.categories.category_view') }}' !== 'sidebar'"
         >
             <div
-                class="group relative flex h-[77px] items-center border-b-4 border-transparent hover:border-b-4 hover:border-navyBlue"
+                class="group relative flex h-19.25 items-center border-b-4 border-transparent hover:border-b-4 hover:border-navyBlue"
                 v-for="category in categories"
             >
                 <span>
@@ -308,13 +316,13 @@
                 </span>
 
                 <div
-                    class="pointer-events-none absolute top-[78px] z-[1] max-h-[580px] w-max max-w-[1260px] translate-y-1 overflow-auto overflow-x-auto border border-b-0 border-l-0 border-r-0 border-t border-[#F3F3F3] bg-white p-9 opacity-0 shadow-[0_6px_6px_1px_rgba(0,0,0,.3)] transition duration-300 ease-out group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-hover:duration-200 group-hover:ease-in ltr:-left-9 rtl:-right-9"
+                    class="pointer-events-none absolute top-19.5 z-1 max-h-145 w-max max-w-315 translate-y-1 overflow-auto overflow-x-auto border border-b-0 border-l-0 border-r-0 border-t border-[#F3F3F3] bg-white p-9 opacity-0 shadow-[0_6px_6px_1px_rgba(0,0,0,.3)] transition duration-300 ease-out group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-hover:duration-200 group-hover:ease-in ltr:-left-9 rtl:-right-9"
                     data-mega-menu-dropdown
                     v-if="category.children && category.children.length"
                 >
-                    <div class="flex justify-between gap-x-[70px]">
+                    <div class="flex justify-between gap-x-17.5">
                         <div
-                            class="grid w-full min-w-max max-w-[150px] flex-auto grid-cols-[1fr] content-start gap-5"
+                            class="grid w-full min-w-max max-w-37.5 flex-auto grid-cols-[1fr] content-start gap-5"
                             v-for="pairCategoryChildren in pairCategoryChildren(category)"
                         >
                             <template v-for="secondLevelCategory in pairCategoryChildren">
@@ -350,7 +358,7 @@
             <div class="flex items-center">
                 <!-- "All" button for opening the category drawer -->
                 <div
-                    class="flex h-[77px] cursor-pointer items-center border-b-4 border-transparent hover:border-b-4 hover:border-navyBlue"
+                    class="flex h-19.25 cursor-pointer items-center border-b-4 border-transparent hover:border-b-4 hover:border-navyBlue"
                     @click="toggleCategoryDrawer"
                 >
                     <span class="flex items-center gap-1 px-5 uppercase">
@@ -362,7 +370,7 @@
 
                 <!-- Show only first 4 categories in main navigation -->
                 <div
-                    class="group relative flex h-[77px] items-center border-b-4 border-transparent hover:border-b-4 hover:border-navyBlue"
+                    class="group relative flex h-19.25 items-center border-b-4 border-transparent hover:border-b-4 hover:border-navyBlue"
                     v-for="category in categories.slice(0, 4)"
                 >
                     <span>
@@ -376,12 +384,12 @@
 
                     <!-- Dropdown for each category -->
                     <div
-                        class="pointer-events-none absolute top-[78px] z-[1] max-h-[580px] w-max max-w-[1260px] translate-y-1 overflow-auto overflow-x-auto border border-b-0 border-l-0 border-r-0 border-t border-[#F3F3F3] bg-white p-9 opacity-0 shadow-[0_6px_6px_1px_rgba(0,0,0,.3)] transition duration-300 ease-out group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-hover:duration-200 group-hover:ease-in ltr:-left-9 rtl:-right-9 flex justify-between gap-x-[70px]"
+                        class="pointer-events-none absolute top-19.5 z-1 max-h-145 w-max max-w-315 translate-y-1 overflow-auto overflow-x-auto border border-b-0 border-l-0 border-r-0 border-t border-[#F3F3F3] bg-white p-9 opacity-0 shadow-[0_6px_6px_1px_rgba(0,0,0,.3)] transition duration-300 ease-out group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100 group-hover:duration-200 group-hover:ease-in ltr:-left-9 rtl:-right-9 flex justify-between gap-x-17.5"
                         data-mega-menu-dropdown
                         v-if="category.children && category.children.length"
                     >
                         <div
-                            class="grid w-full min-w-max max-w-[150px] flex-auto grid-cols-[1fr] content-start gap-5"
+                            class="grid w-full min-w-max max-w-37.5 flex-auto grid-cols-[1fr] content-start gap-5"
                             v-for="pairCategoryChildren in pairCategoryChildren(category)"
                         >
                             <template v-for="secondLevelCategory in pairCategoryChildren">
@@ -428,7 +436,7 @@
                     </div>
                 </x-slot>
 
-                <x-slot:content class="!px-0">
+                <x-slot:content class="px-0!">
                     <!-- Wrapper with transition effects -->
                     <div class="relative h-full overflow-hidden">
                         <!-- Sliding container -->
@@ -440,7 +448,7 @@
                             }"
                         >
                             <!-- First level view -->
-                            <div class="h-[calc(100vh-74px)] w-full flex-shrink-0 overflow-auto">
+                            <div class="h-[calc(100vh-74px)] w-full shrink-0 overflow-auto">
                                 <div class="py-4">
                                     <div
                                         v-for="category in categories"
@@ -486,13 +494,13 @@
 
                             <!-- Third level view -->
                             <div
-                                class="flex-shrink-0 w-full h-full"
+                                class="shrink-0 w-full h-full"
                                 v-if="currentViewLevel === 'third'"
                             >
                                 <div class="px-6 py-4 border-b border-gray-200">
                                     <button
                                         @click="goBackToMainView"
-                                        class="flex items-center justify-center gap-2 focus:outline-none"
+                                        class="flex items-center justify-center gap-2 focus:outline-hidden"
                                         aria-label="Go back"
                                     >
                                         <span class="text-lg icon-arrow-left rtl:icon-arrow-right"></span>
@@ -557,12 +565,16 @@
                         const stored = localStorage.getItem('categories');
 
                         if (stored) {
-                            this.categories = JSON.parse(stored);
-                            this.isLoading = false;
+                            const parsed = JSON.parse(stored);
 
-                            this.$nextTick(this.positionMegaMenus);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                this.categories = parsed;
+                                this.isLoading = false;
 
-                            return;
+                                this.$nextTick(this.positionMegaMenus);
+
+                                return;
+                            }
                         }
 
                     } catch (e) {}
@@ -639,7 +651,9 @@
 
                         const rect = dropdown.getBoundingClientRect();
 
-                        // Positive when it spills off the right edge, negative off the left, 0 when it fits.
+                        /**
+                         * Positive when it spills off the right edge, negative off the left, 0 when it fits.
+                         */
                         const overflow = Math.max(0, rect.right - (viewport - MARGIN)) - Math.max(0, MARGIN - rect.left);
 
                         if (overflow) {
@@ -653,4 +667,5 @@
         });
     </script>
 @endPushOnce
+
 {!! view_render_event('bagisto.shop.components.layouts.header.desktop.bottom.after') !!}

@@ -1,19 +1,20 @@
 @php
     $clearActions = [
-        'clear-all'      => trans('admin::app.configuration.index.cache-management.actions.clear-all'),
-        'clear-config'   => trans('admin::app.configuration.index.cache-management.actions.clear-config'),
-        'clear-cache'    => trans('admin::app.configuration.index.cache-management.actions.clear-cache'),
+        'clear-all' => trans('admin::app.configuration.index.cache-management.actions.clear-all'),
+        'clear-config' => trans('admin::app.configuration.index.cache-management.actions.clear-config'),
+        'clear-cache' => trans('admin::app.configuration.index.cache-management.actions.clear-cache'),
         'clear-compiled' => trans('admin::app.configuration.index.cache-management.actions.clear-compiled'),
-        'clear-events'   => trans('admin::app.configuration.index.cache-management.actions.clear-events'),
-        'clear-routes'   => trans('admin::app.configuration.index.cache-management.actions.clear-routes'),
-        'clear-views'    => trans('admin::app.configuration.index.cache-management.actions.clear-views'),
+        'clear-events' => trans('admin::app.configuration.index.cache-management.actions.clear-events'),
+        'clear-routes' => trans('admin::app.configuration.index.cache-management.actions.clear-routes'),
+        'clear-views' => trans('admin::app.configuration.index.cache-management.actions.clear-views'),
+        'clear-page-cache' => trans('admin::app.configuration.index.cache-management.actions.clear-page-cache'),
     ];
 
     $buildActions = [
-        'build-all'    => trans('admin::app.configuration.index.cache-management.actions.build-all'),
+        'build-all' => trans('admin::app.configuration.index.cache-management.actions.build-all'),
         'build-config' => trans('admin::app.configuration.index.cache-management.actions.build-config'),
         'build-routes' => trans('admin::app.configuration.index.cache-management.actions.build-routes'),
-        'build-views'  => trans('admin::app.configuration.index.cache-management.actions.build-views'),
+        'build-views' => trans('admin::app.configuration.index.cache-management.actions.build-views'),
     ];
 @endphp
 
@@ -23,7 +24,7 @@
     <script type="text/x-template" id="v-cache-management-template">
         <div>
             <!-- Edge Cases Warning -->
-            <div class="mb-4 rounded border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
+            <div class="mb-4 rounded-sm border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
                 <p class="mb-1 text-sm font-semibold text-amber-800 dark:text-amber-300">
                     @lang('admin::app.configuration.index.cache-management.warning-title')
                 </p>
@@ -94,7 +95,7 @@
             </div>
 
             <!-- Output Console -->
-            <div class="overflow-hidden rounded border dark:border-gray-800">
+            <div class="overflow-hidden rounded-sm border dark:border-gray-800">
                 <div class="flex items-center justify-between border-b bg-gray-50 px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
                     <p class="text-xs font-semibold text-gray-800 dark:text-white">
                         @lang('admin::app.configuration.index.cache-management.console-title')
@@ -117,12 +118,12 @@
                 </div>
 
                 <div
-                    class="max-h-[400px] min-h-[120px] overflow-y-auto bg-gray-950 p-3"
+                    class="max-h-100 min-h-30 overflow-y-auto bg-gray-950 p-3"
                     ref="console"
                 >
                     <!-- Empty State -->
                     <div
-                        class="flex h-[90px] items-center justify-center font-mono text-xs text-gray-600"
+                        class="flex h-22.5 items-center justify-center font-mono text-xs text-gray-600"
                         v-if="! logs.length"
                     >
                         @lang('admin::app.configuration.index.cache-management.console-empty')
@@ -216,7 +217,7 @@
 
                     this.scrollToBottom();
 
-                    this.$axios.post("{{ route('admin.configuration.cache-management.execute') }}", {
+                    this.$axios.post("{{ route('admin.configuration.cache_management.execute') }}", {
                             action: action,
                         })
                         .then((response) => {

@@ -11,7 +11,8 @@ return [
             'footer' => '© 版权所有 2010 - :current_year，Webkul Software（注册于印度）。保留所有权利。',
             'forgot-password-text' => '如果您忘记了密码，请通过输入您的电子邮件地址来找回密码。',
             'page-title' => '忘记密码？',
-            'reset-link-sent' => '我们已将重置密码链接发送到您的电子邮件。',
+            'reset-link-sent' => '如果该邮箱已注册，密码重置链接已发送至该邮箱。',
+            'reset-link-failed' => '无法发送密码重置链接，请稍后重试。',
             'sign-in-button' => '登录',
             'submit' => '重置密码',
             'title' => '找回密码',
@@ -42,7 +43,7 @@ return [
             'page-title' => '用户登录',
             'password' => '密码',
             'resend-verification' => '重新发送验证邮件',
-            'show-password' => '显示密码',
+            'social-account-exists' => '该邮箱已存在账户。请使用您的邮箱和密码登录。',
             'title' => '登录',
             'verify-first' => '请先验证您的电子邮件。',
         ],
@@ -323,8 +324,6 @@ return [
                 'invoice-pdf' => [
                     'bank-details' => '银行详细信息',
                     'bill-to' => '账单给',
-                    'contact-number' => '联系电话',
-                    'contact' => '联系人',
                     'date' => '发票日期',
                     'discount' => '折扣',
                     'excl-tax' => '不含税：',
@@ -338,6 +337,7 @@ return [
                     'price' => '价格',
                     'product-name' => '产品名称',
                     'qty' => '数量',
+                    'phone' => '电话',
                     'ship-to' => '收货地址',
                     'shipping-handling-excl-tax' => '运输和处理（不含税）',
                     'shipping-handling-incl-tax' => '运输和处理（含税）',
@@ -373,6 +373,7 @@ return [
                 'remaining-downloads' => '剩余下载次数',
                 'status' => '状态',
                 'title' => '名称',
+                'unlimited' => '无限制',
             ],
 
             'wishlist' => [
@@ -541,8 +542,22 @@ return [
             'default-header' => '默认标题',
         ],
 
+        'image-zoomer' => [
+            'close' => '关闭图库',
+            'view-image' => '查看图片',
+            'view-video' => '查看视频',
+        ],
+
         'drawer' => [
             'default-toggle' => '默认切换',
+        ],
+
+        'form' => [
+            'control-group' => [
+                'control' => [
+                    'show-password' => '显示密码',
+                ],
+            ],
         ],
 
         'media' => [
@@ -554,6 +569,11 @@ return [
         ],
 
         'layouts' => [
+            'account' => [
+                'greeting' => '你好！:name',
+                'profile-image' => '个人资料图片',
+            ],
+
             'header' => [
                 'desktop' => [
                     'top' => [
@@ -690,6 +710,17 @@ return [
                     'custom-filters' => [
                         'clear-all' => '清除所有',
                     ],
+
+                    'number-options' => [
+                        'between' => 'Between',
+                        'equals' => 'Equals',
+                        'from' => 'From',
+                        'greater-than' => 'Greater Than',
+                        'greater-than-or-equal' => 'Greater Than Or Equal',
+                        'less-than' => 'Less Than',
+                        'less-than-or-equal' => 'Less Than Or Equal',
+                        'to' => 'To',
+                    ],
                 ],
             ],
 
@@ -761,6 +792,10 @@ return [
     ],
 
     'products' => [
+        'omnibus' => [
+            'price-info' => '折扣前 30 天的最低价格：',
+        ],
+
         'prices' => [
             'grouped' => [
                 'starting-at' => '起价',
@@ -910,6 +945,7 @@ return [
                 'translate' => '翻译',
                 'translating' => '翻译中...',
                 'write-a-review' => '写评论',
+                'stars' => '星星',
             ],
 
             'contact-us' => [
@@ -963,16 +999,16 @@ return [
                 'integrity' => [
                     'event' => [
                         'expired' => '此活动已过期。',
-                        'exceeds_available' => '此活动仅剩 :qty 张门票可用。',
-                        'sold_out' => '此活动的门票已售罄。',
-                        'ticket_exceeds_available' => '":ticket" 门票仅剩 :qty 张可用。',
-                        'ticket_sold_out' => '":ticket" 门票已售罄。',
+                        'exceeds-available' => '此活动仅剩 :qty 张门票可用。',
+                        'sold-out' => '此活动的门票已售罄。',
+                        'ticket-exceeds-available' => '":ticket" 门票仅剩 :qty 张可用。',
+                        'ticket-sold-out' => '":ticket" 门票已售罄。',
                     ],
 
-                    'missing_options' => '此产品缺少选项。',
-                    'inventory_warning' => '请求的数量不可用，请稍后再试。',
-                    'rental_unavailable' => '此租赁产品在所选日期不可用。',
-                    'select_hourly_duration' => '请选择至少一小时的时段时长。',
+                    'missing-options' => '此产品缺少选项。',
+                    'inventory-warning' => '请求的数量不可用，请稍后再试。',
+                    'rental-unavailable' => '此租赁产品在所选日期不可用。',
+                    'select-hourly-duration' => '请选择至少一小时的时段时长。',
                 ],
 
                 'per-guest' => '每位客人',
@@ -980,7 +1016,7 @@ return [
                 'rent-from' => '租赁从',
                 'rent-till' => '租赁到',
                 'rent-type' => '租赁类型',
-                'renting_type' => '租赁类型',
+                'renting-type' => '租赁类型',
                 'special-note' => '特别请求/备注',
             ],
 
@@ -1152,6 +1188,9 @@ return [
             'address' => [
                 'add-new' => '添加新地址',
                 'add-new-address' => '添加新地址',
+                'address-updated-payment-info' => '系统将根据您的新地址刷新付款方式和订单总额。点击“继续”查看最新选项。',
+                'address-updated-shipping-info' => '系统将根据您的新地址重新计算送货方式和运费。点击“继续”查看最新选项。',
+                'address-updated-title' => '您的地址已更新',
                 'back' => '返回',
                 'billing-address' => '账单地址',
                 'check-billing-address' => '缺少账单地址。',
@@ -1163,6 +1202,7 @@ return [
                 'email' => '电子邮件',
                 'first-name' => '名',
                 'last-name' => '姓',
+                'phone' => '电话',
                 'postcode' => '邮政编码',
                 'proceed' => '继续',
                 'same-as-billing' => '是否使用相同地址进行配送？',
@@ -1173,7 +1213,6 @@ return [
                 'shipping-address' => '送货地址',
                 'state' => '省份',
                 'street-address' => '街道地址',
-                'telephone' => '电话',
                 'title' => '地址',
                 'vat-id' => 'VAT号码',
             ],
@@ -1204,7 +1243,7 @@ return [
                 'items-discount' => '商品折扣',
                 'shipping-discount' => '运费折扣',
                 'place-order' => '下单',
-                'price_and_qty' => ':price × :qty',
+                'price-and-qty' => ':price × :qty',
                 'processing' => '处理中',
                 'sub-total' => '小计',
                 'sub-total-excl-tax' => '小计（不含税）',
@@ -1255,6 +1294,7 @@ return [
             'categories-carousel' => '分类轮播',
             'image-carousel' => '图片轮播',
             'offer' => '首单最高可享40%折扣，立即购买',
+            'preview-banner' => '正在预览 :channel 渠道中的 :theme 主题。预览中的链接已禁用。',
             'product-carousel' => '产品轮播',
             'resend-verify-email' => '重新发送验证邮件',
             'verify-email' => '验证您的邮箱账户',
@@ -1760,7 +1800,9 @@ return [
 
         'response' => [
             'already-cancel' => 'RMA 状态已被取消。',
+            'cancel-not-allowed' => '不允许取消此RMA请求。',
             'cancel-success' => 'RMA状态已成功取消。',
+            'close-not-allowed' => '不允许关闭此RMA请求。',
             'create-success' => '请求已成功创建。',
             'creation-error' => '无法更新 RMA 状态，因为尚未为此订单创建发票。',
             'invalid-item' => '所选订单项无效。',
@@ -1773,104 +1815,104 @@ return [
         ],
     ],
 
-    'eu_withdrawal' => [
+    'eu-withdrawal' => [
         'button' => [
             'withdraw' => '撤回合同',
-            'view_existing' => '查看您的撤回请求',
+            'view-existing' => '查看您的撤回请求',
         ],
 
-        'guest_dropdown' => [
+        'guest-dropdown' => [
             'link' => '撤回合同',
         ],
 
         'lookup' => [
-            'page_title' => '撤回合同',
+            'page-title' => '撤回合同',
             'heading' => '撤回您的合同',
             'intro' => '请输入订单编号以及您在结账时使用的电子邮件地址。我们将向您发送一个用于提交撤回请求的链接。',
-            'order_number' => '订单编号',
+            'order-number' => '订单编号',
             'email' => '电子邮件地址',
             'submit' => '发送撤回链接',
-            'sent_notice' => '如果存在匹配的订单，我们已将撤回链接发送至该邮箱地址。链接将在24小时内有效。',
-            'legal_note' => '根据欧盟指令 2011/83/EU（经修订），您拥有在14天内撤回合同的法定权利。其他撤回方式 — 包括以书面形式发送至我们客户服务的声明 — 仍然有效。',
+            'sent-notice' => '如果存在匹配的订单，我们已将撤回链接发送至该邮箱地址。链接将在24小时内有效。',
+            'legal-note' => '根据欧盟指令 2011/83/EU（经修订），您拥有在14天内撤回合同的法定权利。其他撤回方式 — 包括以书面形式发送至我们客户服务的声明 — 仍然有效。',
         ],
 
         'form' => [
-            'page_title' => '确认您的撤回请求',
+            'page-title' => '确认您的撤回请求',
             'heading' => '确认撤回合同',
-            'legal_notice_title' => '这是一份具有法律约束力的声明',
-            'legal_effect' => '提交此表单即表示您行使对订单 #:order_id 的法定撤回权。该声明在您提交之时即具有法律效力。',
-            'order_summary' => '订单',
-            'order_total' => '总计',
-            'order_items' => '商品',
-            'placed_on' => '下单日期：:date',
-            'reason_label' => '理由',
-            'reason_optional' => '（可选）',
-            'reason_help' => '您无需提供理由。您在此填写的任何内容都将记录在撤回凭证上并发送给商家。',
-            'reason_placeholder' => '例如：“改变主意”、“商品与描述不符”，或留空。',
+            'legal-notice-title' => '这是一份具有法律约束力的声明',
+            'legal-effect' => '提交此表单即表示您行使对订单 #:order_id 的法定撤回权。该声明在您提交之时即具有法律效力。',
+            'order-summary' => '订单',
+            'order-total' => '总计',
+            'order-items' => '商品',
+            'placed-on' => '下单日期：:date',
+            'reason-label' => '理由',
+            'reason-optional' => '（可选）',
+            'reason-help' => '您无需提供理由。您在此填写的任何内容都将记录在撤回凭证上并发送给商家。',
+            'reason-placeholder' => '例如：“改变主意”、“商品与描述不符”，或留空。',
             'submit' => '提交撤回请求',
             'cancel' => '取消并返回',
         ],
 
         'confirmation' => [
-            'page_title' => '撤回收据',
+            'page-title' => '撤回收据',
             'heading' => '您的撤回请求已收到',
-            'heading_received' => '您的撤回请求已收到',
-            'heading_refunded' => '您的退款已发放',
-            'heading_declined' => '您的撤回请求已被拒绝',
+            'heading-received' => '您的撤回请求已收到',
+            'heading-refunded' => '您的退款已发放',
+            'heading-declined' => '您的撤回请求已被拒绝',
             'intro' => '我们已记录您的声明。本页面以及我们刚刚发送给您的邮件均可作为持久性介质上的确认凭证。',
-            'intro_received' => '我们已记录您的声明。本页面以及我们刚刚发送给您的邮件均可作为持久性介质上的确认凭证。',
-            'intro_refunded' => '商家已处理您的退款。退款将很快返回到您的原支付方式。',
-            'intro_declined' => '商家对本声明项下的退款请求权提出异议。请参阅下方详细信息了解所给理由以及您可选择的其他途径。',
-            'received_at' => '接收时间',
+            'intro-received' => '我们已记录您的声明。本页面以及我们刚刚发送给您的邮件均可作为持久性介质上的确认凭证。',
+            'intro-refunded' => '商家已处理您的退款。退款将很快返回到您的原支付方式。',
+            'intro-declined' => '商家对本声明项下的退款请求权提出异议。请参阅下方详细信息了解所给理由以及您可选择的其他途径。',
+            'received-at' => '接收时间',
             'reference' => '参考编号',
-            'copy_reference' => '复制参考编号',
-            'reference_copied' => '参考编号已复制到剪贴板。',
+            'copy-reference' => '复制参考编号',
+            'reference-copied' => '参考编号已复制到剪贴板。',
             'order' => '订单',
             'email' => '电子邮件',
             'reason' => '理由',
             'status' => '状态',
-            'status_received' => '已接收',
-            'status_refunded' => '已退款',
-            'status_declined' => '已拒绝',
+            'status-received' => '已接收',
+            'status-refunded' => '已退款',
+            'status-declined' => '已拒绝',
             'print' => '打印',
-            'next_steps_title' => '后续步骤',
-            'step_received' => '您的声明已被接收并记录。',
-            'step_email' => '确认邮件已发送至您的收件箱。',
-            'step_refund' => '将在14天内发放退款。',
-            'step_refund_done' => '退款已发放。',
-            'step_declined' => '商家已拒绝该撤回请求。',
-            'declined_reason_label' => '商家给出的理由',
-            'declined_notice' => '您仍然保留欧盟消费者法律下的所有其他法律救济权利。如果您不同意此决定，请直接联系商家。',
-            'refund_notice' => '除非您另有明确同意，我们将使用您在原交易中使用的相同支付方式进行退款。',
-            'email_sent' => '确认邮件已发送。',
-            'email_pending' => '我们暂时无法立即发送确认邮件；我们的团队将跟进处理。请保存本页面作为您的收据。',
-            'durable_medium_notice' => '本页面即为您的收据。您可以保存或打印。',
+            'next-steps-title' => '后续步骤',
+            'step-received' => '您的声明已被接收并记录。',
+            'step-email' => '确认邮件已发送至您的收件箱。',
+            'step-refund' => '将在14天内发放退款。',
+            'step-refund-done' => '退款已发放。',
+            'step-declined' => '商家已拒绝该撤回请求。',
+            'declined-reason-label' => '商家给出的理由',
+            'declined-notice' => '您仍然保留欧盟消费者法律下的所有其他法律救济权利。如果您不同意此决定，请直接联系商家。',
+            'refund-notice' => '除非您另有明确同意，我们将使用您在原交易中使用的相同支付方式进行退款。',
+            'email-sent' => '确认邮件已发送。',
+            'email-pending' => '我们暂时无法立即发送确认邮件；我们的团队将跟进处理。请保存本页面作为您的收据。',
+            'durable-medium-notice' => '本页面即为您的收据。您可以保存或打印。',
         ],
 
         'emails' => [
             'confirmation' => [
                 'subject' => '撤回确认 — 订单 :order_id',
                 'title' => '撤回请求已接收',
-                'title_received' => '撤回请求已接收',
-                'title_refunded' => '退款已发放',
-                'title_declined' => '撤回请求已被拒绝',
+                'title-received' => '撤回请求已接收',
+                'title-refunded' => '退款已发放',
+                'title-declined' => '撤回请求已被拒绝',
                 'greeting' => '您好，',
                 'intro' => '我们已收到您关于订单 #:order_id 的合同撤回声明。具有法律效力的接收时间记录如下。',
-                'intro_received' => '我们已收到您关于订单 #:order_id 的合同撤回声明。具有法律效力的接收时间记录如下。',
-                'intro_refunded' => '您订单 #:order_id 的退款已发放。退款将很快返回到您的原支付方式。',
-                'intro_declined' => '商家对您本声明项下订单 #:order_id 的退款请求权提出异议。所给理由如下。',
+                'intro-received' => '我们已收到您关于订单 #:order_id 的合同撤回声明。具有法律效力的接收时间记录如下。',
+                'intro-refunded' => '您订单 #:order_id 的退款已发放。退款将很快返回到您的原支付方式。',
+                'intro-declined' => '商家对您本声明项下订单 #:order_id 的退款请求权提出异议。所给理由如下。',
                 'summary' => '撤回请求概要',
-                'received_at' => '接收时间',
+                'received-at' => '接收时间',
                 'reference' => '参考编号',
                 'order' => '订单',
                 'email' => '电子邮件',
                 'reason' => '所给理由',
-                'declined_reason' => '拒绝理由',
-                'refund_notice' => '如需退款，除非您另有明确同意，我们将在上述日期起14天内，使用您在原交易中使用的相同支付方式进行退款。',
+                'declined-reason' => '拒绝理由',
+                'refund-notice' => '如需退款，除非您另有明确同意，我们将在上述日期起14天内，使用您在原交易中使用的相同支付方式进行退款。',
                 'footer' => '本邮件是欧盟指令 2011/83/EU（经欧盟指令 2023/2673 修订）第 11a 条所要求的持久性介质上的确认凭证。请妥善保存以备查阅。',
             ],
 
-            'guest_link' => [
+            'guest-link' => [
                 'subject' => '您的撤回链接',
                 'title' => '您的撤回链接',
                 'intro' => '请使用以下链接提交订单 :order_id 的撤回请求。链接将在24小时内有效。',

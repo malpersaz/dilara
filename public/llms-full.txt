@@ -17506,8 +17506,12 @@ php artisan bagisto:install
 
 | Flag | Description |
 |---|---|
-| `--skip-env-check` | Skip environment file validation |
-| `--skip-admin-creation` | Skip the admin user creation step |
+| `--no-interaction` (`-n`) | Unattended install: uses the existing `.env`, creates the default admin user, skips sample products |
+| `--demo-samples` | Also seed demo/sample product data (use with `--no-interaction`) |
+| `--skip-env-check` | Deprecated — use `--no-interaction` |
+| `--skip-admin-creation` | Deprecated — use `--no-interaction` |
+| `--skip-cloud-promotion` | Deprecated — use `--no-interaction` |
+| `--skip-github-star` | Deprecated — use `--no-interaction` |
 
 **Source:** `Webkul\Installer\Console\Commands\Installer`
 
@@ -17873,7 +17877,7 @@ Bagisto implements a multi-layered caching strategy to optimize performance acro
 
 | Layer | Technology | Scope | Configuration |
 |---|---|---|---|
-| **Application Cache** | File / Redis / Memcached | Key-value storage for config, routes | `CACHE_STORE` in `.env` |
+| **Application Cache** | Database / Redis / Memcached | Key-value storage for config, routes | `CACHE_STORE` in `.env` |
 | **Repository Cache** | Prettus L5 Repository | Automatic model query caching | `config/repository.php` |
 | **Full Page Cache (FPC)** | Spatie ResponseCache | Caches entire HTTP responses | `RESPONSE_CACHE_ENABLED` in `.env` |
 | **Elasticsearch** | Elasticsearch 7.17+ | Product search index | `config/elasticsearch.php` |
@@ -17881,11 +17885,11 @@ Bagisto implements a multi-layered caching strategy to optimize performance acro
 
 ## Application Cache
 
-Configured via the `CACHE_STORE` environment variable. Default is `file`:
+Configured via the `CACHE_STORE` environment variable. Default is `database`:
 
 ```properties
 # .env
-CACHE_STORE=file
+CACHE_STORE=database
 ```
 
 For production, Redis is recommended:

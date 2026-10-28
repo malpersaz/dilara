@@ -77,13 +77,16 @@ class CategoryController extends Controller
             'meta_title',
             'meta_keywords',
             'meta_description',
-            'status',
             'position',
             'display_mode',
             'attributes',
             'logo_path',
+            'logo_meta',
             'banner_path',
+            'banner_meta',
         ]);
+
+        $data['status'] = $categoryRequest->boolean('status');
 
         if (! empty($data['description'])) {
             $data['description'] = clean_content($data['description']);
@@ -135,12 +138,15 @@ class CategoryController extends Controller
             'locale',
             'parent_id',
             'logo_path',
+            'logo_meta',
             'banner_path',
+            'banner_meta',
             'position',
             'display_mode',
-            'status',
             'attributes'
         );
+
+        $data['status'] = $categoryRequest->boolean('status');
 
         $data[$locale] = $localeData;
 
@@ -245,7 +251,7 @@ class CategoryController extends Controller
 
                 $category = $this->categoryRepository->find($categoryId);
 
-                $category->status = $massUpdateRequest->input('value');
+                $category->status = $massUpdateRequest->boolean('value');
 
                 $category->save();
 

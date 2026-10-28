@@ -1,378 +1,572 @@
-import { Page, expect, Locator } from "@playwright/test";
+import { Page, Response, expect } from "@playwright/test";
 import { BasePage } from "../../BasePage";
+import { generateEmail } from "../../../utils/faker";
 
-/**
- * Base checkout helper for common checkout operations
- * Includes all locators needed for shop checkout flow
- */
+export type ShippingMethod = "free" | "flatrate";
+
+export type PaymentMethod = "moneytransfer" | "cashondelivery";
+
+export interface GuestAddress {
+    companyName: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    street: string;
+    country: string;
+    state: string;
+    city: string;
+    postcode: string;
+    phone: string;
+}
+
+export function guestAddress(): GuestAddress {
+    return {
+        companyName: "Webkul",
+        firstName: "Demo",
+        lastName: "Guest",
+        email: generateEmail(),
+        street: "North Street",
+        country: "IN",
+        state: "UP",
+        city: "Test City",
+        postcode: "123456",
+        phone: "2365432789",
+    };
+}
+
+const SHIPPING_IDS: Record<ShippingMethod, string> = {
+    free: "free_free",
+    flatrate: "flatrate_flatrate",
+};
+
 export class CheckoutHelper extends BasePage {
     constructor(page: Page) {
         super(page);
     }
 
-    get searchInput() {
-        return this.page.getByRole("textbox", {
-            name: "Search products here",
-        });
+    private get searchInput() {
+        return this.page.getByRole("textbox", { name: "Search products here" });
     }
 
-    get addToCartButton() {
-        return this.page.locator(
-            "(//button[contains(@class,'secondary-button')])[2]",
-        );
+    protected productCard(productName: string) {
+        return this.page
+            .locator("div.group")
+            .filter({ has: this.page.locator(`p:text-is("${productName}")`) });
     }
 
-    get shoppingCartIcon() {
-        return this.page.locator("(//span[contains(@class,'icon-cart')])[1]");
+    protected cardSellingPrice(productName: string) {
+        return this.productCard(productName)
+            .locator("div.flex-wrap > p:not(.line-through):not(.price-label)")
+            .filter({ visible: true });
     }
 
-    get addCartSuccess() {
-        return this.page.getByText("Item Added Successfully");
+    protected cardStruckPrice(productName: string) {
+        return this.productCard(productName)
+            .locator("div.flex-wrap > p.line-through")
+            .filter({ visible: true });
     }
 
-    get continueButton() {
-        return this.page.locator(
-            '//a[contains(.," Continue to Checkout ")][1]',
-        );
+    protected get productForm() {
+        return this.page.locator('form:has(input[name="product_id"])');
     }
 
-    get companyName() {
-        return this.page.getByRole("textbox", { name: "Company Name" });
+    protected get addToCartButton() {
+        return this.productForm.getByRole("button", { name: "Add To Cart" });
     }
 
-    get firstName() {
-        return this.page.getByRole("textbox", { name: "First Name" });
+    protected get addCartSuccess() {
+        return this.page.getByText("Item Added Successfully").first();
     }
 
-    get lastName() {
-        return this.page.getByRole("textbox", { name: "Last Name" });
+    private get proceedToCheckoutLink() {
+        return this.page.getByRole("link", { name: "Proceed To Checkout" });
     }
 
-    get shippingEmail() {
-        return this.page.getByRole("textbox", { name: "email@example.com" });
+    private get cookieAcceptButton() {
+        return this.page.locator(".js-cookie-consent").getByRole("button", { name: "Accept" });
     }
 
-    get streetAddress() {
-        return this.page.getByRole("textbox", { name: "Street Address" });
+    private async dismissCookieNoticeIfShown() {
+        if (await this.cookieAcceptButton.isVisible()) {
+            await this.cookieAcceptButton.click();
+
+            await expect(this.cookieAcceptButton).toBeHidden();
+        }
     }
 
-    get addNewAddress() {
+    private get addNewAddressOption() {
         return this.page.getByText("Add new address");
     }
 
-    get billingCountry() {
-        return this.page.locator('select[name="billing\\.country"]');
-    }
-
-    get billingState() {
-        return this.page.locator('select[name="billing\\.state"]');
-    }
-
-    get billingCity() {
-        return this.page.getByRole("textbox", { name: "City" });
-    }
-
-    get billingZip() {
-        return this.page.getByRole("textbox", { name: "Zip/Postcode" });
-    }
-
-    get billingTelephone() {
-        return this.page.getByRole("textbox", { name: "Telephone" });
-    }
-
-    get clickSaveAddressButton() {
-        return this.page.getByRole("button", { name: "Save" });
-    }
-
-    get clickProcessButton() {
+    private get proceedButton() {
         return this.page.getByRole("button", { name: "Proceed" });
     }
 
-    get chooseShippingMethod() {
-        return this.page.getByText("Free Shipping").first();
+    private get saveAddressButton() {
+        return this.page.getByRole("button", { name: "Save" });
     }
 
-    get chooseFlatShippingMethod() {
-        return this.page.getByText("Flat Rate").first();
+    private get savedBillingAddressOptions() {
+        return this.page
+            .locator('label[for^="billing_address_id_"]')
+            .filter({ hasText: /\S/ });
     }
 
-    get choosePaymentMethod() {
-        return this.page.getByAltText("Money Transfer");
+    private get guestCountrySelect() {
+        return this.page.locator('select[name="billing\\.country"]');
     }
 
-    get choosePaymentMethodCOD() {
-        return this.page.getByAltText("Cash On Delivery");
+    private get guestStateSelect() {
+        return this.page.locator('select[name="billing\\.state"]');
     }
 
-    get clickPlaceOrderButton() {
+    private get guestStreetInput() {
+        return this.page.getByRole("textbox", { name: "Street Address" });
+    }
+
+    private get freeShippingOption() {
+        return this.page.locator('label[for="free_free"]').filter({ hasText: /\S/ });
+    }
+
+    private get minimumOrderNotice() {
+        return this.page.getByText(/Minimum order amount is/);
+    }
+
+    private get addressUpdatedNotice() {
+        return this.page
+            .getByRole("status")
+            .filter({ hasText: "Your address has been updated" });
+    }
+
+    private get placeOrderButton() {
         return this.page.getByRole("button", { name: "Place Order" });
     }
 
-    get clickLink() {
+    protected get orderIdHeading() {
+        return this.page.locator("p.text-xl").filter({ hasText: /#\s*\d+/ });
+    }
+
+    protected get downloadableLinkOption() {
         return this.page.locator("label.icon-uncheck");
     }
 
-    get eventTicket() {
+    protected get eventTicket() {
         return this.page.locator(
-            'div.place-items-end>div.flex>span.icon-plus[aria-label="Increase Quantity"]',
+            'div.place-items-end>div.flex>button.icon-plus[aria-label="Increase Quantity"]',
         );
     }
 
-    get hourlyRadio() {
+    protected get hourlyRadio() {
         return this.page.locator(
             'span.flex>label[for="booking[hourly]"].icon-radio-unselect',
         );
     }
 
-    get dailyRadio() {
+    protected get dailyRadio() {
         return this.page.locator(
             'span.flex>label[for="booking[daily]"].icon-radio-unselect',
         );
     }
 
-    getMinimizebtn() {
-        return this.page.locator("a.phpdebugbar-minimize-btn");
-    }
-
-    get bookingDateInput() {
+    protected get bookingDateInput() {
         return this.page.locator('input[name="booking[date]"]');
     }
 
-    get bookingDateFromInput() {
+    protected get bookingDateFromInput() {
         return this.page.locator('input[name="booking[date_from]"]');
     }
 
-    get bookingDateToInput() {
+    protected get bookingDateToInput() {
         return this.page.locator('input[name="booking[date_to]"]');
     }
 
-    get bookingSlotSelect() {
+    protected get bookingSlotSelect() {
         return this.page.locator('select[name="booking[slot]"]');
     }
 
-    get bookingSlotStartSelect() {
+    protected get bookingSlotStartSelect() {
         return this.page.locator('select[name="booking[slot][from]"]');
     }
 
-    get bookingSlotEndSelect() {
+    protected get bookingSlotEndSelect() {
         return this.page.locator('select[name="booking[slot][to]"]');
     }
 
-    get flatpickrOpenCalendar() {
+    protected get flatpickrOpenCalendar() {
         return this.page.locator(".flatpickr-calendar.open");
     }
 
-    get flatpickrEnabledDates() {
-        return this.page.locator(
-            ".flatpickr-day:not(.disabled):not(.prevMonthDay):not(.nextMonthDay)",
-        );
-    }
-
-    get flatpickrOpenEnabledDates() {
+    protected get flatpickrOpenEnabledDates() {
         return this.page.locator(
             ".flatpickr-calendar.open .flatpickr-day:not(.disabled):not(.prevMonthDay):not(.nextMonthDay)",
         );
     }
 
-    get flatpickrNextMonthButton() {
+    protected get flatpickrOpenEnabledDatesAfterToday() {
+        return this.page.locator(
+            ".flatpickr-calendar.open .flatpickr-day:not(.disabled):not(.prevMonthDay):not(.nextMonthDay):not(.today)",
+        );
+    }
+
+    protected get flatpickrMonthLabel() {
+        return this.page.locator(
+            ".flatpickr-calendar.open .flatpickr-current-month",
+        );
+    }
+
+    protected get flatpickrNextMonthButton() {
         return this.page.locator(
             ".flatpickr-calendar.open .flatpickr-next-month",
         );
     }
 
-    get orderIdHeading() {
-        return this.page.locator("p.text-xl:has(.text-blue-700)").first();
+    protected get miniCartDrawer() {
+        return this.page
+            .locator("div.fixed")
+            .filter({ has: this.page.locator("p", { hasText: /^\s*Shopping Cart\s*$/ }) })
+            .filter({ visible: true });
     }
 
-    get cartSummaryToggle() {
-        return this.page.locator("p.flex > span.icon-arrow-down").first();
+    protected get cartSummaryToggles() {
+        return this.miniCartDrawer.getByRole("button", { name: "See Details" });
     }
 
-    cartSummaryText(index: number) {
-        return this.page.locator("div.grid.gap-2>div>p.text-sm").nth(index);
+    protected get cartDismissButton() {
+        return this.page.getByRole("button", { name: "Close drawer" });
     }
 
-    get cartDismissButton() {
-        return this.page.locator("span.icon-cancel").nth(1);
-    }
-
-    get cartOverlayDismissButton() {
-        return this.page.locator("div.absolute>span.icon-cancel").nth(1);
-    }
-
-    get pageBody() {
+    protected get pageBody() {
         return this.page.locator("body");
     }
 
-    get bookingItemsWillNotBeCanceledText() {
-        return this.page
-            .getByText(" Booking Items Will Not Be Canceled ")
-            .first();
+    protected get bookingItemsWillNotBeCanceledText() {
+        return this.page.getByText("Booking Items Will Not Be Canceled");
     }
 
-    get cancellationNotAllowedText() {
-        return this.page.getByText(" Cancellation Not Allowed ").first();
+    protected get cancellationNotAllowedText() {
+        return this.page.getByText("Cancellation Not Allowed");
     }
 
-    get createInvoiceAction() {
-        return this.page.locator("div.transparent-button:has(.icon-sales)");
+    protected get shoppingCartButton() {
+        return this.page.getByRole("button", { name: "Shopping Cart" });
     }
 
-    get canCreateTransactionToggle() {
-        return this.page.locator(
-            'div.mb-4:has(label[for="can_create_transaction"])',
-        );
+    protected async goToNextFlatpickrMonth() {
+        const current = await this.flatpickrMonthLabel.first().innerText();
+
+        await this.flatpickrNextMonthButton.click();
+
+        await expect
+            .poll(
+                async () => {
+                    const months = await this.flatpickrMonthLabel.allInnerTexts();
+
+                    return months.length === 1 ? months[0] : current;
+                },
+                {
+                    message:
+                        "the calendar kept sliding between months instead of settling on the next one",
+                },
+            )
+            .not.toBe(current);
     }
 
-    get createInvoiceButton() {
-        return this.page
-            .getByRole("button", { name: " Create Invoice " })
-            .first();
+    private async assertOrderAccepted(response: Response) {
+        if (response.ok()) {
+            return;
+        }
+
+        const body = await response.text().catch(() => "");
+        const payload = parseJson(body);
+        const message =
+            payload?.message ??
+            payload?.data?.message ??
+            body.trim().slice(0, 300);
+
+        throw new Error(`checkout failed (${response.status()}): ${message}`);
     }
 
-    get invoiceCreatedSuccessText() {
-        return this.page
-            .getByText("Invoice created successfully", { exact: false })
-            .first();
+    private async waitForPaymentMethodSaved() {
+        await expect
+            .poll(
+                async () => {
+                    const response = await this.page.request
+                        .get("api/checkout/onepage/summary")
+                        .catch(() => null);
+
+                    if (!response || !response.ok()) {
+                        return null;
+                    }
+
+                    const body = await response.json().catch(() => null);
+
+                    return body?.data?.payment_method ?? null;
+                },
+                {
+                    message:
+                        "the selected payment method was never saved on the cart",
+                    timeout: 30 * 1000,
+                },
+            )
+            .not.toBeNull();
     }
 
-    get slotGraphEvent() {
-        return this.page
-            .locator("div.vuecal__event:has(div.slot.border-emerald-500)")
-            .first();
-    }
-
-    slotGraphTimeText(slotGraph: Locator) {
-        return slotGraph.locator("span.truncate");
-    }
-
-    bookingDetailText(index: number) {
-        return this.page.locator("div.font-medium.text-gray-900").nth(index);
-    }
-
-    get bookingCustomerNameText() {
-        return this.page.locator("span.font-medium");
-    }
-
-    get bookingDialogCloseButton() {
-        return this.page.locator("span.icon-cancel-1").first();
-    }
-
-    get bookingListToggleButton() {
-        return this.page.locator("button.icon-list").first();
-    }
-
-    bookingRowByOrderId(orderId: string) {
-        return this.page
-            .locator("div.row.py-4")
-            .filter({
-                has: this.page.locator("p").nth(1).filter({ hasText: orderId }),
-            })
-            .first();
-    }
-
-    bookingRowText(row: Locator, index: number) {
-        return row.locator("p").nth(index);
-    }
-
-    get cancelOrderAction() {
-        return this.page.locator(
-            "div.transparent-button:has(span.icon-cancel)",
-        );
-    }
-
-    get refundButton() {
-        return this.page
-            .getByRole("button", { name: " Refund ", exact: true })
-            .first();
-    }
-
-    get refundCreatedSuccessText() {
-        return this.page.getByText("Refund created successfully").first();
-    }
-
-    get bookingCalendarNextButton() {
-        return this.page.locator("span.icon-sort-right");
-    }
-
-    customerSlotByName(customerName: string) {
-        return this.page
-            .locator(`div.slot:has-text('${customerName}')`)
-            .first();
-    }
-
-    /**
-     * Search for product by name
-     */
     async searchProduct(productName: string) {
         await this.visit("");
-        await this.page.waitForLoadState("networkidle");
         await this.searchInput.fill(productName);
         await this.searchInput.press("Enter");
+
+        await expect(this.productCard(productName)).toHaveCount(1);
     }
 
-    /**
-     * Navigate from cart to checkout (billing address step)
-     */
-    async proceedToCheckout() {
-        if (await this.shoppingCartIcon.isVisible()) {
-            await this.shoppingCartIcon.click();
+    async openProduct(productName: string) {
+        await this.searchProduct(productName);
+        await this.productCard(productName)
+            .getByRole("link", { name: productName })
+            .click();
+
+        await expect(this.productForm).toBeVisible();
+    }
+
+    async addSimpleProductToCart(productName: string) {
+        await this.searchProduct(productName);
+
+        const card = this.productCard(productName);
+
+        await card.hover();
+        await card.getByRole("button", { name: "Add To Cart" }).click();
+
+        await expect(this.addCartSuccess).toBeVisible();
+    }
+
+    async addOpenProductToCart() {
+        await this.addToCartButton.click();
+
+        await expect(this.addCartSuccess).toBeVisible();
+    }
+
+    async openCheckout() {
+        await this.visit("checkout/cart");
+        await this.dismissCookieNoticeIfShown();
+        await this.proceedToCheckoutLink.click();
+
+        await expect(this.page).toHaveURL(/checkout\/onepage/);
+    }
+
+    async proceedWithSavedAddress() {
+        await this.openCheckout();
+
+        await expect(this.savedBillingAddressOptions.first()).toBeVisible();
+
+        const selected = this.page.locator(
+            'input[id^="billing_address_id_"]:checked',
+        );
+
+        if (!(await selected.count())) {
+            await this.savedBillingAddressOptions.first().click();
         }
-        await this.continueButton.click();
-        await this.page.locator(".icon-radio-unselect").first().click();
-        await this.clickProcessButton.click();
+
+        await this.proceedButton.click();
     }
 
-    /**
-     * Place order and wait for processing
-     */
-    async placeOrder() {
-        await this.page.waitForTimeout(2000);
-        await this.clickPlaceOrderButton.click();
-        await this.page.waitForTimeout(5000);
+    async fillGuestAddress(
+        address: GuestAddress = guestAddress(),
+    ): Promise<GuestAddress> {
+        await this.page
+            .getByRole("textbox", { name: "Company Name" })
+            .fill(address.companyName);
+        await this.page
+            .getByRole("textbox", { name: "First Name" })
+            .fill(address.firstName);
+        await this.page
+            .getByRole("textbox", { name: "Last Name" })
+            .fill(address.lastName);
+        await this.page.locator('input[name="billing\\.email"]').fill(address.email);
+        await this.page
+            .getByRole("textbox", { name: "Street Address" })
+            .fill(address.street);
+        await this.page
+            .locator('select[name="billing\\.country"]')
+            .selectOption(address.country);
+        await this.page
+            .locator('select[name="billing\\.state"]')
+            .selectOption(address.state);
+        await this.page.getByRole("textbox", { name: "City" }).fill(address.city);
+        await this.page
+            .getByRole("textbox", { name: "Zip/Postcode" })
+            .fill(address.postcode);
+        await this.page
+            .getByRole("textbox", { name: "Phone" })
+            .fill(address.phone);
+
+        return address;
     }
 
-    /**
-     * Common guest checkout address entry
-     */
-    async fillGuestCheckoutAddress() {
-        await this.companyName.fill("Web");
-        await this.firstName.fill("demo");
-        await this.lastName.fill("guest");
-        await this.shippingEmail.fill("demo@example.com");
-        await this.streetAddress.fill("north street");
-        await this.billingCountry.selectOption({ value: "IN" });
-        await this.billingState.selectOption({ value: "UP" });
-        await this.billingCity.fill("test city");
-        await this.billingZip.fill("123456");
-        await this.billingTelephone.fill("2365432789");
+    async proceedAsGuest(
+        address: GuestAddress = guestAddress(),
+    ): Promise<GuestAddress> {
+        await this.openCheckout();
+        await this.fillGuestAddress(address);
+        await this.proceedButton.click();
+
+        return address;
     }
 
-    /**
-     * Complete guest checkout end-to-end
-     */
-    async guestCheckoutComplete() {
-        await this.shoppingCartIcon.click();
-        await this.continueButton.click();
-        await this.fillGuestCheckoutAddress();
-        await this.clickProcessButton.click();
-        await this.chooseShippingMethod.click();
-        await this.choosePaymentMethod.click();
-        await this.placeOrder();
+    async proceedWithNewAddress(
+        address: GuestAddress = guestAddress(),
+    ): Promise<GuestAddress> {
+        await this.openCheckout();
+        await this.addNewAddressOption.click();
+        await this.fillGuestAddress(address);
+        await this.saveAddressButton.click();
+        await this.proceedButton.click();
+
+        return address;
     }
 
-    /**
-     * Complete checkout with new address
-     */
-    async checkoutWithNewAddress() {
-        await this.shoppingCartIcon.click();
-        await this.continueButton.click();
-        await this.addNewAddress.click();
-        await this.fillGuestCheckoutAddress();
-        await this.clickSaveAddressButton.click();
-        await this.clickProcessButton.click();
-        await this.chooseShippingMethod.click();
-        await this.choosePaymentMethod.click();
-        await this.placeOrder();
+    async chooseShipping(method: ShippingMethod) {
+        const id = SHIPPING_IDS[method];
+
+        await this.page.locator(`label[for="${id}"]`).filter({ hasText: /\S/ }).click();
+
+        await expect(this.page.locator(`input#${id}`)).toBeChecked();
+    }
+
+    async choosePayment(method: PaymentMethod) {
+        await Promise.all([
+            this.page.waitForResponse((response) =>
+                response.url().includes("checkout/onepage/payment-methods"),
+            ),
+            this.page.locator(`label[for="${method}"]`).filter({ hasText: /\S/ }).click(),
+        ]);
+
+        await expect(this.page.locator(`input#${method}`)).toBeChecked();
+    }
+
+    async placeOrder(): Promise<string> {
+        await this.waitForPaymentMethodSaved();
+
+        await expect(this.placeOrderButton).toBeEnabled({ timeout: 60 * 1000 });
+
+        const orderResponse = this.page.waitForResponse(
+            (response) =>
+                response.url().includes("/api/checkout/onepage/orders") &&
+                response.request().method() === "POST",
+            { timeout: 90 * 1000 },
+        );
+
+        await this.placeOrderButton.click();
+
+        await this.assertOrderAccepted(await orderResponse);
+
+        await expect(this.page).toHaveURL(/checkout\/onepage\/success/, {
+            timeout: 30 * 1000,
+        });
+
+        return this.readOrderId();
+    }
+
+    async readOrderId(): Promise<string> {
+        const text = await this.orderIdHeading.innerText();
+        const match = text.match(/#\s*(\d+)/);
+
+        if (!match) {
+            throw new Error(`Order id not found on the success page: "${text}"`);
+        }
+
+        return match[1];
+    }
+
+    async completeCheckout(
+        options: {
+            shipping?: ShippingMethod | null;
+            payment?: PaymentMethod;
+            address?: "saved" | "guest" | "new";
+        } = {},
+    ): Promise<string> {
+        const address = options.address ?? "saved";
+
+        if (address === "guest") {
+            await this.proceedAsGuest();
+        } else if (address === "new") {
+            await this.proceedWithNewAddress();
+        } else {
+            await this.proceedWithSavedAddress();
+        }
+
+        if (options.shipping !== null) {
+            await this.chooseShipping(options.shipping ?? "free");
+        }
+
+        await this.choosePayment(options.payment ?? "moneytransfer");
+
+        return this.placeOrder();
+    }
+
+    async attemptCheckoutFromCart(): Promise<void> {
+        await this.visit("checkout/cart");
+        await this.dismissCookieNoticeIfShown();
+        await this.proceedToCheckoutLink.click();
+    }
+
+    async changeGuestCountry(country: string): Promise<void> {
+        await this.guestCountrySelect.selectOption(country);
+    }
+
+    async editGuestStreet(street: string): Promise<void> {
+        await this.guestStreetInput.fill(street);
+    }
+
+    async proceedWithEditedAddress(): Promise<void> {
+        await this.proceedButton.click();
+    }
+
+    async expectNoShippingStep(): Promise<void> {
+        await expect(this.page.locator('label[for="free_free"]')).toHaveCount(0);
+    }
+
+    async expectShippingMethodsOffered(): Promise<void> {
+        await expect(this.freeShippingOption).toBeVisible();
+    }
+
+    async expectSignInRequired(): Promise<void> {
+        await expect(this.page).toHaveURL(/customer\/login/);
+    }
+
+    async expectStillOnCart(): Promise<void> {
+        await expect(this.page).toHaveURL(/checkout\/cart/);
+    }
+
+    async expectMinimumOrderNotice(amount: string): Promise<void> {
+        await expect(this.minimumOrderNotice).toContainText(amount);
+    }
+
+    async expectGuestState(state: string): Promise<void> {
+        await expect(this.guestStateSelect).toHaveValue(state);
+    }
+
+    async expectStateRequiredError(): Promise<void> {
+        await expect(this.page.getByText("The State field is required")).toBeVisible();
+    }
+
+    async expectShippingMethodsNotOffered(): Promise<void> {
+        await expect(this.freeShippingOption).toHaveCount(0);
+    }
+
+    async expectAddressUpdatedNotice(): Promise<void> {
+        await expect(this.addressUpdatedNotice).toBeVisible();
+        await expect(this.proceedButton).toBeVisible();
+    }
+
+    async expectAddressUpdatedNoticeCleared(): Promise<void> {
+        await expect(this.addressUpdatedNotice).toBeHidden();
+    }
+}
+
+function parseJson(body: string): any {
+    try {
+        return JSON.parse(body);
+    } catch {
+        return null;
     }
 }

@@ -17,7 +17,7 @@
         </div>
 
         @if ($bookingProduct->available_every_week)
-            @inject ('bookingSlotHelper', 'Webkul\BookingProduct\Helpers\AppointmentSlot')
+            @inject ('bookingSlotHelper', \Webkul\BookingProduct\Helpers\AppointmentSlot::class)
 
             <div class="flex gap-3">
                 <span class="icon-calendar text-2xl"></span>
@@ -51,7 +51,7 @@
         <div class="grid w-max select-none gap-3">
             <!-- Details Toggler -->
             <p
-                class="flex cursor-pointer items-center gap-x-[15px] text-sm font-medium text-blue-600"
+                class="flex cursor-pointer items-center gap-x-3.75 text-sm font-medium text-blue-600"
                 @click="showDaysAvailability = ! showDaysAvailability"
             >
                 @lang('shop::app.products.view.type.booking.appointment.see-details')

@@ -36,7 +36,7 @@
                 @lang('shop::app.rma.view-customer-rma.heading')
             </h2>
 
-            <div class="rounded-xl border shadow-sm overflow-hidden">
+            <div class="rounded-xl border shadow-xs overflow-hidden">
                 <div class="p-6 space-y-4 max-md:p-4">
                     <!-- Request Date -->
                     <div class="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-4">
@@ -98,10 +98,10 @@
 
                             <div class="flex gap-2 flex-wrap">
                                 @foreach ($rma->images as $image)
-                                    <a href="{{ Storage::url($image['path']) }}" target="_blank">
+                                    <a href="{{ route('shop.customers.account.rma.image', $image['id']) }}" target="_blank">
                                         <img
-                                            src="{{ Storage::url($image['path']) }}"
-                                            class="w-24 h-24 max-sm:w-20 max-sm:h-20 object-cover rounded border shadow-sm hover:shadow-md transition"
+                                            src="{{ route('shop.customers.account.rma.image', $image['id']) }}"
+                                            class="w-24 h-24 max-sm:w-20 max-sm:h-20 object-cover rounded-sm border shadow-xs hover:shadow-md transition"
                                         />
                                     </a>
                                 @endforeach
@@ -127,18 +127,21 @@
                 </div>
 
                 <!-- Close / Re-open RMA -->
-                @if (! $isExpired && ($canCloseRma || $canReopenRma))
+                @if (
+                    ! $isExpired
+                    && ($canCloseRma || $canReopenRma)
+                )
                     <div class="border-t bg-gray-50 px-6 py-5 max-md:px-4">
                         <x-shop::form
                             enctype="multipart/form-data"
                             :action="$canCloseRma
-                                ? route('shop.customers.account.rma.update-status', $rma->id)
-                                : route('shop.customers.account.rma.re-open', $rma->id)"
+                                ? route('shop.customers.account.rma.update_status', $rma->id)
+                                : route('shop.customers.account.rma.re_open', $rma->id)"
                         >
                             @php $checkboxName = $canCloseRma ? 'close_rma' : 'reopen_rma'; @endphp
 
                             <div class="flex flex-wrap items-center justify-between gap-4">
-                                <x-shop::form.control-group class="!mb-0 flex select-none items-center gap-2.5">
+                                <x-shop::form.control-group class="mb-0! flex select-none items-center gap-2.5">
                                     <x-shop::form.control-group.control
                                         type="checkbox"
                                         :id="$checkboxName"
@@ -174,7 +177,7 @@
             </h2>
 
             <!-- Desktop Table View -->
-            <div class="rounded-xl border shadow-sm overflow-hidden hidden md:block">
+            <div class="rounded-xl border shadow-xs overflow-hidden hidden md:block">
                 <table class="w-full table-fixed">
                     <thead class="bg-gray-50">
                         <tr>
@@ -209,9 +212,10 @@
                             <tr>
                                 <td class="px-4 py-4 align-top">
                                     <div class="flex items-start gap-3">
-                                        @if ($item->orderItem->product?->images?->first())
+                                        @if ($productBaseImage = product_image()->getProductBaseImage($item->orderItem->product))
                                             <img
-                                                src="{{ asset('storage/' . $item->orderItem->product->images->first()->path) }}"
+                                                src="{{ $productBaseImage['small_image_url'] }}"
+                                                alt="{{ $productBaseImage['alt'] }}"
                                                 class="h-16 w-16 shrink-0 rounded-lg border object-cover"
                                             />
                                         @else
@@ -221,7 +225,10 @@
                                         @endif
 
                                         <div class="min-w-0">
-                                            @if ($item->orderItem->product?->url_key && $item->orderItem->product?->visible_individually)
+                                            @if (
+                                                $item->orderItem->product?->url_key
+                                                && $item->orderItem->product?->visible_individually
+                                            )
                                                 <a
                                                     href="{{ route('shop.product_or_category.index', $item->orderItem->product->url_key) }}"
                                                     class="text-sm font-medium text-blue-600 hover:underline"
@@ -258,7 +265,7 @@
                                 </td>
                                 
                                 <td class="px-4 py-4 align-top text-sm text-gray-600">
-                                    {!! core()->formatPrice($item->orderItem->price, $item->orderItem->order->order_currency_code) !!}
+                                    {{ core()->formatPrice($item->orderItem->price, $item->orderItem->order->order_currency_code) }}
                                 </td>
                                 
                                 <td class="px-4 py-4 align-top text-sm text-gray-600">
@@ -285,21 +292,25 @@
             <!-- Mobile Card View -->
             <div class="md:hidden space-y-4">
                 @if($item = $rma->item)
-                    <div class="rounded-xl border shadow-sm p-4 space-y-3">
+                    <div class="rounded-xl border shadow-xs p-4 space-y-3">
                         <div class="flex items-center gap-3">
-                            @if ($item->orderItem->product?->images?->first())
-                                <img 
-                                    src="{{ asset('storage/' . $item->orderItem->product->images->first()->path) }}" 
-                                    class="w-16 h-16 object-cover rounded border"
+                            @if ($productBaseImage = product_image()->getProductBaseImage($item->orderItem->product))
+                                <img
+                                    src="{{ $productBaseImage['small_image_url'] }}"
+                                    alt="{{ $productBaseImage['alt'] }}"
+                                    class="w-16 h-16 object-cover rounded-sm border"
                                 />
                             @else
-                                <div class="w-16 h-16 border border-dashed rounded flex items-center justify-center text-gray-300">
+                                <div class="w-16 h-16 border border-dashed rounded-sm flex items-center justify-center text-gray-300">
                                     <span class="text-xs">No Image</span>
                                 </div>
                             @endif
 
                             <div class="flex-1">
-                                @if ($item->orderItem->product?->url_key && $item->orderItem->product?->visible_individually)
+                                @if (
+                                    $item->orderItem->product?->url_key
+                                    && $item->orderItem->product?->visible_individually
+                                )
                                     <a
                                         href="{{ route('shop.product_or_category.index', $item->orderItem->product->url_key) }}"
                                         class="text-blue-600 hover:underline text-sm font-medium"
@@ -338,7 +349,7 @@
 
                             <div>
                                 <span class="font-medium text-gray-600">@lang('shop::app.rma.table-heading.price')</span>
-                                <p class="text-gray-600">{!! core()->formatPrice($item->orderItem->price, $item->orderItem->order->order_currency_code) !!}</p>
+                                <p class="text-gray-600">{{ core()->formatPrice($item->orderItem->price, $item->orderItem->order->order_currency_code) }}</p>
                             </div>
 
                             <div>
@@ -374,7 +385,7 @@
                 </p>
             </div>
 
-            <div class="relative mt-3 flex flex-col-reverse overflow-hidden rounded-xl border shadow-sm bg-white">
+            <div class="relative mt-3 flex flex-col-reverse overflow-hidden rounded-xl border shadow-xs bg-white">
                 <div class="border-t border-zinc-200 bg-white p-4 max-md:p-3">
                     <x-shop::form
                         v-slot="{ meta, errors, handleSubmit }" 
@@ -397,11 +408,11 @@
                             />
 
                             <x-shop::form.control-group>
-                                <div class="bg-white !pl-0 !pt-2">
+                                <div class="bg-white pl-0! pt-2!">
                                     <x-shop::form.control-group.control
                                         type="textarea"
                                         name="message"
-                                        class="!mb-1 px-5 max-md:px-3 py-5 max-md:py-3"
+                                        class="mb-1! px-5 max-md:px-3 py-5 max-md:py-3"
                                         rules="required"
                                         maxlength="250"
                                         :placeholder="trans('shop::app.customers.account.rma.view.enter-message')"
@@ -460,7 +471,7 @@
                                 :class="message.is_admin == 1 ? 'justify-start' : 'justify-end'"
                             >
                                 <div
-                                    class="max-w-[70%] w-fit rounded-xl p-3.5 text-left shadow-sm"
+                                    class="max-w-[70%] w-fit rounded-xl p-3.5 text-left shadow-xs"
                                     :class="message.is_admin == 1 ? 'bg-gray-100' : 'bg-blue-50'"
                                 >
                                     <div class="flex items-center gap-2 mb-1">
@@ -477,12 +488,12 @@
                                         <span class="text-xs text-gray-400">· @{{ dateFormat(message.created_at) }}</span>
                                     </div>
 
-                                    <div class="value text-sm max-sm:text-xs break-words">@{{ message.message }}</div>
+                                    <div class="value text-sm max-sm:text-xs wrap-break-word">@{{ message.message }}</div>
 
                                     <div v-if="message.attachment" class="mt-2 flex items-center gap-2">
                                         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l7.071-7.071a4 4 0 00-5.657-5.657l-7.071 7.07a6 6 0 108.485 8.486L20.485 13"/></svg>
                                         <a
-                                            @click="viewAttachmentModal(message.attachment_path)"
+                                            @click="viewAttachmentModal(message.attachment_url, message.attachment)"
                                             class="text-xs max-sm:text-xs hover:underline cursor-pointer text-blue-700"
                                         >
                                             @{{ message.attachment }}
@@ -514,13 +525,13 @@
                     <x-slot:content>
                         <img
                             v-if="messagePath && (getAttachmentExtension === 'jpg' || getAttachmentExtension === 'jpeg' || getAttachmentExtension === 'png' || getAttachmentExtension === 'gif')"
-                            :src="'{{ config('app.url') }}' + '/storage/' + messagePath"
-                            class="min-h-[500px] min-w-[500px] max-h-[500px] max-w-[500px] max-md:min-h-[300px] max-md:min-w-[300px] max-md:max-h-[300px] max-md:max-w-[300px] rounded m-auto"
+                            :src="messagePath"
+                            class="min-h-125 min-w-125 max-h-125 max-w-125 max-md:min-h-75 max-md:min-w-75 max-md:max-h-75 max-md:max-w-75 rounded-sm m-auto"
                         />
 
                         <embed
                             v-if="messagePath && getAttachmentExtension === 'pdf'"
-                            :src="'{{ config('app.url') }}' + '/storage/' + messagePath"
+                            :src="messagePath"
                             width="100%" height="500px"
                             type="application/pdf"
                         />
@@ -528,9 +539,9 @@
                         <video
                             v-if="messagePath && (getAttachmentExtension === 'mp4' || getAttachmentExtension === 'webm' || getAttachmentExtension === 'ogg')"
                             controls
-                            class="w-full h-auto max-h-[500px] max-md:max-h-[300px] rounded m-auto"
+                            class="w-full h-auto max-h-125 max-md:max-h-75 rounded-sm m-auto"
                         >
-                            <source :src="'{{ config('app.url') }}' + '/storage/' + messagePath" />
+                            <source :src="messagePath" />
                         </video>
                     </x-slot>
 
@@ -558,6 +569,9 @@
                         message: '',
                         rma: @json($rma),
                         limit: 5,
+                        messagePath: '',
+                        attachmentName: '',
+                        getAttachmentExtension: '',
                         allowedFileTypes: @json(core()->getConfigData('sales.rma.setting.allowed_file_extension')),
                     };
                 },
@@ -577,7 +591,7 @@
 
                 methods: {
                     getMessage() {
-                        this.$axios.get(`{{ route('shop.customers.account.rma.get-messages') }}`, {
+                        this.$axios.get(`{{ route('shop.customers.account.rma.get_messages') }}`, {
                             params: { id: this.rma.id, limit: this.limit }
                         })
                         .then(response => {
@@ -592,7 +606,7 @@
                         formData.set('message', sanitizedMessage);
                         this.isChatSend = false;
 
-                        this.$axios.post("{{ route('shop.customers.account.rma.send-message') }}", formData)
+                        this.$axios.post("{{ route('shop.customers.account.rma.send_message') }}", formData)
                             .then((response) => {
                                 const attachmentPreview = document.getElementById('attachmentPreview');
                                 attachmentPreview.innerHTML = '';
@@ -608,17 +622,17 @@
                         return tempDiv.innerHTML;
                     },
 
-                    viewAttachmentModal(messagePath) {
+                    viewAttachmentModal(messagePath, attachmentName) {
                         this.messagePath = messagePath;
-                        this.getAttachmentExtension = messagePath.split('.').pop().toLowerCase();
+                        this.attachmentName = attachmentName ?? '';
+                        this.getAttachmentExtension = this.attachmentName.split('.').pop().toLowerCase();
                         this.$refs.attachmentModal.toggle();
                     },
 
                     downloadAttachment(messagePath) {
-                        const imageUrl = `{{ config('app.url') }}/storage/${messagePath}`;
                         const link = document.createElement('a');
-                        link.href = imageUrl;
-                        link.download = imageUrl.split('/').pop();
+                        link.href = messagePath;
+                        link.download = this.attachmentName || messagePath.split('/').pop();
                         document.body.appendChild(link);
                         link.click();
                         document.body.removeChild(link);

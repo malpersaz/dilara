@@ -262,12 +262,14 @@ class Import
             $typeImporter = $this->getTypeImporter()->setSource($source);
 
             $typeImporter->validateData();
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            report($e);
+
             $this->errorHelper->addError(
                 AbstractImporter::ERROR_CODE_SYSTEM_EXCEPTION,
                 null,
                 null,
-                $e->getMessage()
+                trans('data_transfer::app.validation.errors.system')
             );
         }
 
@@ -318,12 +320,14 @@ class Import
 
         try {
             $state = $importer->validateChunkRows($state, $limit ?? $importer->getValidationChunkSize());
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            report($e);
+
             $this->errorHelper->addError(
                 AbstractImporter::ERROR_CODE_SYSTEM_EXCEPTION,
                 null,
                 null,
-                $e->getMessage()
+                trans('data_transfer::app.validation.errors.system')
             );
 
             $state['done'] = true;
@@ -467,6 +471,20 @@ class Import
 
         return is_string($importer)
             && method_exists($importer, 'downloadImagesBatch');
+    }
+
+    /**
+     * Whether an import is part-way through a phase and has progress worth returning to.
+     */
+    public static function isInProgress(?string $state): bool
+    {
+        return in_array($state, [
+            self::STATE_VALIDATING,
+            self::STATE_DOWNLOADING,
+            self::STATE_PROCESSING,
+            self::STATE_LINKING,
+            self::STATE_INDEXING,
+        ]);
     }
 
     /**
@@ -760,9 +778,9 @@ class Import
     {
         $summary = $this->importBatchRepository
             ->select(
-                DB::raw('SUM(json_unquote(json_extract(summary, \'$."created"\'))) AS created'),
-                DB::raw('SUM(json_unquote(json_extract(summary, \'$."updated"\'))) AS updated'),
-                DB::raw('SUM(json_unquote(json_extract(summary, \'$."deleted"\'))) AS deleted'),
+                DB::raw('SUM('.db_grammar()->jsonExtractNumeric('summary', '$."created"').') AS created'),
+                DB::raw('SUM('.db_grammar()->jsonExtractNumeric('summary', '$."updated"').') AS updated'),
+                DB::raw('SUM('.db_grammar()->jsonExtractNumeric('summary', '$."deleted"').') AS deleted'),
             )
             ->where('import_id', $this->import->id)
             ->groupBy('import_id')
@@ -795,9 +813,9 @@ class Import
 
         $summary = $this->importBatchRepository
             ->select(
-                DB::raw('SUM(json_unquote(json_extract(summary, \'$."created"\'))) AS created'),
-                DB::raw('SUM(json_unquote(json_extract(summary, \'$."updated"\'))) AS updated'),
-                DB::raw('SUM(json_unquote(json_extract(summary, \'$."deleted"\'))) AS deleted'),
+                DB::raw('SUM('.db_grammar()->jsonExtractNumeric('summary', '$."created"').') AS created'),
+                DB::raw('SUM('.db_grammar()->jsonExtractNumeric('summary', '$."updated"').') AS updated'),
+                DB::raw('SUM('.db_grammar()->jsonExtractNumeric('summary', '$."deleted"').') AS deleted'),
             )
             ->where('import_id', $this->import->id)
             ->where('state', $state)

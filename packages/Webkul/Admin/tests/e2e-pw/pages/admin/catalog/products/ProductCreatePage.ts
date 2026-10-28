@@ -1,30 +1,8 @@
-import { fileURLToPath } from "url";
-import path from "path";
 import { expect, Page } from "@playwright/test";
 import { BasePage } from "../../../BasePage";
-import {
-    generateDescription,
-    generateLocation,
-    generateName,
-    generateRandomDateTime,
-    generateSKU,
-} from "../../../../utils/faker";
+import { uniqueStamp } from "../../../../utils/faker";
 import { ProductEditPage } from "./ProductEditPage";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-type BookingProductSeed = {
-    name: string;
-    sku: string;
-    productNumber: string;
-    shortDescription: string;
-    description: string;
-    price: string;
-    weight: string;
-    date: string;
-    location: string;
-};
+import { BaseProduct } from "../../types/product.types";
 
 export class ProductCreatePage extends BasePage {
     constructor(page: Page) {
@@ -51,324 +29,17 @@ export class ProductCreatePage extends BasePage {
         return this.page.getByRole("button", { name: "Save Product" });
     }
 
-    private get modalSaveButton() {
-        return this.page.getByRole("button", { name: "Save", exact: true });
+    private get validationErrors() {
+        return this.page.locator("p.text-red-600");
     }
 
-    private get applyToAllButton() {
-        return this.page.getByRole("button", { name: "Apply to All" });
-    }
-
-    private get agreeButton() {
-        return this.page.getByRole("button", { name: "Agree", exact: true });
-    }
-
-    private get selectActionButton() {
-        return this.page.getByRole("button", { name: "Select Action " });
-    }
-
-    private get searchByNameInput() {
-        return this.page.getByRole("textbox", { name: "Search by name" });
-    }
-
-    private get addSelectedProductButton() {
-        return this.page.getByText("Add Selected Product");
-    }
-
-    private get addSlotsButton() {
-        return this.page.getByText("Add Slots").first();
-    }
-
-    private get addTicketsButton() {
-        return this.page.getByText("Add Tickets");
-    }
-
-    private get addLinkButton() {
-        return this.page.getByText("Add Link").first();
-    }
-
-    private get editPricesOption() {
-        return this.page.getByText("Edit Prices");
-    }
-
-    private get editInventoriesOption() {
-        return this.page.getByText("Edit Inventories");
-    }
-
-    private get editWeightOption() {
-        return this.page.getByText("Edit Weight");
-    }
-
-    private get productSelectionButton() {
-        return this.page.locator(".secondary-button").first();
-    }
-
-    private get firstUncheckedCheckbox() {
-        return this.page.locator(".icon-uncheckbox").first();
-    }
-
-    private get configurableAttributesHeading() {
-        return this.page.locator('p:has-text("Configurable Attributes")');
-    }
-
-    private get configurableAttributeRemoveButton() {
-        return this.page
-            .locator("div:nth-child(2) > div > p > .icon-cross")
-            .first();
-    }
-
-    private get productCreatedSuccessToast() {
-        return this.page.locator('p:has-text("Product created successfully")');
-    }
-
-    private get selectProductsModalTitle() {
-        return this.page.locator('p:has-text("Select Products")');
-    }
-
-    private get downloadableLinkPanel() {
-        return this.page.locator(".min-h-0 > div > div");
-    }
-
-    private get flatpickrCalendar() {
-        return this.page.locator(".flatpickr-calendar.hasTime.noCalendar.open");
-    }
-
-    public get updateProductSuccessToast() {
-        return this.page.getByText(/Product updated successfully/i);
-    }
-
-    private get bulkPriceInput() {
-        return this.page.locator('input[name="price"]');
-    }
-
-    private get bulkInventoryInput() {
-        return this.page.locator('input[name="inventories\\[1\\]"]');
-    }
-
-    private get bulkWeightInput() {
-        return this.page.locator('input[name="weight"]');
-    }
-
-    private get linkTitleInput() {
-        return this.page.locator('input[name="title"]').first();
-    }
-
-    private get linkPriceInput() {
-        return this.page.locator('input[name="price"]').first();
-    }
-
-    private get linkDownloadsInput() {
-        return this.page.locator('input[name="downloads"]');
-    }
-
-    private get linkTypeSelect() {
-        return this.page.locator('select[name="type"]');
-    }
-
-    private get linkFileInput() {
-        return this.page.locator('input[name="file"]').nth(1);
-    }
-
-    private get fromDaySelect() {
-        return this.page.locator('select[name="from_day"]');
-    }
-
-    private get toDaySelect() {
-        return this.page.locator('select[name="to_day"]');
-    }
-
-    private get fromTimeTextbox() {
-        return this.page.getByRole("textbox", { name: "From Time" });
-    }
-
-    private get toTimeTextbox() {
-        return this.page.getByRole("textbox", { name: "To Time" });
-    }
-
-    private get availableFromTextbox() {
-        return this.page.getByRole("textbox", { name: "Available From" });
-    }
-
-    private get availableToTextbox() {
-        return this.page.getByRole("textbox", { name: "Available To" });
-    }
-
-    private get hourSpinbutton() {
-        return this.page.getByRole("spinbutton", { name: "Hour" });
-    }
-
-    private get minuteSpinbutton() {
-        return this.page.getByRole("spinbutton", { name: "Minute" });
-    }
-
-    private get dayStatusSelect() {
-        return this.page.locator("select[name='status']");
-    }
-
-    private get ticketNameInput() {
-        return this.page.getByRole("textbox", { name: "Name" });
-    }
-
-    private get ticketQuantityInput() {
-        return this.page.getByRole("textbox", { name: "Quantity" });
-    }
-
-    private get ticketPriceInput() {
-        return this.page.getByRole("textbox", { name: "Price" });
-    }
-
-    private get ticketDescriptionInput() {
-        return this.page.getByRole("textbox", { name: "Description" });
-    }
-
-    private get dailyPriceTextbox() {
-        return this.page.getByRole("textbox", { name: "Daily Price" });
-    }
-
-    private get hourlyPriceTextbox() {
-        return this.page.getByRole("textbox", { name: "Hourly Price" });
-    }
-
-    private get guestCapacityTextbox() {
-        return this.page.getByRole("textbox", { name: "Guest Capacity" });
-    }
-
-    private get slotDurationTextbox() {
-        return this.page.getByRole("textbox", {
-            name: "Slot Duration (Mins)",
-        });
-    }
-
-    private get breakTimeTextbox() {
-        return this.page.getByRole("textbox", {
-            name: "Break Time b/w Slots (Mins)",
-        });
-    }
-
-    private get preventSchedulingBeforeTextbox() {
-        return this.page.getByRole("textbox", {
-            name: "Prevent Scheduling Before",
-        });
-    }
-
-    private get guestLimitPerTableTextbox() {
-        return this.page.getByRole("textbox", {
-            name: "Guest Limit Per Table",
-        });
-    }
-
-    private get tableSameSlotAllDaysSelect() {
-        return this.page.locator('select[name="booking\\[same_slot_all_days\\]\\`"]');
-    }
-
-    private get escapeTarget() {
-        return this.page.locator("body");
-    }
-
-    private paragraphByText(text: string | RegExp) {
-        return this.page.getByRole("paragraph").filter({ hasText: text });
-    }
-
-    private bookingInput(name: string) {
-        return this.page.locator(`input[name="booking[${name}]"]`);
-    }
-
-    private bookingSelect(name: string) {
-        return this.page.locator(`select[name="booking[${name}]"]`);
-    }
-
-    private bookingSlotIdInput(slotIndex: number) {
-        return this.page.locator(
-            `input[name="booking[slots][${slotIndex}][id]"]`,
-        );
-    }
-
-    private bookingDaySlotIdInput(dayIndex: number) {
-        return this.page.locator(
-            `input[name="booking[slots][${dayIndex}][0][id]"]`,
-        );
-    }
-
-    private bookingErrorMessage(index = 0) {
-        return this.page.locator("p.text-red-600").nth(index);
-    }
-
-    private groupedProductCheckbox(name: string | RegExp) {
-        return this.page
-            .locator("div.flex.justify-between.gap-2\\.5.border-b", {
-                has: this.page.locator("p", { hasText: name }),
-            })
-            .first()
-            .locator('input[type="checkbox"]');
-    }
-
-    private configurableAttributeOption(name: string) {
-        return this.paragraphByText(name).locator("span");
-    }
-
-    private linkTitleText(title: string) {
-        return this.page.getByText(title);
-    }
-
-    private timeRangeText(text: string) {
-        return this.page.getByText(text);
-    }
-
-    private dayAvailabilityTrigger(dayIndex: number) {
-        return this.page
-            .locator(
-                `.overflow-x-auto > div:nth-child(${dayIndex}) > div:nth-child(2) > .cursor-pointer`,
-            )
-            .first();
-    }
-
-    private slotEditorTrigger(dayIndex: number, slotIndex: number) {
-        return this.page.locator(
-            `div.flex.gap-2\\.5[index="${dayIndex}_${slotIndex}"]`,
-        );
-    }
-
-    private inlineDaySlotTrigger(dayIndex: number) {
-        const selector =
-            dayIndex === 1
-                ? ".overflow-x-auto > div > div > .cursor-pointer"
-                : `.overflow-x-auto > div:nth-child(${dayIndex}) > div > .cursor-pointer`;
-
-        return this.page.locator(selector).first();
-    }
-
-    private slotTimeTextbox(label: "From" | "To", index: number) {
-        return this.page
-            .getByRole("textbox", {
-                name: label,
-                exact: true,
-            })
-            .nth(index);
-    }
-
-    private async fillAvailabilityRange(
-        availableFrom: string,
-        availableTo: string,
-    ) {
-        await this.availableFromTextbox.fill(availableFrom);
-        await this.availableFromTextbox.press("Enter");
-        await this.availableToTextbox.fill(availableTo);
-        await this.availableToTextbox.press("Enter");
-    }
-
-    public async expectBookingErrorText(text: string) {
-        await expect(this.bookingErrorMessage()).toBeVisible();
-        await expect(this.bookingErrorMessage()).toHaveText(text);
-    }
+    private async openCreateModal(): Promise<void> {
+        await this.visit("admin/catalog/products");
 
-    async visit() {
-        await super.visit("admin/catalog/products");
         await expect(this.createButton).toBeVisible();
-    }
 
-    async openCreateModal() {
-        await this.visit();
         await this.createButton.click();
+
         await expect(this.typeSelect).toBeVisible();
     }
 
@@ -378,10 +49,10 @@ export class ProductCreatePage extends BasePage {
 
     async fillAttributeFamily(attributeFamily: string | { label: string }) {
         await this.attributeFamilySelect.waitFor({ state: "visible" });
-        
+
         let target: any = attributeFamily;
-        
-        if (typeof attributeFamily === "object" && 'label' in attributeFamily && attributeFamily.label === "Clothing") {
+
+        if (typeof attributeFamily === "object" && "label" in attributeFamily && attributeFamily.label === "Clothing") {
             const hasValue3 = await this.attributeFamilySelect.locator('option[value="3"]').count() > 0;
             if (hasValue3) {
                 target = { value: "3" };
@@ -394,7 +65,7 @@ export class ProductCreatePage extends BasePage {
                 target = { index: 0 };
             }
         }
-        
+
         await this.attributeFamilySelect.selectOption(target);
     }
 
@@ -406,11 +77,11 @@ export class ProductCreatePage extends BasePage {
         await this.saveProductButton.click();
     }
 
-    async createProduct(
+    private async submitCreateModal(
         type: string,
         attributeFamily: string | { label: string },
         sku: string,
-    ) {
+    ): Promise<void> {
         await this.openCreateModal();
         await this.fillType(type);
         await this.fillAttributeFamily(attributeFamily);
@@ -418,18 +89,63 @@ export class ProductCreatePage extends BasePage {
         await this.submit();
     }
 
-    private async startProductCreation(
+    async createProduct(
         type: string,
         attributeFamily: string | { label: string },
-    ) {
-        await this.createProduct(type, attributeFamily, generateSKU());
+        sku: string,
+    ): Promise<void> {
+        await this.submitCreateModal(type, attributeFamily, sku);
     }
 
-    public async verifyProductVisible(name: string) {
-        await this.visit("admin/catalog/products");
+    async attemptCreateProduct(sku: string, type: string = "simple"): Promise<void> {
+        await this.submitCreateModal(type, "1", sku);
+    }
+
+    async createSimpleProduct(
+        product: BaseProduct,
+        attributeFamily: string | { label: string } = "1",
+    ): Promise<string> {
+        const sku = product.sku ?? `SKU-${uniqueStamp()}`;
+
+        await this.submitCreateModal("simple", attributeFamily, sku);
+
+        const productEditPage = new ProductEditPage(this.page);
+        await productEditPage.waitForForm();
+
+        await productEditPage.fillGeneralDetails({
+            productNumber: product.productNumber,
+            name: product.name,
+        });
+
+        await productEditPage.fillDescriptions(
+            product.shortDescription,
+            product.description,
+        );
+
+        await productEditPage.fillMeta({
+            metaTitle: product.name,
+            metaKeywords: product.name,
+            metaDescription: product.shortDescription,
+        });
+
+        await productEditPage.fillPrice(product.price ?? "");
+        await productEditPage.fillWeight(product.weight ?? "");
+        await productEditPage.fillInventory(product.inventory ?? "");
+
+        if (product.allowRma) {
+            await productEditPage.setAllowRma(true);
+        }
+
+        await productEditPage.saveAndVerifyUpdated();
+
+        return sku;
+    }
+
+    async expectCreateRefused(message: string): Promise<void> {
         await expect(
-            this.paragraphByText(new RegExp(`^${name}$`)),
+            this.validationErrors.filter({ hasText: message }).first(),
         ).toBeVisible();
+<<<<<<< HEAD
     }
 
     private async createBookingProductBase(): Promise<BookingProductSeed> {
@@ -1399,5 +1115,8 @@ export class ProductCreatePage extends BasePage {
             await this.escapeTarget.press("Escape");
         }
         await this.modalSaveButton.click();
+=======
+        await expect(this.typeSelect).toBeVisible();
+>>>>>>> v2.5.0
     }
 }

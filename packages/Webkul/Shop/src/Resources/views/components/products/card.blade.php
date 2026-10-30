@@ -24,10 +24,10 @@
                 >
                     <x-shop::media.images.lazy
                         class="after:content-[' '] relative bg-zinc-100 transition-all duration-300 after:block after:pb-[calc(100%+9px)] group-hover:scale-105"
-                        ::src="product.base_image.medium_image_url"
+                        ::src="product.base_image.medium_image_url ? product.base_image.medium_image_url + '?v=2' : ''"
                         ::srcset="`
-                            ${product.base_image.small_image_url} 150w,
-                            ${product.base_image.medium_image_url} 300w,
+                            ${product.base_image.small_image_url}?v=2 150w,
+                            ${product.base_image.medium_image_url}?v=2 300w,
                         `"
                         sizes="(max-width: 768px) 150px, (max-width: 1200px) 300px, 600px"
                         ::key="product.id"
@@ -201,7 +201,7 @@
                 <a :href="'{{ route('shop.product_or_category.index', ':slug') }}'.replace(':slug', product.url_key)">
                     <x-shop::media.images.lazy
                         class="after:content-[' '] relative min-w-62.5 bg-zinc-100 transition-all duration-300 after:block after:pb-[calc(100%+9px)] group-hover:scale-105"
-                        ::src="product.base_image.medium_image_url"
+                        ::src="product.base_image.medium_image_url ? product.base_image.medium_image_url + '?v=2' : ''"
                         ::key="product.id"
                         ::index="product.id"
                         width="291"

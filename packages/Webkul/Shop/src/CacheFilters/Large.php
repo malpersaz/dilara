@@ -15,9 +15,9 @@ class Large
         $url = url()->current();
 
         return match (true) {
-            Str::contains($url, '/products') => $image->cover(560, 610),
-            Str::contains($url, '/categories') => $image->cover(165, 165),
-            Str::contains($url, '/attribute-options') => $image->cover(330, 330),
+            Str::contains($url, ['/products', '/product']) => $image->cover(560, 610),
+            Str::contains($url, ['/categories', '/category']) => $image->cover(165, 165),
+            Str::contains($url, ['/attribute-options', '/attribute_option']) => $image->cover(330, 330),
             default => $image->cover(1280, 467),
         };
     }

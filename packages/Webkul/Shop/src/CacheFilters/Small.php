@@ -15,9 +15,9 @@ class Small
         $url = url()->current();
 
         return match (true) {
-            Str::contains($url, '/products') => $image->cover(100, 100),
-            Str::contains($url, '/categories') => $image->cover(80, 80),
-            Str::contains($url, '/attribute-options') => $image->cover(60, 60),
+            Str::contains($url, ['/products', '/product']) => $image->cover(100, 100),
+            Str::contains($url, ['/categories', '/category']) => $image->cover(80, 80),
+            Str::contains($url, ['/attribute-options', '/attribute_option']) => $image->cover(60, 60),
             default => $image->cover(768, 280),
         };
     }
